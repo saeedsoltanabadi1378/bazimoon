@@ -24,6 +24,7 @@ function initialRoutes(): Route[] {
   const start = telegram.initDataUnsafe.start_param ?? "";
   if (GUID.test(start)) return [{ name: "home" }, { name: "mafia", gameId: start }];
   if (start.startsWith("couple_")) return [{ name: "home" }, { name: "couple", screen: "invite", token: start.slice("couple_".length) }];
+  if (start === "couple") return [{ name: "home" }, { name: "couple", screen: "home" }];
   if (!readLocal<boolean>(WELCOMED_KEY, false)) return [{ name: "welcome" }];
   return [{ name: "home" }];
 }

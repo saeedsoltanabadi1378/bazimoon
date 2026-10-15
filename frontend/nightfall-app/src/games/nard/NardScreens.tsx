@@ -383,7 +383,7 @@ export function NardPlay({ resume }: { resume: boolean }) {
               onClick={() => play(m)}
               style={{ minHeight: 44, padding: "0 12px", borderRadius: 12, border: `1.5px solid ${m.hit ? "#E5604D" : m.to === "off" ? "#5FD0BE" : "#4A3A22"}`, background: "#1F1A14", color: "var(--text)", fontSize: 14, fontWeight: 600, cursor: "pointer" }}
             >
-              {`${m.from === "bar" ? t("bar") : m.from} → ${m.to === "off" ? t("off") : m.to}${m.hit ? ` · ${t("hitWord")}` : ""}`}
+              {`${m.from === "bar" ? t("bar") : m.from} → ${m.to === "off" ? t("borneOff") : m.to}${m.hit ? ` · ${t("hitWord")}` : ""}`}
             </button>
           ))}
         </div>

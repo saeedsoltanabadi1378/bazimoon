@@ -14,7 +14,7 @@ export type Route =
   | { name: "profile" }
   | { name: "mafia"; gameId?: string }
   | { name: "game"; game: GameKey; screen: GameScreen; params?: Record<string, string | number | boolean | null> }
-  | { name: "couple"; screen: CoupleScreen; token?: string };
+  | { name: "couple"; screen: CoupleScreen; token?: string; number?: number };
 
 interface Navigation {
   route: Route;
@@ -69,9 +69,10 @@ export function tabFor(route: Route): TabKey | null {
   switch (route.name) {
     case "home":
       return "home";
+    case "couple":
+      return "home";
     case "solo":
     case "game":
-    case "couple":
       return "solo";
     case "mafia":
       return "mafia";
