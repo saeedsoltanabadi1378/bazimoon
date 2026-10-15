@@ -27,6 +27,8 @@ namespace Nightfall.Tests;
 public sealed class NightfallApiFactory : WebApplicationFactory<ApiProgram>
 {
     public const string TestBotToken = "123456789:AAFakeTestTokenForGoldenFixtureOnly1234";
+    public const string AdminUsername = "admin";
+    public const string AdminPassword = "admin-test-password";
     public const string TestJwtSigningKey = "test-signing-key-at-least-32-characters-long-for-hs256!!";
 
     private readonly string _databaseName = $"nightfall-tests-{Guid.NewGuid()}";
@@ -49,7 +51,9 @@ public sealed class NightfallApiFactory : WebApplicationFactory<ApiProgram>
                 ["ConnectionStrings:Postgres"] = "Host=localhost;Database=unused;Username=unused;Password=unused",
                 ["ConnectionStrings:Redis"] = "localhost:0,abortConnect=false",
                 ["Agora:AppId"] = "0123456789abcdef0123456789abcdef",
-                ["Agora:AppCertificate"] = "fedcba9876543210fedcba9876543210"
+                ["Agora:AppCertificate"] = "fedcba9876543210fedcba9876543210",
+                ["Admin:Username"] = AdminUsername,
+                ["Admin:Password"] = AdminPassword
             });
         });
 

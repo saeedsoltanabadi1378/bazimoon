@@ -34,22 +34,16 @@ public static class AdminEndpoints
         auth.MapPost("/logout", async (HttpContext http) => { if (!ValidCsrf(http)) return Results.BadRequest(new { detail = "Invalid CSRF token." }); await http.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme); http.Response.Cookies.Delete(CsrfCookie); return Results.Ok(); }).RequireAuthorization("AdminOnly");
 
         var group = app.MapGroup("/api/admin").RequireAuthorization("AdminOnly");
-        group.MapGet("/overview", async (NightfallDbContext db, IConnectionMultiplexer redis) => Results.Ok(new {
-            activeGames = await CountActiveAsync(redis), completedGames = await db.Games.CountAsync(x => x.Status == "Completed"), cancelledGames = await db.Games.CountAsync(x => x.Status == "Cancelled"), users = await db.UserProfiles.CountAsync(), chats = await db.ChatProfiles.CountAsync(), recentEvents = await db.OperationalEvents.OrderByDescending(x => x.CreatedAt).Take(8).ToListAsync()
-        }));
-        group.MapGet("/games", async (string? status, int? page, int? pageSize, NightfallDbContext db, IConnectionMultiplexer redis, IGameSessionStore sessions) =>
+        group.MapGet("/overview", async (int? days, AdminDashboardService dash) => Results.Ok(await dash.GetOverviewAsync(days ?? 1)));
+        group.MapGet("/games", async (string? status, int? page, int? pageSize, string? search, AdminDashboardService dash) =>
         {
             int p = Math.Max(1, page ?? 1), size = Math.Clamp(pageSize ?? 25, 1, 100);
-            if (string.Equals(status, "active", StringComparison.OrdinalIgnoreCase)) { var games = await LoadActiveAsync(redis, sessions); return Results.Ok(new { items = games.Select(g => g.ToSnapshot()), total = games.Count, page = p, pageSize = size }); }
-            var query = db.Games.AsNoTracking().OrderByDescending(x => x.EndedAt);
-            var total = await query.CountAsync();
-            var items = await query.Skip((p - 1) * size).Take(size).Select(game => new AdminGameView(
-                game.Id, game.TelegramChatId, game.CreatedAt, game.EndedAt, game.Result, game.Status,
-                game.CancellationReason,
-                game.Players.Select(player => new AdminGamePlayerView(
-                    player.PlayerId, player.TelegramUserId, player.TelegramUsername, player.Role,
-                    player.SurvivedToEnd, player.GodfatherRank)).ToList())).ToListAsync();
-            return Results.Ok(new { items, total, page = p, pageSize = size });
+            if (string.Equals(status, "active", StringComparison.OrdinalIgnoreCase))
+            {
+                var live = await dash.GetLiveGamesAsync();
+                return Results.Ok(new AdminPageDto<AdminLiveGameDto>(live, live.Count, 1, live.Count));
+            }
+            return Results.Ok(await dash.GetPastGamesAsync(p, size, search));
         });
         group.MapGet("/games/{id:guid}", async (Guid id, IGameSessionStore sessions, NightfallDbContext db) =>
         {
@@ -64,10 +58,16 @@ public static class AdminEndpoints
             return past is not null ? Results.Ok(past) : Results.NotFound();
         });
         group.MapPost("/games/{id:guid}/cancel", async (Guid id, CancelRequest request, HttpContext http, GameService games) => { if (!ValidCsrf(http)) return Results.BadRequest(new { detail = "Invalid CSRF token." }); if (string.IsNullOrWhiteSpace(request.Reason)) return Results.BadRequest(new { detail = "A cancellation reason is required." }); return await games.CancelByAdminAsync(id, request.Reason, http.User.Identity?.Name ?? "admin") ? Results.Ok() : Results.NotFound(); });
-        group.MapGet("/players", async (int? page, int? pageSize, string? search, NightfallDbContext db) => { int p=Math.Max(1,page??1), size=Math.Clamp(pageSize??25,1,100); var q=db.UserProfiles.AsNoTracking().Where(x => search == null || x.Username.ToLower().Contains(search.ToLower())); return Results.Ok(new { items=await q.OrderByDescending(x=>x.LastSeenAt).Skip((p-1)*size).Take(size).ToListAsync(), total=await q.CountAsync(), page=p,pageSize=size }); });
-        group.MapGet("/chats", async (int? page, int? pageSize, NightfallDbContext db) => { int p=Math.Max(1,page??1), size=Math.Clamp(pageSize??25,1,100); var q=db.ChatProfiles.AsNoTracking(); return Results.Ok(new { items=await q.OrderByDescending(x=>x.LastSeenAt).Skip((p-1)*size).Take(size).ToListAsync(), total=await q.CountAsync(),page=p,pageSize=size }); });
-        group.MapGet("/events", async (int? page, int? pageSize, string? category, NightfallDbContext db) => { int p=Math.Max(1,page??1),size=Math.Clamp(pageSize??25,1,100); var q=db.OperationalEvents.AsNoTracking().Where(x=>category==null||x.Category==category); return Results.Ok(new { items=await q.OrderByDescending(x=>x.CreatedAt).Skip((p-1)*size).Take(size).ToListAsync(),total=await q.CountAsync(),page=p,pageSize=size }); });
-        group.MapGet("/health", async (NightfallDbContext db, IConnectionMultiplexer redis) => { bool pg, rd; try { pg=await db.Database.CanConnectAsync(); } catch { pg=false; } try { rd=await redis.GetDatabase().PingAsync()<TimeSpan.FromSeconds(2); } catch { rd=false; } var heartbeat=await redis.GetDatabase().StringGetAsync("nightfall:bot-heartbeat"); var fresh=DateTime.TryParse(heartbeat,out var h)&&h>DateTime.UtcNow.AddMinutes(-2); return Results.Ok(new { api="healthy", postgres=pg?"healthy":"unhealthy", redis=rd?"healthy":"unhealthy", bot=fresh?"healthy":"stale", botHeartbeat=heartbeat.ToString() }); });
+        group.MapGet("/players", async (int? page, int? pageSize, string? search, AdminDashboardService dash) =>
+            Results.Ok(await dash.GetPlayersAsync(Math.Max(1, page ?? 1), Math.Clamp(pageSize ?? 25, 1, 100), search)));
+        group.MapGet("/players/{id:long}", async (long id, AdminDashboardService dash) =>
+            await dash.GetPlayerAsync(id) is { } player ? Results.Ok(player) : Results.NotFound());
+        group.MapGet("/chats", async (int? page, int? pageSize, string? search, AdminDashboardService dash) =>
+            Results.Ok(await dash.GetChatsAsync(Math.Max(1, page ?? 1), Math.Clamp(pageSize ?? 25, 1, 100), search)));
+        group.MapGet("/puzzles", async (AdminDashboardService dash) => Results.Ok(await dash.GetPuzzlesAsync()));
+        group.MapGet("/events", async (string? level, long? before, int? pageSize, AdminDashboardService dash) =>
+            Results.Ok(await dash.GetEventsAsync(level, before, Math.Clamp(pageSize ?? 25, 1, 100))));
+        group.MapGet("/health", async (AdminDashboardService dash) => Results.Ok(await dash.GetHealthAsync()));
         group.MapGet("/settings", async (IBotSettingsService settings) => Results.Ok(await settings.GetAsync()));
         group.MapPut("/settings", UpdateSettingsAsync);
     }
@@ -94,9 +94,6 @@ public static class AdminEndpoints
         await db.SaveChangesAsync(); return Results.Ok(BotSettingsService.ToSnapshot(row));
     }
 
-    private static async Task<long> CountActiveAsync(IConnectionMultiplexer redis) => (await ActiveKeysAsync(redis)).LongLength;
-    private static async Task<List<Nightfall.Domain.GameState>> LoadActiveAsync(IConnectionMultiplexer redis, IGameSessionStore sessions) { var result=new List<Nightfall.Domain.GameState>(); foreach(var key in await ActiveKeysAsync(redis)) if(Guid.TryParse(key.ToString().Split(':').Last(),out var id)&&await sessions.GetAsync(id) is { } game) result.Add(game); return result; }
-    private static async Task<RedisKey[]> ActiveKeysAsync(IConnectionMultiplexer redis) { var endpoint=redis.GetEndPoints().FirstOrDefault(); if(endpoint is null)return []; var server=redis.GetServer(endpoint); return await server.KeysAsync(pattern:"nightfall:game:*").ToArrayAsync(); }
 }
 
 public sealed record LoginRequest(string Username, string Password);
