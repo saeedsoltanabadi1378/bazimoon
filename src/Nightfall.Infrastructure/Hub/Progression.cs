@@ -28,9 +28,10 @@ public static class Progression
         ["blocks"] = new DateOnly(2026, 9, 1),
         ["sudoku"] = new DateOnly(2026, 10, 15),
         ["snake"] = new DateOnly(2026, 10, 15),
+        ["esmfamil"] = new DateOnly(2026, 10, 15),
     };
 
-    public static readonly IReadOnlySet<string> Games = new HashSet<string> { "zip", "queens", "merge", "mines", "memory", "nard", "word", "ladder", "stack", "blocks", "sudoku", "snake", "dooz" };
+    public static readonly IReadOnlySet<string> Games = new HashSet<string> { "zip", "queens", "merge", "mines", "memory", "nard", "word", "ladder", "stack", "blocks", "sudoku", "snake", "dooz", "esmfamil" };
     /// <summary>Daily puzzles that count toward the shared puzzle streak.</summary>
     public static readonly IReadOnlySet<string> StreakGames = new HashSet<string> { "zip", "queens", "word", "ladder", "sudoku" };
 
@@ -164,6 +165,10 @@ public static class Progression
                 // A won match, by opponent; a lost or drawn one earns 5.
                 if (!o.Solved) return 5;
                 return o.Mode switch { "easy" => 20, "big" => 50, _ => 40 };
+            case "esmfamil":
+                // Online: 30 for a win, 10 for playing. Solo daily: 2 per correct answer (Moves). Practice earns none.
+                if (o.Mode == "online") return o.Solved ? 30 : 10;
+                return daily ? 2 * Math.Max(0, o.Moves ?? 0) : 0;
             case "blocks":
                 return Math.Min(150, (o.Score ?? 0) / 50 + (newBest ? 10 : 0));
             default:

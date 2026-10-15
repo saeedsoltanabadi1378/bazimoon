@@ -55,6 +55,7 @@ const paths = {
   stack: <path d="M6 18h12v3H6zM7 13h10v3H7zM8 8h8v3H8zM9 3h6v3H9z" />,
   blocks: <path d="M4 4h6v6H4zM10 10h6v6h-6zM4 14h6v6H4zM14 4h6v6h-6z" />,
   snake: <path d="M4 18h9a3 3 0 0 0 0-6H9a3 3 0 0 1 0-6h8M17 6h3" />,
+  phone: <path d="M7 2h10v20H7zM11 18h2" />,
   dooz: <path d="M9 3v18M15 3v18M3 9h18M3 15h18" />,
   spy: <path d="M3 11h18M6 11l1.5-6h9L18 11M8 17a2.5 2.5 0 1 0 0-.01M16 17a2.5 2.5 0 1 0 0-.01M10.5 17h3" />,
   esmFamil: <path d="M5 4h14v16H5zM8 8h8M8 12h8M8 16h5" />,

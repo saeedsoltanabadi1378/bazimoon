@@ -15,7 +15,9 @@ import type { SudokuLevel } from "./sudoku/logic";
 import { SnakeIntro, SnakePlay, SnakeResult } from "./snake/SnakeScreens";
 import { DoozIntro, DoozPlay, DoozResult } from "./dooz/DoozScreens";
 import { SpyIntro, SpyPlay, SpyResult } from "./spy/SpyScreens";
-import { EsmFamilIntro, EsmFamilPlay, EsmFamilResult } from "./esmfamil/EsmFamilScreens";
+import { EsmFamilIntro, EsmFamilPlay, EsmFamilResult, EsmFamilSetup } from "./esmfamil/EsmFamilScreens";
+import { EsmFamilSolo } from "./esmfamil/EsmFamilSolo";
+import { EsmFamilLobby, EsmFamilOnline } from "./esmfamil/EsmFamilOnline";
 
 type GameRouteProps = { route: Extract<Route, { name: "game" }> };
 
@@ -101,21 +103,16 @@ export function GameRoute({ route }: GameRouteProps) {
       }
       if (route.screen === "result") return <SpyResult params={p} />;
       return <SpyIntro />;
-    case "esmfamil":
-      if (route.screen === "play") {
-        return (
-          <EsmFamilPlay
-            key={JSON.stringify(p)}
-            mode={str(p?.mode, "classic") === "quick" ? "quick" : "classic"}
-            players={clamp(num(p?.players) ?? 4, 2, 8)}
-            rounds={clamp(num(p?.rounds) ?? 3, 1, 8)}
-            seconds={clamp(num(p?.seconds) ?? 90, 30, 180)}
-            letters={str(p?.letters, "fa") === "en" ? "en" : "fa"}
-          />
-        );
-      }
+    case "esmfamil": {
+      const way = str(p?.way, "phone");
+      if (route.screen === "play") return <EsmFamilPlay key={JSON.stringify(p)} />;
+      if (route.screen === "setup") return <EsmFamilSetup way={way === "online" || way === "solo" ? way : "phone"} room={typeof p?.room === "string" ? p.room : undefined} />;
+      if (route.screen === "lobby") return <EsmFamilLobby key={str(p?.code, "")} code={str(p?.code, "")} />;
+      if (route.screen === "online") return <EsmFamilOnline key={str(p?.code, "")} code={str(p?.code, "")} />;
+      if (route.screen === "solo") return <EsmFamilSolo key={JSON.stringify(p)} mode={str(p?.mode, "daily") === "practice" ? "practice" : "daily"} letters={str(p?.letters, "fa") === "en" ? "en" : "fa"} />;
       if (route.screen === "result") return <EsmFamilResult params={p} />;
       return <EsmFamilIntro />;
+    }
     default:
       return null;
   }

@@ -32,6 +32,7 @@ builder.Services.AddScoped<GameService>();
 builder.Services.AddScoped<HubService>();
 builder.Services.AddScoped<TableService>();
 builder.Services.AddScoped<CoupleService>();
+builder.Services.AddSingleton<Nightfall.Api.EsmFamil.EsmFamilRoomService>();
 builder.Services.AddSingleton<ReminderStatus>();
 builder.Services.AddScoped<Nightfall.Api.Admin.AdminDashboardService>();
 builder.Services.AddHttpClient<ITelegramNotifier, TelegramNotifier>(c => c.Timeout = TimeSpan.FromSeconds(10));
@@ -132,6 +133,7 @@ app.MapGameEndpoints();
 app.MapHubEndpoints();
 app.MapTableEndpoints();
 app.MapCoupleEndpoints();
+Nightfall.Api.EsmFamil.EsmFamilEndpoints.MapEsmFamilEndpoints(app);
 app.MapHub<GameHub>("/hubs/game");
 
 // Applies pending EF Core migrations before serving traffic. IsRelational() guards this so it's a

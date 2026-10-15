@@ -54,8 +54,8 @@ public static class HubEndpoints
         puzzles.MapGet("/{game}/weekly", (string game, HubService hub, HttpContext http) =>
             hub.GetWeeklyAsync(http.User.GetTelegramUserId(), http.User.GetTelegramUsername(), game)).WithName("GetWeeklyScores");
 
-        puzzles.MapGet("/{game}/board", (string game, int? number, HubService hub, HttpContext http) =>
-            hub.GetBoardAsync(http.User.GetTelegramUserId(), game, number)).WithName("GetPuzzleBoard");
+        puzzles.MapGet("/{game}/board", (string game, int? number, string? mode, HubService hub, HttpContext http) =>
+            hub.GetBoardAsync(http.User.GetTelegramUserId(), game, number, mode)).WithName("GetPuzzleBoard");
 
         puzzles.MapGet("/{game}/archive", async (string game, int year, int month, HubService hub, HttpContext http) =>
         {

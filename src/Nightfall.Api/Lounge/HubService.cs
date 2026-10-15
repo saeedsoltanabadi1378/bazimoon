@@ -226,6 +226,9 @@ public sealed class HubService
     {
         if (!Progression.Games.Contains(request.Game))
             throw new GameException("Unknown game.");
+        // Online Esm-Famil results are recorded by the room service, never by the client.
+        if (request.Game == "esmfamil" && request.Mode?.Trim().ToLowerInvariant() == "online")
+            throw new GameException("Unknown mode.");
         var mode = string.IsNullOrWhiteSpace(request.Mode) ? "classic" : request.Mode.Trim().ToLowerInvariant();
         if (mode.Length > 16) throw new GameException("Unknown mode.");
 
@@ -345,16 +348,20 @@ public sealed class HubService
             solved.Where(r => r.Detail.HasValue).GroupBy(r => r.Detail!.Value).ToDictionary(g => g.Key, g => g.Count()));
     }
 
-    public async Task<BoardDto> GetBoardAsync(long userId, string game, int? number)
+    public async Task<BoardDto> GetBoardAsync(long userId, string game, int? number, string? mode = null)
     {
         if (!Progression.Games.Contains(game)) throw new GameException("Unknown game.");
+        // A language variant of a daily (Daily Word and Esm-Famil have a Persian one).
+        var dailyMode = mode == "daily-fa" ? "daily-fa" : "daily";
         number ??= Progression.DailyNumber(game, Today);
         var group = await GroupMembersAsync(userId);
         var results = await _db.PuzzleResults
-            .Where(r => r.Game == game && r.Mode == "daily" && r.PuzzleNumber == number && group.Contains(r.TelegramUserId))
+            .Where(r => r.Game == game && r.Mode == dailyMode && r.PuzzleNumber == number && group.Contains(r.TelegramUserId))
             .ToListAsync();
         var names = await _db.PlayerStats.Where(s => group.Contains(s.TelegramUserId)).ToDictionaryAsync(s => s.TelegramUserId, s => s.Username);
-        var ordered = results
+        var ordered = game == "esmfamil"
+            ? results.OrderByDescending(r => r.Score ?? 0).ToList() // solo Esm-Famil is scored, not timed
+            : results
             .OrderByDescending(r => r.Solved)
             .ThenBy(r => r.TimeMs ?? int.MaxValue)
             .ThenBy(r => r.Moves ?? int.MaxValue)

@@ -27,6 +27,7 @@ function initialRoutes(): Route[] {
   if (start.startsWith("t_")) return [{ name: "home" }, { name: "mafia", code: start.slice(2) }];
   if (start.startsWith("couple_")) return [{ name: "home" }, { name: "couple", screen: "invite", token: start.slice("couple_".length) }];
   if (start === "couple") return [{ name: "home" }, { name: "couple", screen: "home" }];
+  if (start.startsWith("ef_")) return [{ name: "home" }, { name: "game", game: "esmfamil", screen: "lobby", params: { code: `EF-${start.slice(3)}` } }];
   if (!readLocal<boolean>(WELCOMED_KEY, false)) return [{ name: "welcome" }];
   return [{ name: "home" }];
 }

@@ -2,7 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState, t
 import { showBackButton } from "../lib/telegram";
 
 export type GameKey = "zip" | "queens" | "merge" | "mines" | "memory" | "nard" | "word" | "ladder" | "stack" | "blocks" | "sudoku" | "snake" | "dooz" | "spy" | "esmfamil";
-export type GameScreen = "intro" | "play" | "result" | "archive";
+export type GameScreen = "intro" | "play" | "result" | "archive" | "setup" | "lobby" | "online" | "solo";
 export type CoupleScreen = "home" | "invite" | "quiz" | "reveal";
 export type TabKey = "home" | "solo" | "mafia" | "league" | "profile";
 

@@ -221,8 +221,10 @@ export const hubApi = (api: NightfallApiClient) => ({
   league: (board: "mafia" | "puzzles") => api.request<League>("GET", `/api/hub/league?board=${board}`),
   submit: (result: PuzzleSubmit) => api.request<PuzzleResult>("POST", "/api/puzzles/results", { hints: 0, ...result }),
   stats: (game: string) => api.request<GameStats>("GET", `/api/puzzles/${game}/stats`),
-  board: (game: string, number?: number | null) =>
-    api.request<Board>("GET", `/api/puzzles/${game}/board${number ? `?number=${number}` : ""}`),
+  board: (game: string, number?: number | null, mode?: string) => {
+    const query = [number ? `number=${number}` : "", mode ? `mode=${encodeURIComponent(mode)}` : ""].filter(Boolean).join("&");
+    return api.request<Board>("GET", `/api/puzzles/${game}/board${query ? `?${query}` : ""}`);
+  },
   weekly: (game: string) => api.request<Weekly>("GET", `/api/puzzles/${game}/weekly`),
   archive: (game: string, year: number, month: number) =>
     api.request<Archive>("GET", `/api/puzzles/${game}/archive?year=${year}&month=${month}`),
