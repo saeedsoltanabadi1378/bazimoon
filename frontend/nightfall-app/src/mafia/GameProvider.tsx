@@ -1,0 +1,160 @@
+import type { HubConnection } from "@microsoft/signalr";
+import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
+import { ApiError, type NightfallApiClient } from "../api/client";
+import { connectToGameHub } from "../api/signalr";
+import type { GameView, NightActionType } from "../api/types";
+import { useSession } from "../app/session";
+import { useLanguage } from "../i18n/LanguageContext";
+import { haptic } from "../lib/haptics";
+
+export type GameStatus = "loading" | "ready" | "not-found" | "error";
+export type LinkState = "connected" | "reconnecting" | "closed";
+
+export interface GameContextValue {
+  apiClient: NightfallApiClient;
+  gameId: string;
+  status: GameStatus;
+  link: LinkState;
+  view: GameView | null;
+  busy: boolean;
+  actionError: string | null;
+  clearActionError(): void;
+  refresh(): Promise<void>;
+  joinGame(): Promise<boolean>;
+  leaveGame(): Promise<boolean>;
+  startGame(): Promise<boolean>;
+  submitNightAction(targetPlayerId: string, actionType: NightActionType): Promise<boolean>;
+  resolveNight(): Promise<boolean>;
+  submitVote(targetPlayerId: string | null): Promise<boolean>;
+  resolveVoting(): Promise<boolean>;
+  startVoting(): Promise<boolean>;
+  startNight(): Promise<boolean>;
+  requestChallenge(): Promise<boolean>;
+  cancelChallenge(): Promise<boolean>;
+  acceptChallenge(challengerId: string): Promise<boolean>;
+  rejectChallenge(challengerId: string): Promise<boolean>;
+  finishDiscussion(): Promise<boolean>;
+}
+
+const GameContext = createContext<GameContextValue | null>(null);
+
+export function GameProvider({ gameId, children }: { gameId: string; children: ReactNode }) {
+  const { api } = useSession();
+  const { t } = useLanguage();
+  const [status, setStatus] = useState<GameStatus>("loading");
+  const [link, setLink] = useState<LinkState>("connected");
+  const [view, setView] = useState<GameView | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const hubRef = useRef<HubConnection | null>(null);
+
+  const refresh = useCallback(async () => {
+    try {
+      setView(await api.getGame(gameId));
+    } catch (err) {
+      console.error("[Nightfall] Failed to refresh game view", err);
+    }
+  }, [api, gameId]);
+
+  useEffect(() => {
+    let cancelled = false;
+    setStatus("loading");
+    api.getGame(gameId)
+      .then((initial) => {
+        if (cancelled) return;
+        setView(initial);
+        setStatus("ready");
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        setStatus(err instanceof ApiError && err.status === 404 ? "not-found" : "error");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [api, gameId]);
+
+  // Live updates: the hub only pings "something changed"; we re-fetch our own filtered view.
+  useEffect(() => {
+    if (status !== "ready") return;
+    let cancelled = false;
+    connectToGameHub(import.meta.env.VITE_API_BASE_URL, api.getToken() ?? "", gameId, () => void refresh(), (state) => {
+      if (!cancelled) setLink(state);
+    })
+      .then(async (hub) => {
+        if (cancelled) {
+          await hub.stop();
+          return;
+        }
+        hubRef.current = hub;
+        setLink("connected");
+      })
+      .catch((err) => {
+        console.error("[Nightfall] Failed to connect to the live update hub", err);
+        if (!cancelled) setLink("closed");
+      });
+    return () => {
+      cancelled = true;
+      void hubRef.current?.stop();
+      hubRef.current = null;
+    };
+  }, [api, gameId, status, refresh]);
+
+  // A dropped hub means we may have missed updates — poll until it's back.
+  useEffect(() => {
+    if (status !== "ready" || link === "connected") return;
+    const id = window.setInterval(() => void refresh(), 4000);
+    return () => window.clearInterval(id);
+  }, [status, link, refresh]);
+
+  const run = useCallback(async (action: () => Promise<unknown>) => {
+    setBusy(true);
+    setActionError(null);
+    try {
+      await action();
+      haptic.tap();
+      await refresh();
+      return true;
+    } catch (err) {
+      haptic.warn();
+      setActionError(err instanceof ApiError && err.status !== 0 ? err.message : err instanceof ApiError ? t("offlineAction") : t("genericError"));
+      return false;
+    } finally {
+      setBusy(false);
+    }
+  }, [refresh, t]);
+
+  const value: GameContextValue = {
+    apiClient: api,
+    gameId,
+    status,
+    link,
+    view,
+    busy,
+    actionError,
+    clearActionError: () => setActionError(null),
+    refresh,
+    joinGame: () => run(() => api.joinGame(gameId)),
+    leaveGame: () => run(() => api.leaveGame(gameId)),
+    startGame: () => run(() => api.startGame(gameId)),
+    submitNightAction: (target, type) => run(() => api.submitNightAction(gameId, target, type)),
+    resolveNight: () => run(() => api.resolveNight(gameId)),
+    submitVote: (target) => run(() => api.submitVote(gameId, target)),
+    resolveVoting: () => run(() => api.resolveVoting(gameId)),
+    startVoting: () => run(() => api.startVoting(gameId)),
+    startNight: () => run(() => api.startNight(gameId)),
+    requestChallenge: () => run(() => api.requestChallenge(gameId)),
+    cancelChallenge: () => run(() => api.cancelChallenge(gameId)),
+    acceptChallenge: (id) => run(() => api.acceptChallenge(gameId, id)),
+    rejectChallenge: (id) => run(() => api.rejectChallenge(gameId, id)),
+    finishDiscussion: () => run(() => api.finishDiscussion(gameId)),
+  };
+
+  return <GameContext.Provider value={value}>{children}</GameContext.Provider>;
+}
+
+export function useGame() {
+  const context = useContext(GameContext);
+  if (!context) throw new Error("useGame must be used inside GameProvider");
+  return context;
+}

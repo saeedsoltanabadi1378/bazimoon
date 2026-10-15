@@ -24,6 +24,18 @@ public static class GameEndpoints
             return Results.Ok();
         }).WithName("JoinGame");
 
+        group.MapPost("/{gameId:guid}/rematch", async (Guid gameId, GameService games, HttpContext http) =>
+        {
+            var rematchId = await games.RematchAsync(gameId, http.User.GetTelegramUserId(), http.User.GetTelegramUsername());
+            return Results.Ok(new CreateGameResponse(rematchId));
+        }).WithName("Rematch");
+
+        group.MapDelete("/{gameId:guid}/players", async (Guid gameId, GameService games, HttpContext http) =>
+        {
+            await games.LeaveGameAsync(gameId, http.User.GetTelegramUserId());
+            return Results.Ok();
+        }).WithName("LeaveGame");
+
         group.MapGet("/{gameId:guid}", async (Guid gameId, GameService games, HttpContext http) =>
         {
             var game = await games.LoadOrThrowAsync(gameId);
@@ -122,8 +134,15 @@ public static class GameEndpoints
             {
                 case "main":
                     channelName = $"nightfall-{gameId}";
-                    role = player.IsAlive && (game.CurrentPhase is GamePhase.Day or GamePhase.Voting or GamePhase.Results)
-                        ? AgoraRtcRole.Publisher : AgoraRtcRole.Subscriber;
+                    // During the timed day discussion only the active speaker (or accepted challenger) holds
+                    // the floor; everyone else listens until their turn. Clients rejoin on every turn change.
+                    bool mayTalk = game.CurrentPhase switch
+                    {
+                        GamePhase.Day => game.Discussion is null || game.Discussion.ActivePlayerId == player.Id,
+                        GamePhase.Voting or GamePhase.Results => true,
+                        _ => false
+                    };
+                    role = player.IsAlive && mayTalk ? AgoraRtcRole.Publisher : AgoraRtcRole.Subscriber;
                     break;
                 case "mafia":
                     if (!player.IsAlive || !player.IsMafiaAligned)

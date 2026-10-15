@@ -4,6 +4,18 @@ export interface TelegramUser {
   last_name?: string;
   username?: string;
   language_code?: string;
+  photo_url?: string;
+}
+
+type HapticImpact = "light" | "medium" | "heavy" | "rigid" | "soft";
+type HapticNotification = "error" | "success" | "warning";
+
+interface TelegramBackButton {
+  isVisible: boolean;
+  show(): void;
+  hide(): void;
+  onClick(callback: () => void): void;
+  offClick(callback: () => void): void;
 }
 
 export interface TelegramWebApp {
@@ -13,12 +25,24 @@ export interface TelegramWebApp {
     start_param?: string;
     chat?: { id: number };
   };
+  version?: string;
   colorScheme: "light" | "dark";
   ready(): void;
   expand(): void;
   close(): void;
+  isVersionAtLeast?(version: string): boolean;
+  setHeaderColor?(color: string): void;
+  setBackgroundColor?(color: string): void;
+  setBottomBarColor?(color: string): void;
+  disableVerticalSwipes?(): void;
+  enableVerticalSwipes?(): void;
+  openTelegramLink?(url: string): void;
+  openLink?(url: string): void;
+  BackButton?: TelegramBackButton;
   HapticFeedback?: {
-    notificationOccurred(type: "error" | "success" | "warning"): void;
+    impactOccurred(style: HapticImpact): void;
+    notificationOccurred(type: HapticNotification): void;
+    selectionChanged(): void;
   };
 }
 
@@ -42,7 +66,7 @@ function createMockWebApp(): TelegramWebApp {
     initData: params.get("mockInitData") ?? "",
     initDataUnsafe: {
       user: { id: 111111111, first_name: "Dev", username: "dev_user" },
-      start_param: params.get("gameId") ?? undefined,
+      start_param: params.get("gameId") ?? params.get("startapp") ?? undefined,
     },
     colorScheme: "dark",
     ready() {},
@@ -58,7 +82,7 @@ function resolveWebApp(): TelegramWebApp {
   // An explicit dev override always wins, since the real telegram-web-app.js script defines
   // window.Telegram.WebApp even outside an actual Telegram client — as an inert stub with an
   // empty initData — so a plain `?? createMockWebApp()` fallback would never actually trigger.
-  if (params.has("mockInitData") || params.has("gameId")) {
+  if (params.has("mockInitData") || params.has("gameId") || params.has("startapp")) {
     return createMockWebApp();
   }
 
@@ -67,3 +91,60 @@ function resolveWebApp(): TelegramWebApp {
 }
 
 export const telegram: TelegramWebApp = resolveWebApp();
+
+/** True only inside a real Telegram client (initData is signed there). */
+export const isInsideTelegram = Boolean(window.Telegram?.WebApp?.initData);
+
+function supports(version: string) {
+  return telegram.isVersionAtLeast?.(version) ?? false;
+}
+
+/** One-time setup: tell Telegram we're ready, go full height, and stop swipe-to-close stealing drags. */
+export function initTelegramShell() {
+  try {
+    telegram.ready();
+    telegram.expand();
+    if (supports("7.7")) telegram.disableVerticalSwipes?.();
+  } catch (err) {
+    console.warn("[Nightfall] Telegram shell setup failed", err);
+  }
+}
+
+/** Matches Telegram's header and background to the current screen so the app feels edge to edge. */
+export function setTelegramColors(color: string) {
+  try {
+    if (supports("6.1")) {
+      telegram.setHeaderColor?.(color);
+      telegram.setBackgroundColor?.(color);
+    }
+    if (supports("7.10")) telegram.setBottomBarColor?.(color);
+  } catch {
+    // Older clients reject custom colors; the app still works with Telegram's defaults.
+  }
+}
+
+export function showBackButton(onBack: () => void): () => void {
+  const back = supports("6.1") ? telegram.BackButton : undefined;
+  if (!back) return () => {};
+  back.onClick(onBack);
+  back.show();
+  return () => {
+    back.offClick(onBack);
+    back.hide();
+  };
+}
+
+/** Opens Telegram's "share to chat" picker with a link and message. */
+export function shareToTelegram(url: string, text: string) {
+  const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`;
+  if (telegram.openTelegramLink) {
+    telegram.openTelegramLink(shareUrl);
+  } else {
+    window.open(shareUrl, "_blank", "noopener");
+  }
+}
+
+export function openTelegramLink(url: string) {
+  if (telegram.openTelegramLink) telegram.openTelegramLink(url);
+  else window.open(url, "_blank", "noopener");
+}

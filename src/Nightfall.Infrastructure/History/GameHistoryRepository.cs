@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Nightfall.Domain;
+using Nightfall.Infrastructure.Hub;
 using Nightfall.Infrastructure.Sessions;
 
 namespace Nightfall.Infrastructure.History;
@@ -23,13 +24,14 @@ public sealed class GameHistoryRepository : IGameHistoryRepository
             throw new InvalidOperationException("Game has no TelegramChatId and cannot be saved to history.");
 
         var roster = _rosterStore is null ? [] : await _rosterStore.GetAsync(game.GameId);
+        var result = game.CheckWinCondition();
         var record = new GameRecord
         {
             Id = game.GameId,
             TelegramChatId = game.TelegramChatId.Value,
             CreatedAt = game.CreatedAt.UtcDateTime,
             EndedAt = DateTime.UtcNow,
-            Result = game.CheckWinCondition(),
+            Result = result,
             Players = game.Players.Select(p => new GamePlayerRecord
             {
                 Id = Guid.NewGuid(),
@@ -38,12 +40,48 @@ public sealed class GameHistoryRepository : IGameHistoryRepository
                 TelegramUsername = p.TelegramUsername,
                 Role = p.Role,
                 SurvivedToEnd = p.IsAlive,
-                GodfatherRank = p.GodfatherRank
+                GodfatherRank = p.GodfatherRank,
+                EliminatedBy = p.EliminatedBy,
+                EliminatedRound = p.EliminatedRound,
+                WasPromoted = p.WasPromoted,
+                Won = result == WinCondition.None ? null : p.IsMafiaAligned == (result == WinCondition.MafiaWin)
             }).ToList()
         };
 
+        await ApplyRatingsAsync(record, ct);
         _db.Games.Add(record);
         await _db.SaveChangesAsync(ct);
+    }
+
+    /// <summary>Team Elo across the two sides; also awards Mafia XP. Players without a known Telegram id stay unrated.</summary>
+    private async Task ApplyRatingsAsync(GameRecord record, CancellationToken ct)
+    {
+        var rated = record.Players.Where(p => p.TelegramUserId.HasValue && p.Won.HasValue).ToList();
+        if (rated.Count == 0) return;
+
+        var stats = new Dictionary<long, PlayerStatsRecord>();
+        foreach (var p in rated)
+            stats[p.TelegramUserId!.Value] = await _db.GetOrCreateStatsAsync(p.TelegramUserId.Value, p.TelegramUsername, ct);
+
+        double Average(bool mafia)
+        {
+            var side = rated.Where(p => (p.Role is Role.Mafia or Role.Godfather) == mafia).ToList();
+            return side.Count == 0 ? Progression.StartingRating : side.Average(p => stats[p.TelegramUserId!.Value].Rating);
+        }
+
+        double mafiaAverage = Average(mafia: true);
+        double townAverage = Average(mafia: false);
+        foreach (var p in rated)
+        {
+            var s = stats[p.TelegramUserId!.Value];
+            bool isMafia = p.Role is Role.Mafia or Role.Godfather;
+            int delta = Progression.RatingDelta(isMafia ? mafiaAverage : townAverage, isMafia ? townAverage : mafiaAverage, p.Won!.Value);
+            p.RatingBefore = s.Rating;
+            p.RatingDelta = delta;
+            s.Rating += delta;
+            s.Xp += Progression.MafiaXp(p.Won.Value);
+            s.UpdatedAt = DateTime.UtcNow;
+        }
     }
 
     public Task<GameRecord?> GetAsync(Guid gameId, CancellationToken ct = default) =>

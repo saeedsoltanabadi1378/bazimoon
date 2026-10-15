@@ -11,6 +11,7 @@ export async function connectToGameHub(
   token: string,
   gameId: string,
   onGameUpdated: () => void,
+  onConnectionChange?: (state: "connected" | "reconnecting" | "closed") => void,
 ): Promise<signalR.HubConnection> {
   const connection = new signalR.HubConnectionBuilder()
     .withUrl(`${baseUrl}/hubs/game`, {
@@ -21,7 +22,10 @@ export async function connectToGameHub(
 
   connection.on("GameUpdated", onGameUpdated);
 
+  connection.onreconnecting(() => onConnectionChange?.("reconnecting"));
+  connection.onclose(() => onConnectionChange?.("closed"));
   connection.onreconnected(() => {
+    onConnectionChange?.("connected");
     connection.invoke("JoinGame", gameId).catch((err) => console.error("[Nightfall] Failed to rejoin game group after reconnect", err));
     onGameUpdated();
   });

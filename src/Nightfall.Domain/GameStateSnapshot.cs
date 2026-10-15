@@ -21,8 +21,17 @@ public sealed record GameStateSnapshot(
     int? LastDoctorSelfHealNight,
     NightResult? LastNightResult,
     VotingResult? LastVotingResult,
-    DiscussionStateSnapshot? Discussion = null);
+    DiscussionStateSnapshot? Discussion = null,
+    Guid? RematchGameId = null);
 
-public sealed record PlayerSnapshot(Guid Id, string TelegramUsername, Role? Role, bool IsAlive, int? GodfatherRank);
+public sealed record PlayerSnapshot(
+    Guid Id,
+    string TelegramUsername,
+    Role? Role,
+    bool IsAlive,
+    int? GodfatherRank,
+    EliminationCause? EliminatedBy = null,
+    int? EliminatedRound = null,
+    bool WasPromoted = false);
 
 public sealed record NightActionSnapshot(Guid ActorId, Guid TargetId, NightActionType ActionType);

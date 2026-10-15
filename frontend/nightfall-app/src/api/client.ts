@@ -1,6 +1,7 @@
 import type {
   CreateGameResponse,
   GameView,
+  MyGameResult,
   NightActionType,
   NightResult,
   TelegramAuthResponse,
@@ -30,7 +31,15 @@ export class NightfallApiClient {
     this.token = token;
   }
 
-  private async request<T>(method: string, path: string, body?: unknown): Promise<T> {
+  getToken() {
+    return this.token;
+  }
+
+  get isAuthenticated() {
+    return this.token !== null;
+  }
+
+  async request<T>(method: string, path: string, body?: unknown): Promise<T> {
     const headers: Record<string, string> = {};
     if (this.token) {
       headers.Authorization = `Bearer ${this.token}`;
@@ -39,11 +48,17 @@ export class NightfallApiClient {
       headers["Content-Type"] = "application/json";
     }
 
-    const response = await fetch(`${this.baseUrl}${path}`, {
-      method,
-      headers,
-      body: body !== undefined ? JSON.stringify(body) : undefined,
-    });
+    let response: Response;
+    try {
+      response = await fetch(`${this.baseUrl}${path}`, {
+        method,
+        headers,
+        body: body !== undefined ? JSON.stringify(body) : undefined,
+      });
+    } catch {
+      // fetch only rejects when the request never reached the server (offline, DNS, CORS).
+      throw new ApiError(0, "offline");
+    }
 
     if (!response.ok) {
       let detail = response.statusText || `HTTP ${response.status}`;
@@ -75,6 +90,18 @@ export class NightfallApiClient {
 
   joinGame(gameId: string) {
     return this.request<void>("POST", `/api/games/${gameId}/players`);
+  }
+
+  rematch(gameId: string) {
+    return this.request<CreateGameResponse>("POST", `/api/games/${gameId}/rematch`);
+  }
+
+  getMyGameResult(gameId: string) {
+    return this.request<MyGameResult>("GET", `/api/me/games/${gameId}`);
+  }
+
+  leaveGame(gameId: string) {
+    return this.request<void>("DELETE", `/api/games/${gameId}/players`);
   }
 
   startGame(gameId: string) {

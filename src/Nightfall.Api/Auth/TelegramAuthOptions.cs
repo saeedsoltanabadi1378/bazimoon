@@ -6,4 +6,6 @@ public sealed class TelegramAuthOptions
 
     public string BotToken { get; set; } = string.Empty;
     public TimeSpan MaxInitDataAge { get; set; } = TimeSpan.FromHours(24);
+    /// <summary>Mini App link (t.me/&lt;bot&gt;/&lt;app&gt;) used for "Open Nightfall" buttons in bot messages.</summary>
+    public string? MiniAppUrl { get; set; }
 }

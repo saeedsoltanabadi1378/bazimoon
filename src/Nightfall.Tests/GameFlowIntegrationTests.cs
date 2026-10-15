@@ -267,14 +267,16 @@ public class GameFlowIntegrationTests : IClassFixture<NightfallApiFactory>, IAsy
         Assert.False(string.IsNullOrWhiteSpace(mainToken!.Token));
         Assert.Equal("Subscriber", mainToken.Role);
 
-        // Once daytime begins, every living player can speak in the main room, not only the
-        // player whose discussion turn is active.
+        // During the day discussion only the player holding the floor may speak; everyone else listens.
         (await creator.Client.PostAsync($"/api/games/{created.GameId}/resolve-night", null)).EnsureSuccessStatusCode();
+        var dayView = await creator.Client.GetFromJsonAsync<GameView>($"/api/games/{created.GameId}");
+        var speakerId = dayView!.Discussion!.ActivePlayerId;
         foreach (var player in players)
         {
+            var playerView = await player.Client.GetFromJsonAsync<GameView>($"/api/games/{created.GameId}");
             var dayToken = await player.Client.GetFromJsonAsync<VoiceTokenResponse>(
                 $"/api/games/{created.GameId}/voice-token?channel=main");
-            Assert.Equal("Publisher", dayToken!.Role);
+            Assert.Equal(playerView!.YourPlayerId == speakerId ? "Publisher" : "Subscriber", dayToken!.Role);
         }
 
         if (view!.YourRole is not (Role.Mafia or Role.Godfather))
@@ -282,6 +284,46 @@ public class GameFlowIntegrationTests : IClassFixture<NightfallApiFactory>, IAsy
             var mafiaTokenResponse = await creator.Client.GetAsync($"/api/games/{created.GameId}/voice-token?channel=mafia");
             Assert.Equal(HttpStatusCode.Forbidden, mafiaTokenResponse.StatusCode);
         }
+    }
+
+    [Fact]
+    public async Task Rematch_FromEndedGame_CreatesOneLobbyEveryoneCanJoin()
+    {
+        var players = await CreateAuthenticatedPlayersAsync(3, seed: 7);
+        var creator = players[0];
+        var created = await (await creator.Client.PostAsJsonAsync("/api/games", new CreateGameRequest(42007)))
+            .Content.ReadFromJsonAsync<CreateGameResponse>();
+        var gameId = created!.GameId;
+        foreach (var player in players.Skip(1))
+            (await player.Client.PostAsync($"/api/games/{gameId}/players", null)).EnsureSuccessStatusCode();
+        (await creator.Client.PostAsync($"/api/games/{gameId}/start", null)).EnsureSuccessStatusCode();
+
+        var views = new List<GameView>();
+        foreach (var player in players)
+            views.Add((await player.Client.GetFromJsonAsync<GameView>($"/api/games/{gameId}"))!);
+        var godfather = views.Single(v => v.YourRole == Role.Godfather).YourPlayerId;
+
+        (await creator.Client.PostAsync($"/api/games/{gameId}/resolve-night", null)).EnsureSuccessStatusCode();
+        (await creator.Client.PostAsync($"/api/games/{gameId}/start-voting", null)).EnsureSuccessStatusCode();
+        for (int i = 0; i < players.Count; i++)
+        {
+            if (views[i].YourPlayerId == godfather) continue;
+            (await players[i].Client.PostAsJsonAsync($"/api/games/{gameId}/votes", new SubmitVoteRequest(godfather))).EnsureSuccessStatusCode();
+        }
+        (await creator.Client.PostAsync($"/api/games/{gameId}/resolve-voting", null)).EnsureSuccessStatusCode();
+
+        var first = await (await players[1].Client.PostAsync($"/api/games/{gameId}/rematch", null)).Content.ReadFromJsonAsync<CreateGameResponse>();
+        var second = await (await players[2].Client.PostAsync($"/api/games/{gameId}/rematch", null)).Content.ReadFromJsonAsync<CreateGameResponse>();
+        Assert.Equal(first!.GameId, second!.GameId);
+
+        var ended = await creator.Client.GetFromJsonAsync<GameView>($"/api/games/{gameId}");
+        Assert.Equal(GamePhase.Ended, ended!.Phase);
+        Assert.Equal(first.GameId, ended.RematchGameId);
+
+        var lobby = await players[2].Client.GetFromJsonAsync<GameView>($"/api/games/{first.GameId}");
+        Assert.Equal(GamePhase.Lobby, lobby!.Phase);
+        Assert.Equal(2, lobby.Players.Count);
+        Assert.Equal(lobby.Players[0].PlayerId, (await players[1].Client.GetFromJsonAsync<GameView>($"/api/games/{first.GameId}"))!.YourPlayerId);
     }
 
     private static int FindIndexByRole(List<GameView> views, Role role)

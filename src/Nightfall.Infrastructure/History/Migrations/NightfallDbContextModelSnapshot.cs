@@ -165,6 +165,13 @@ namespace Nightfall.Infrastructure.History.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<string>("EliminatedBy")
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<int?>("EliminatedRound")
+                        .HasColumnType("integer");
+
                     b.Property<Guid>("GameRecordId")
                         .HasColumnType("uuid");
 
@@ -173,6 +180,12 @@ namespace Nightfall.Infrastructure.History.Migrations
 
                     b.Property<Guid>("PlayerId")
                         .HasColumnType("uuid");
+
+                    b.Property<int?>("RatingBefore")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("RatingDelta")
+                        .HasColumnType("integer");
 
                     b.Property<string>("Role")
                         .HasMaxLength(32)
@@ -189,9 +202,17 @@ namespace Nightfall.Infrastructure.History.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("character varying(256)");
 
+                    b.Property<bool>("WasPromoted")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool?>("Won")
+                        .HasColumnType("boolean");
+
                     b.HasKey("Id");
 
                     b.HasIndex("GameRecordId");
+
+                    b.HasIndex("TelegramUserId");
 
                     b.ToTable("game_players", (string)null);
                 });
@@ -229,6 +250,263 @@ namespace Nightfall.Infrastructure.History.Migrations
                     b.HasIndex("TelegramChatId");
 
                     b.ToTable("games", (string)null);
+                });
+
+            modelBuilder.Entity("Nightfall.Infrastructure.Hub.ChatMemberRecord", b =>
+                {
+                    b.Property<long>("TelegramChatId")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("TelegramUserId")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime>("LastSeenAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("TelegramChatId", "TelegramUserId");
+
+                    b.HasIndex("TelegramUserId");
+
+                    b.ToTable("chat_members", (string)null);
+                });
+
+            modelBuilder.Entity("Nightfall.Infrastructure.Hub.CoupleAnswerRecord", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("Answers")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<Guid>("CoupleId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Day")
+                        .HasColumnType("integer");
+
+                    b.Property<long>("TelegramUserId")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CoupleId", "Day", "TelegramUserId")
+                        .IsUnique();
+
+                    b.ToTable("couple_answers", (string)null);
+                });
+
+            modelBuilder.Entity("Nightfall.Infrastructure.Hub.CoupleRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("AcceptedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("BestStreak")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("InviteExpiresAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("InviteToken")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<long>("InviterId")
+                        .HasColumnType("bigint");
+
+                    b.Property<int?>("InviterNudgedDay")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Language")
+                        .IsRequired()
+                        .HasMaxLength(8)
+                        .HasColumnType("character varying(8)");
+
+                    b.Property<int?>("LastBothDay")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("LastReminderDay")
+                        .HasColumnType("integer");
+
+                    b.Property<long?>("PartnerId")
+                        .HasColumnType("bigint");
+
+                    b.Property<int?>("PartnerNudgedDay")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ReminderTime")
+                        .IsRequired()
+                        .HasMaxLength(5)
+                        .HasColumnType("character varying(5)");
+
+                    b.Property<int?>("StartDay")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Streak")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("TotalMatches")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("TotalQuestions")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("InviteToken")
+                        .IsUnique();
+
+                    b.HasIndex("InviterId");
+
+                    b.HasIndex("PartnerId");
+
+                    b.ToTable("couples", (string)null);
+                });
+
+            modelBuilder.Entity("Nightfall.Infrastructure.Hub.PlayerStatsRecord", b =>
+                {
+                    b.Property<long>("TelegramUserId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("TelegramUserId"));
+
+                    b.Property<int>("BestPuzzleStreak")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("Haptics")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("HighContrast")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Language")
+                        .IsRequired()
+                        .HasMaxLength(8)
+                        .HasColumnType("character varying(8)");
+
+                    b.Property<int?>("LastPuzzleDay")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("LastReminderDay")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("PuzzleStreak")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Rating")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("ReminderEnabled")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("ReminderTime")
+                        .IsRequired()
+                        .HasMaxLength(5)
+                        .HasColumnType("character varying(5)");
+
+                    b.Property<int>("StreakFreezes")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Username")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<int>("Xp")
+                        .HasColumnType("integer");
+
+                    b.HasKey("TelegramUserId");
+
+                    b.HasIndex("Rating");
+
+                    b.ToTable("player_stats", (string)null);
+                });
+
+            modelBuilder.Entity("Nightfall.Infrastructure.Hub.PuzzleResultRecord", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Day")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("Detail")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Game")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<int>("Hints")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Mode")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<int?>("Moves")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Points")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("PuzzleNumber")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("Score")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("Solved")
+                        .HasColumnType("boolean");
+
+                    b.Property<long>("TelegramUserId")
+                        .HasColumnType("bigint");
+
+                    b.Property<int?>("TimeMs")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("XpGained")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Day");
+
+                    b.HasIndex("Game", "PuzzleNumber");
+
+                    b.HasIndex("TelegramUserId", "Game", "Day");
+
+                    b.ToTable("puzzle_results", (string)null);
                 });
 
             modelBuilder.Entity("Nightfall.Infrastructure.History.GamePlayerRecord", b =>
