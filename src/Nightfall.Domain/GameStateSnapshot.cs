@@ -23,6 +23,14 @@ public sealed record GameStateSnapshot(
     VotingResult? LastVotingResult,
     DiscussionStateSnapshot? Discussion = null);
 
-public sealed record PlayerSnapshot(Guid Id, string TelegramUsername, Role? Role, bool IsAlive, int? GodfatherRank);
+public sealed record PlayerSnapshot(
+    Guid Id,
+    string TelegramUsername,
+    Role? Role,
+    bool IsAlive,
+    int? GodfatherRank,
+    EliminationCause? EliminatedBy = null,
+    int? EliminatedRound = null,
+    bool WasPromoted = false);
 
 public sealed record NightActionSnapshot(Guid ActorId, Guid TargetId, NightActionType ActionType);

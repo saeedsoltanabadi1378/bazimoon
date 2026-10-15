@@ -49,7 +49,7 @@ public sealed class GameState
         CurrentPhase,
         NightNumber,
         Config,
-        _players.Select(p => new PlayerSnapshot(p.Id, p.TelegramUsername, p.Role, p.IsAlive, p.GodfatherRank)).ToList(),
+        _players.Select(p => new PlayerSnapshot(p.Id, p.TelegramUsername, p.Role, p.IsAlive, p.GodfatherRank, p.EliminatedBy, p.EliminatedRound, p.WasPromoted)).ToList(),
         _nightActions.Values.Select(a => new NightActionSnapshot(a.ActorId, a.TargetId, a.ActionType)).ToList(),
         new Dictionary<Guid, Guid?>(_votes),
         _investigatedTargets.ToList(),
@@ -79,6 +79,8 @@ public sealed class GameState
                 player.SetGodfatherRank(ps.GodfatherRank);
             if (!ps.IsAlive)
                 player.Eliminate();
+            player.RestoreElimination(ps.EliminatedBy, ps.EliminatedRound);
+            player.RestorePromotion(ps.WasPromoted);
             game._players.Add(player);
         }
 
@@ -122,6 +124,34 @@ public sealed class GameState
 
         _players.Add(player);
     }
+
+    /// <summary>Removes a player who changed their mind while the lobby is still open.</summary>
+    public void RemovePlayer(Guid playerId)
+    {
+        if (CurrentPhase != GamePhase.Lobby)
+            throw new GameException("Players can only leave during the Lobby phase.");
+        var player = GetPlayer(playerId) ?? throw new GameException("You are not in this lobby.");
+        _players.Remove(player);
+    }
+
+    /// <summary>Players the Detective has already investigated (each can be checked only once).</summary>
+    public IReadOnlyCollection<Guid> InvestigatedTargets => _investigatedTargets;
+
+    /// <summary>True when the Doctor healed themselves last night and so cannot do so tonight.</summary>
+    public bool DoctorSelfHealBlocked => _lastDoctorSelfHealNight.HasValue && _lastDoctorSelfHealNight == NightNumber;
+
+    /// <summary>Night actions submitted so far this night.</summary>
+    public IReadOnlyCollection<NightAction> PendingNightActions => _nightActions.Values;
+
+    /// <summary>Living night roles whose action is required before the night can end (Godfather, Detective, Doctor).</summary>
+    public int RequiredNightActionCount => CurrentPhase == GamePhase.Night
+        ? _players.Count(p => p.IsAlive && p.Role is Role.Godfather or Role.Detective or Role.Doctor)
+        : 0;
+
+    /// <summary>How many of the required night actions are already in.</summary>
+    public int SubmittedRequiredNightActionCount => CurrentPhase == GamePhase.Night
+        ? _players.Count(p => p.IsAlive && p.Role is Role.Godfather or Role.Detective or Role.Doctor && _nightActions.ContainsKey(p.Id))
+        : 0;
 
     /// <summary>Randomly assigns roles to all lobby players.</summary>
     public void AssignRoles(Random? random = null)
@@ -220,6 +250,8 @@ public sealed class GameState
             case NightActionType.Kill:
                 if (!actor.IsMafiaAligned)
                     throw new GameException("Only Mafia-aligned players can submit a kill.");
+                if (GetPlayer(targetId)!.IsMafiaAligned)
+                    throw new GameException("The Mafia cannot target its own team.");
                 break;
 
             default:
@@ -245,7 +277,7 @@ public sealed class GameState
         if (killTarget.HasValue && !wasSaved)
         {
             var victim = GetPlayer(killTarget.Value)!;
-            victim.Eliminate();
+            victim.Eliminate(EliminationCause.Night, NightNumber);
             eliminated = victim.Id;
         }
 
@@ -328,6 +360,7 @@ public sealed class GameState
         if (CurrentPhase != GamePhase.Voting)
             throw new GameException("ResolveVoting can only be called during Voting.");
 
+        var ballots = new Dictionary<Guid, Guid?>(_votes);
         var tally = _votes.Values
             .Where(v => v.HasValue)
             .GroupBy(v => v!.Value)
@@ -339,7 +372,7 @@ public sealed class GameState
         if (tally.Count == 0)
         {
             AdvancePhaseAfterResolution(GamePhase.Results);
-            var noVotesResult = new VotingResult(null, false, Array.Empty<Guid>(), null);
+            var noVotesResult = new VotingResult(null, false, Array.Empty<Guid>(), null, ballots);
             LastVotingResult = noVotesResult;
             return noVotesResult;
         }
@@ -353,14 +386,14 @@ public sealed class GameState
         if (!isTie)
         {
             var victim = GetPlayer(topVoted[0])!;
-            victim.Eliminate();
+            victim.Eliminate(EliminationCause.Vote, NightNumber);
             eliminated = victim.Id;
             promotedId = HandlePotentialGodfatherDeath(victim.Id);
         }
 
         AdvancePhaseAfterResolution(GamePhase.Results);
 
-        var result = new VotingResult(eliminated, isTie, topVoted, promotedId);
+        var result = new VotingResult(eliminated, isTie, topVoted, promotedId, ballots);
         LastVotingResult = result;
         return result;
     }
@@ -503,7 +536,7 @@ public sealed class GameState
             .OrderBy(p => p.GodfatherRank)
             .FirstOrDefault();
 
-        successor?.AssignRole(Role.Godfather);
+        successor?.Promote();
         return successor;
     }
 

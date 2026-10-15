@@ -72,6 +72,14 @@ public sealed class GameService
         }
     }
 
+    public async Task LeaveGameAsync(Guid gameId, long telegramUserId)
+    {
+        using var held = await _mutationLock.EnterAsync(gameId);
+        var game = await LoadOrThrowAsync(gameId);
+        game.RemovePlayer(PlayerIdentity.DeriveId(gameId, telegramUserId));
+        await SaveAndNotifyAsync(game);
+    }
+
     public async Task StartGameAsync(Guid gameId, long telegramUserId)
     {
         var game = await LoadOrThrowAsync(gameId);
