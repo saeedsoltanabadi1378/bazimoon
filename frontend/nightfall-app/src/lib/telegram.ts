@@ -100,7 +100,21 @@ function supports(version: string) {
 }
 
 /** One-time setup: tell Telegram we're ready, go full height, and stop swipe-to-close stealing drags. */
+/** The Mini App never zooms: no pinch, no double-tap and no ctrl+wheel (Telegram Desktop). */
+function preventZoom() {
+  const stop = (e: Event) => e.preventDefault();
+  // iOS ignores user-scalable=no, so cancel its gesture events too.
+  document.addEventListener("gesturestart", stop, { passive: false });
+  document.addEventListener("gesturechange", stop, { passive: false });
+  document.addEventListener("touchmove", (e) => { if (e.touches.length > 1) e.preventDefault(); }, { passive: false });
+  window.addEventListener("wheel", (e) => { if (e.ctrlKey) e.preventDefault(); }, { passive: false });
+  window.addEventListener("keydown", (e) => {
+    if ((e.ctrlKey || e.metaKey) && ["+", "-", "=", "0"].includes(e.key)) e.preventDefault();
+  });
+}
+
 export function initTelegramShell() {
+  preventZoom();
   try {
     telegram.ready();
     telegram.expand();

@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
-import { adminApi, ALL_COMMANDS, type BotSettings } from "../adminApi";
+import { adminApi, ALL_COMMANDS, ALL_GAMES, type BotSettings } from "../adminApi";
 import { useAdminI18n } from "../i18n";
-import { Header, PageState, Svg, ICONS, useAdminData } from "../ui";
+import { Header, PageState, Svg, ICONS, gameName, useAdminData } from "../ui";
+import { GAME_STYLE } from "../gameStyle";
 
 type MessageKey = "welcomeMessage" | "helpMessage" | "reminderMessage";
 
 export function SettingsPage() {
-  const { t, date } = useAdminI18n();
+  const { t, n, date, lang } = useAdminI18n();
   const { data, error, reload, setData } = useAdminData<BotSettings>("/settings");
   const [draft, setDraft] = useState<BotSettings | null>(null);
   const [busy, setBusy] = useState(false);
@@ -36,6 +37,8 @@ export function SettingsPage() {
     setMessage(null);
     setDraft({ ...draft, [key]: value });
   };
+  const disabled = draft.disabledGames ?? [];
+  const toggleGame = (game: string) => set("disabledGames", disabled.includes(game) ? disabled.filter((g) => g !== game) : [...disabled, game]);
   const toggleCommand = (cmd: string) => set("enabledCommands", draft.enabledCommands.includes(cmd) ? draft.enabledCommands.filter((c) => c !== cmd) : [...draft.enabledCommands, cmd]);
 
   async function save() {
@@ -118,6 +121,33 @@ export function SettingsPage() {
         </section>
       </div>
 
+      <section className="adm-panel" aria-labelledby="games-title" style={{ gap: 12 }}>
+        <div className="adm-panel-head">
+          <h2 id="games-title">{t("switchesTitle")}</h2>
+          <span className="tiny muted">{t("gamesOn", { on: n(ALL_GAMES.length - ALL_GAMES.filter((g) => disabled.includes(g)).length), total: n(ALL_GAMES.length) })}</span>
+        </div>
+        <p className="small text-2" style={{ lineHeight: 1.45 }}>{t("gamesHint")}</p>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(250px, 100%), 1fr))", gap: 8 }}>
+          {ALL_GAMES.map((game) => {
+            const on = !disabled.includes(game);
+            const [bg, fg, icon] = GAME_STYLE[game];
+            const name = gameName(game, lang);
+            return (
+              <div key={game} style={{ display: "flex", alignItems: "center", gap: 10, minHeight: 60, padding: "0 12px", borderRadius: 12, background: "#0B0D1A", opacity: on ? 1 : 0.7 }}>
+                <span style={{ width: 36, height: 36, flex: "none", borderRadius: 10, background: bg, color: fg, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <Svg d={icon} />
+                </span>
+                <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
+                  <span style={{ fontWeight: 600 }}>{name}</span>
+                  <span className="tiny" style={{ color: on ? "#9A9CB8" : "#F0A83A" }}>{on ? t(`gsub_${game}`) : t("gameOff")}</span>
+                </div>
+                <button type="button" role="switch" className="adm-switch sm" aria-checked={on} aria-label={t("gameEnabled", { name })} onClick={() => toggleGame(game)} />
+              </div>
+            );
+          })}
+        </div>
+      </section>
+
       <section className="adm-panel" aria-labelledby="cmd-title" style={{ gap: 12 }}>
         <div className="adm-panel-head">
           <h2 id="cmd-title">{t("commandsTitle")}</h2>
@@ -179,5 +209,6 @@ function countChanges(a: BotSettings, b: BotSettings) {
     "welcomeMessage", "welcomeMessageFa", "helpMessage", "helpMessageFa", "reminderMessage", "reminderMessageFa"];
   let n = keys.filter((k) => a[k] !== b[k]).length;
   for (const cmd of ALL_COMMANDS) if (a.enabledCommands.includes(cmd) !== b.enabledCommands.includes(cmd)) n++;
+  for (const game of ALL_GAMES) if ((a.disabledGames ?? []).includes(game) !== (b.disabledGames ?? []).includes(game)) n++;
   return n;
 }

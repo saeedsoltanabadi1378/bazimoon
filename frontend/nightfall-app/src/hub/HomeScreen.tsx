@@ -19,7 +19,7 @@ export function HomeScreen() {
   const { t, language, n } = useLanguage();
   const { push } = useNavigation();
   const session = useSession();
-  const { api, profile } = useHub();
+  const { api, profile, isGameOn } = useHub();
   const home = useLoad(() => api.home(), [api]);
   const data = home.data;
 
@@ -62,35 +62,43 @@ export function HomeScreen() {
             {data && <span className="small muted">{formatShortDate(data.date, language)}</span>}
           </div>
 
-          <DailyRow
-            icon={<Icon name="zipFull" size={24} />} iconBg="#173A36" iconFg="#5FD0BE"
-            title={t("puzzleNumbered", { name: t("gameZip"), number: daily("zip")?.number ?? "" })}
-            sub={t("zipTagline")}
-            status={daily("zip")}
-            primary
-            onPlay={() => open("zip", "play", { mode: "daily" })}
-          />
-          <DailyRow
-            icon={<Icon name="crown" size={24} />} iconBg="#2E2340" iconFg="#B79CF2"
-            title={t("puzzleNumbered", { name: t("gameQueens"), number: daily("queens")?.number ?? "" })}
-            sub={t("queensTagline")}
-            status={daily("queens")}
-            onPlay={() => open("queens", "play", { mode: "daily" })}
-          />
-          <DailyRow
-            icon={<span className="display" style={{ fontSize: 18 }}>Aa</span>} iconBg="#3A2A16" iconFg="#F0A83A"
-            title={t("gameLadder")}
-            sub={ladderPuzzle ? t("ladderToday", { from: ladderPuzzle.start, to: ladderPuzzle.end, steps: ladderPuzzle.par }) : t("subLadder")}
-            status={ladder}
-            showMoves
-            onPlay={() => open("ladder", "intro")}
-          />
-          <DailyRow
-            icon={<MergeGlyph />} iconBg="#2A2650" iconFg="#9C8CFF"
-            title={t("gameMerge")}
-            sub={data?.mergeBest ? t("mergeEndlessBest", { best: n(data.mergeBest) }) : t("mergeEndless")}
-            onPlay={() => open("merge", "intro")}
-          />
+          {isGameOn("zip") && (
+            <DailyRow
+              icon={<Icon name="zipFull" size={24} />} iconBg="#173A36" iconFg="#5FD0BE"
+              title={t("puzzleNumbered", { name: t("gameZip"), number: daily("zip")?.number ?? "" })}
+              sub={t("zipTagline")}
+              status={daily("zip")}
+              primary
+              onPlay={() => open("zip", "play", { mode: "daily" })}
+            />
+          )}
+          {isGameOn("queens") && (
+            <DailyRow
+              icon={<Icon name="crown" size={24} />} iconBg="#2E2340" iconFg="#B79CF2"
+              title={t("puzzleNumbered", { name: t("gameQueens"), number: daily("queens")?.number ?? "" })}
+              sub={t("queensTagline")}
+              status={daily("queens")}
+              onPlay={() => open("queens", "play", { mode: "daily" })}
+            />
+          )}
+          {isGameOn("ladder") && (
+            <DailyRow
+              icon={<span className="display" style={{ fontSize: 18 }}>Aa</span>} iconBg="#3A2A16" iconFg="#F0A83A"
+              title={t("gameLadder")}
+              sub={ladderPuzzle ? t("ladderToday", { from: ladderPuzzle.start, to: ladderPuzzle.end, steps: ladderPuzzle.par }) : t("subLadder")}
+              status={ladder}
+              showMoves
+              onPlay={() => open("ladder", "intro")}
+            />
+          )}
+          {isGameOn("merge") && (
+            <DailyRow
+              icon={<MergeGlyph />} iconBg="#2A2650" iconFg="#9C8CFF"
+              title={t("gameMerge")}
+              sub={data?.mergeBest ? t("mergeEndlessBest", { best: n(data.mergeBest) }) : t("mergeEndless")}
+              onPlay={() => open("merge", "intro")}
+            />
+          )}
           <button
             type="button"
             onClick={() => push({ name: "solo" })}
@@ -193,6 +201,9 @@ function PlayTogether({ data }: { data: Home | null }) {
   const { t } = useLanguage();
   const { push } = useNavigation();
   const couple = useCoupleSummary();
+  const { isGameOn } = useHub();
+  const mafiaOn = isGameOn("mafia");
+  const coupleOn = isGameOn("couple");
   const table = data?.table ?? null;
   const open = data?.openTables ?? 0;
   const mafiaSub = table && table.phase === "Lobby" && table.chatTitle
@@ -201,14 +212,15 @@ function PlayTogether({ data }: { data: Home | null }) {
   const tile = { display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 10, padding: 14, borderRadius: 18, background: "var(--surface)", border: 0, color: "var(--text)", textAlign: "start", font: "inherit", cursor: "pointer", minWidth: 0 } as const;
   const iconBox = (bg: string, fg: string) => ({ width: 44, height: 44, borderRadius: 14, background: bg, color: fg, display: "flex", alignItems: "center", justifyContent: "center" });
 
+  if (!mafiaOn && !coupleOn) return null;
   return (
     <section className="stack" style={{ gap: 12 }} aria-labelledby="together-title">
       <div className="row row--between row--baseline">
         <h2 id="together-title" className="display" style={{ fontSize: 20, fontWeight: 700 }}>{t("playTogether")}</h2>
         <button type="button" onClick={() => push({ name: "mafia" })} style={{ background: "none", border: 0, padding: 0, color: "#F0A83A", font: "inherit", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>{t("seeAll")}</button>
       </div>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 10 }}>
-        <button type="button" style={tile} onClick={() => push(table && table.phase === "Lobby" ? { name: "mafia", gameId: table.gameId } : { name: "mafia" })}>
+      <div style={{ display: "grid", gridTemplateColumns: `repeat(${mafiaOn && coupleOn ? 2 : 1}, minmax(0, 1fr))`, gap: 10 }}>
+        {mafiaOn && <button type="button" style={tile} onClick={() => push(table && table.phase === "Lobby" ? { name: "mafia", gameId: table.gameId } : { name: "mafia" })}>
           <span style={iconBox("#2E2340", "#B79CF2")}><Icon name="moon" size={22} /></span>
           <span>
             <span style={{ display: "block", fontWeight: 600, fontSize: 16 }}>{t("roleMafia")}</span>
@@ -223,8 +235,8 @@ function PlayTogether({ data }: { data: Home | null }) {
               ))}
             </span>
           )}
-        </button>
-        <button type="button" style={tile} onClick={() => push({ name: "couple", screen: couple.couple ? "home" : "invite" })}>
+        </button>}
+        {coupleOn && <button type="button" style={tile} onClick={() => push({ name: "couple", screen: couple.couple ? "home" : "invite" })}>
           <span style={iconBox("#24121C", "#F2A7C3")}><Icon name="heart" size={22} /></span>
           <span>
             <span style={{ display: "block", fontWeight: 600, fontSize: 16 }}>{t("coupleQuiz")}</span>
@@ -233,7 +245,7 @@ function PlayTogether({ data }: { data: Home | null }) {
           {couple.couple && couple.couple.streak > 0 && (
             <span style={{ padding: "3px 10px", borderRadius: 999, background: "#24121C", color: "#F2A7C3", fontSize: 12, fontWeight: 600 }}>{t("streakDays", { count: couple.couple.streak })}</span>
           )}
-        </button>
+        </button>}
       </div>
     </section>
   );

@@ -15,9 +15,10 @@ const faceColors = ["#F0A83A", "#5FD0BE", "#B79CF2", "#8FA8FF", "#E9D8A6", "#F08
 export function MafiaTablesScreen({ code }: { code?: string }) {
   const { t } = useLanguage();
   const { push, replace } = useNavigation();
-  const { api } = useHub();
+  const { api, isGameOn } = useHub();
+  const mafiaOn = isGameOn("mafia");
   const [tab, setTab] = useState<"open" | "groups">("open");
-  const { data, loading, error, reload } = useLoad(() => api.tables(tab), [api, tab]);
+  const { data, loading, error, reload } = useLoad(() => (mafiaOn ? api.tables(tab) : Promise.resolve([])), [api, tab, mafiaOn]);
   const [input, setInput] = useState(code ?? "");
   const [codeError, setCodeError] = useState(false);
   const [resolving, setResolving] = useState(false);
@@ -52,7 +53,9 @@ export function MafiaTablesScreen({ code }: { code?: string }) {
     <Screen theme="night">
       <TopBar title={t("playTogether")} subtitle={t("playTogetherSubtitle")} />
       <Body>
-        <CoupleHomeCard />
+        {isGameOn("couple") && <CoupleHomeCard />}
+
+        {mafiaOn && <>
 
         <div className="row" style={{ gap: 10, paddingTop: 4 }}>
           <span style={{ width: 32, height: 32, borderRadius: 10, background: "#2E2340", color: "#B79CF2", display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -113,14 +116,15 @@ export function MafiaTablesScreen({ code }: { code?: string }) {
           </div>
           {codeError && <span id="table-code-error" role="alert" className="small" style={{ color: "#F08A7A" }}>{t("codeNotFound")}</span>}
         </form>
+        </>}
       </Body>
 
-      <div style={{ padding: "12px 16px 10px", background: "#10122A", borderTop: "1px solid #1E2138" }}>
+      {mafiaOn && <div style={{ padding: "12px 16px 10px", background: "#10122A", borderTop: "1px solid #1E2138" }}>
         <button type="button" className="btn" onClick={() => push({ name: "createTable" })} style={{ gap: 8, background: "#E5604D", color: "#1C0905" }}>
           <Icon name="plus" size={18} />
           {t("createTable")}
         </button>
-      </div>
+      </div>}
       <TabBar />
     </Screen>
   );

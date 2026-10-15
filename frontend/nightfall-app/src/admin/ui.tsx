@@ -153,6 +153,9 @@ export function roleName(role: string | null, lang: AdminLang) {
 }
 
 const GAMES: Record<string, [string, string]> = {
+  mafia: ["Mafia", "مافیا"],
+  couple: ["Couple Quiz", "کوییز زوج‌ها"],
+  sudoku: ["Sudoku", "سودوکو"],
   zip: ["Zip", "زیپ"],
   queens: ["Queens", "ملکه‌ها"],
   merge: ["Merge 2048", "۲۰۴۸"],

@@ -8,6 +8,7 @@ import { useLanguage } from "../i18n/LanguageContext";
 
 const QUEUE_KEY = "nightfall-pending-results";
 const CONTRAST_KEY = "nightfall-high-contrast";
+const DISABLED_KEY = "nightfall-disabled-games";
 
 interface HubData {
   api: ReturnType<typeof hubApi>;
@@ -17,6 +18,8 @@ interface HubData {
   saveSettings(patch: Partial<Settings>): Promise<void>;
   /** Records a finished game. Offline results are kept on the device and sent later. */
   submitResult(result: PuzzleSubmit): Promise<PuzzleResult | null>;
+  /** False for a game an admin switched off: it is hidden from Home, Games and Together. */
+  isGameOn(game: string): boolean;
 }
 
 const HubDataContext = createContext<HubData | null>(null);
@@ -27,6 +30,20 @@ export function HubDataProvider({ children }: { children: ReactNode }) {
   const api = useMemo(() => hubApi(session.api), [session.api]);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [highContrast, setHighContrast] = useState(() => readLocal<boolean>(CONTRAST_KEY, false));
+  const [disabledGames, setDisabledGames] = useState<string[]>(() => readLocal<string[]>(DISABLED_KEY, []));
+
+  // Switched-off games: read at start and whenever the app comes back to the foreground.
+  useEffect(() => {
+    const load = () => api.config().then((c) => {
+      setDisabledGames(c.disabledGames);
+      writeLocal(DISABLED_KEY, c.disabledGames);
+    }).catch(() => undefined);
+    void load();
+    const onVisible = () => { if (document.visibilityState === "visible") void load(); };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, [api]);
+  const isGameOn = useCallback((game: string) => !disabledGames.includes(game), [disabledGames]);
 
   const refreshProfile = useCallback(async () => {
     try {
@@ -104,7 +121,7 @@ export function HubDataProvider({ children }: { children: ReactNode }) {
     }
   }, [api, profile, language]);
 
-  const value = useMemo(() => ({ api, profile, refreshProfile, highContrast, saveSettings, submitResult }), [api, profile, refreshProfile, highContrast, saveSettings, submitResult]);
+  const value = useMemo(() => ({ api, profile, refreshProfile, highContrast, saveSettings, submitResult, isGameOn }), [api, profile, refreshProfile, highContrast, saveSettings, submitResult, isGameOn]);
   return <HubDataContext.Provider value={value}>{children}</HubDataContext.Provider>;
 }
 

@@ -40,6 +40,11 @@ function AdminRoot() {
   }, []);
   useEffect(check, [check]);
 
+  // The Mini App turns zoom off in index.html; the admin console is a normal web page, so it keeps it.
+  useEffect(() => {
+    document.querySelector('meta[name="viewport"]')?.setAttribute("content", "width=device-width, initial-scale=1.0");
+  }, []);
+
   useEffect(() => {
     document.documentElement.lang = lang;
     document.title = `Nightfall · ${t("console")}`;

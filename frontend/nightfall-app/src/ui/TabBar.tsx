@@ -2,6 +2,7 @@ import { Icon, type IconName } from "./Icon";
 import { useNavigation, tabFor, type Route, type TabKey } from "../app/router";
 import { useLanguage } from "../i18n/LanguageContext";
 import { haptic } from "../lib/haptics";
+import { useHub } from "../hub/HubData";
 
 const tabs: { key: TabKey; icon: IconName; route: Route }[] = [
   { key: "home", icon: "home", route: { name: "home" } },
@@ -14,11 +15,14 @@ const tabs: { key: TabKey; icon: IconName; route: Route }[] = [
 export function TabBar() {
   const { route, reset } = useNavigation();
   const { t } = useLanguage();
+  const { isGameOn } = useHub();
   const active = tabFor(route);
+  // Together goes away only when both of its games are switched off.
+  const shown = tabs.filter((tab) => tab.key !== "mafia" || isGameOn("mafia") || isGameOn("couple"));
   const labels: Record<TabKey, string> = { home: t("tabHome"), solo: t("tabPuzzles"), mafia: t("tabMafia"), league: t("tabLeague"), profile: t("tabProfile") };
   return (
     <nav className="tabbar" aria-label={t("mainNav")}>
-      {tabs.map((tab) => (
+      {shown.map((tab) => (
         <button
           key={tab.key}
           type="button"

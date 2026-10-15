@@ -4,6 +4,7 @@ import { useNavigation, type GameKey } from "../app/router";
 import { Body, IconButton, Screen } from "../ui/components";
 import { Icon } from "../ui/Icon";
 import { TabBar } from "../ui/TabBar";
+import { useHub } from "./HubData";
 import { catalog, tagColors, type GameCategory } from "../games/catalog";
 import { readLocal } from "../lib/storage";
 import { haptic } from "../lib/haptics";
@@ -21,7 +22,8 @@ export function SoloScreen() {
   const { push, back, depth } = useNavigation();
   const [filter, setFilter] = useState<(typeof filters)[number]>("All");
   const mergeScore = savedMerge();
-  const games = catalog.filter((g) => filter === "All" || g.category === filter);
+  const { isGameOn } = useHub();
+  const games = catalog.filter((g) => isGameOn(g.key) && (filter === "All" || g.category === filter));
 
   function open(key: string) {
     haptic.tap();
@@ -40,7 +42,7 @@ export function SoloScreen() {
       </header>
 
       <Body style={{ paddingBottom: 20 }}>
-        {mergeScore !== null && (
+        {mergeScore !== null && isGameOn("merge") && (
           <button
             type="button"
             onClick={() => push({ name: "game", game: "merge", screen: "play", params: { mode: "classic" } })}

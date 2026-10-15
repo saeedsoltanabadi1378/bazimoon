@@ -207,6 +207,8 @@ export interface Archive {
 export const hubApi = (api: NightfallApiClient) => ({
   profile: () => api.request<Profile>("GET", "/api/me/profile"),
   saveSettings: (settings: Settings) => api.request<Settings>("PUT", "/api/me/settings", settings),
+  /** Games an admin switched off; the app hides them. */
+  config: () => api.request<{ disabledGames: string[] }>("GET", "/api/hub/config"),
   home: () => api.request<Home>("GET", "/api/hub/home"),
   tables: (scope: "open" | "groups") => api.request<Table[]>("GET", `/api/tables?scope=${scope}`),
   tableGroups: () => api.request<TableGroup[]>("GET", "/api/tables/groups"),
