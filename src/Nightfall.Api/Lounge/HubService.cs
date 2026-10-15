@@ -38,7 +38,7 @@ public sealed class HubService
         var (division, tier) = Progression.Division(stats.Rating);
 
         var mafiaGames = await RatedGamesAsync(userId).ToListAsync();
-        var seasonStart = Progression.DateOfDay(Progression.SeasonStartDay(Progression.Season(today))).ToDateTime(TimeOnly.MinValue);
+        var seasonStart = Progression.DateOfDay(Progression.SeasonStartDay(Progression.Season(today))).ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
         var townGames = mafiaGames.Where(g => g.Role is not (Role.Mafia or Role.Godfather)).ToList();
         var mafiaSideGames = mafiaGames.Where(g => g.Role is Role.Mafia or Role.Godfather).ToList();
         var bestRole = mafiaGames.Where(g => g.Won == true && g.Role.HasValue)
@@ -150,7 +150,7 @@ public sealed class HubService
         var today = Today;
         int season = Progression.Season(today);
         var seasonStartDay = Progression.SeasonStartDay(season);
-        var seasonStart = Progression.DateOfDay(seasonStartDay).ToDateTime(TimeOnly.MinValue);
+        var seasonStart = Progression.DateOfDay(seasonStartDay).ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
         var (division, tier) = Progression.Division(me.Rating);
         var everyone = await _db.PlayerStats.AsNoTracking().ToListAsync();
         var sameDivision = everyone.Where(s => Progression.Division(s.Rating).Division == division).ToDictionary(s => s.TelegramUserId);

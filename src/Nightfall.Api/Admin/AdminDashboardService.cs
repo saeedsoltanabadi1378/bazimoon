@@ -105,7 +105,7 @@ public sealed class AdminDashboardService
         int range = rangeDays is 7 or 30 ? rangeDays : 1;
         int chartDays = range == 1 ? 14 : range;
         int from = today - Math.Max(chartDays, range * 2) + 1;
-        var fromDate = Progression.DateOfDay(from).ToDateTime(TimeOnly.MinValue).AddDays(-1);
+        var fromDate = Progression.DateOfDay(from).ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc).AddDays(-1);
 
         var puzzleRows = await _db.PuzzleResults.AsNoTracking().Where(r => r.Day >= from).Select(r => new { r.TelegramUserId, r.Day, r.Game, r.Mode, r.Solved }).ToListAsync();
         var mafiaRows = (await _db.GamePlayers.AsNoTracking().Where(p => p.TelegramUserId != null && p.GameRecord.EndedAt >= fromDate)
