@@ -604,7 +604,7 @@ export const games: Record<keyof typeof en, string> = {
   blocksOverSummary: "{score} امتیاز · {lines} خط",
   blocksNextLevel: "مرحله بعد",
   blocksRetryLevel: "دوباره امتحان کنید",
-  blocksHint: "یک قطعه انتخاب کنید و جای خانه بالا-چپ آن را بزنید",
+  blocksHint: "قطعه را روی صفحه بکش. بیرون از صفحه رها کنی، برمی‌گردد سر جایش.",
   blocksAdventureNext: "مرحله {level} باز شد",
   blocksAdventureRetry: "همان صفحه، همان قطعه‌ها · دوباره امتحان کنید",
   blocksBeatBy: "{by} امتیاز بیشتر از رکورد {best}",
@@ -720,4 +720,8 @@ export const games: Record<keyof typeof en, string> = {
   coupleCardNew: "سؤال‌های تازه آماده است",
   coupleCardPending: "دعوت فرستاده شد · منتظر همراهتان",
   coupleCardInvite: "هر روز با هم بازی کنید · همراهتان را دعوت کنید",
+
+  blocksDropClear: "رها کن تا یک ردیف پاک شود",
+  blocksDropPlace: "رها کن تا قرار بگیرد",
+  blocksNoFitHere: "اینجا جا نمی‌شود",
 };

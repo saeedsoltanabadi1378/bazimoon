@@ -603,7 +603,7 @@ export const games = {
   blocksOverSummary: "{score} points · {lines} lines",
   blocksNextLevel: "Next level",
   blocksRetryLevel: "Try again",
-  blocksHint: "Select a piece, then tap where its top-left block goes",
+  blocksHint: "Drag a piece onto the board. Let go off the board to put it back.",
   blocksAdventureNext: "Level {level} is open",
   blocksAdventureRetry: "Same board, same pieces · give it another go",
   blocksBeatBy: "Beat {best} by {by} points",
@@ -719,4 +719,8 @@ export const games = {
   coupleCardNew: "New questions are ready",
   coupleCardPending: "Invite sent · waiting for your partner",
   coupleCardInvite: "Play together every day · invite your partner",
+
+  blocksDropClear: "Drop to clear a line",
+  blocksDropPlace: "Drop to place",
+  blocksNoFitHere: "Does not fit here",
 };

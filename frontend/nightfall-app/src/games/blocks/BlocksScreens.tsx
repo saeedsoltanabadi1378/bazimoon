@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { useLanguage } from "../../i18n/LanguageContext";
 import { useNavigation } from "../../app/router";
 import { useHub, useLoad } from "../../hub/HubData";
@@ -191,8 +191,13 @@ export function BlocksPlay({ mode, level = 1 }: { mode: BlocksMode; level?: numb
   }, [best, adventure, level, mode, number, submitResult]);
 
   function tap(i: number) {
+    placeAt(s.sel, i);
+  }
+
+  /** Places the tray piece in `slot` with its top-left block on cell `i`. */
+  function placeAt(slot: number, i: number) {
     if (s.over) return;
-    const piece = s.tray[s.sel];
+    const piece = s.tray[slot];
     if (!piece) {
       haptic.warn();
       setMsg({ text: t("blocksPickFirst"), err: true });
@@ -208,7 +213,7 @@ export function BlocksPlay({ mode, level = 1 }: { mode: BlocksMode; level?: numb
     const result = place(s.grid, piece, row, col, s.combo);
     const lines = result.rows + result.cols;
     let tray = [...s.tray];
-    tray[s.sel] = null;
+    tray[slot] = null;
     let trayIndex = s.trayIndex;
     if (!tray.some(Boolean)) {
       trayIndex++;
@@ -248,6 +253,88 @@ export function BlocksPlay({ mode, level = 1 }: { mode: BlocksMode; level?: numb
       finish(next, g?.done ?? false);
     }
   }
+
+  // ------------------------------------------------------------------ drag and drop
+  // Drag a piece from the tray; it floats above the finger so the board stays visible, and lands
+  // where its top-left block is nearest.
+  const boardRef = useRef<HTMLDivElement>(null);
+  const [drag, setDrag] = useState<{ slot: number; x: number; y: number; moved: boolean } | null>(null);
+  const dragPiece = drag ? s.tray[drag.slot] : null;
+
+  function metrics() {
+    const el = boardRef.current;
+    if (!el) return null;
+    const rect = el.getBoundingClientRect();
+    const pitch = (rect.width + BOARD_GAP) / SIZE;
+    return { rect, pitch, cell: pitch - BOARD_GAP };
+  }
+
+  /** Where the dragged piece would land: its top-left cell, or null when it is off the board. */
+  function landing(d: { slot: number; x: number; y: number }) {
+    const piece = s.tray[d.slot];
+    const m = metrics();
+    if (!piece || !m) return null;
+    const { w, h } = shapeSize(piece.shape);
+    // Snap the floating piece's top-left corner to the nearest cell.
+    const left = d.x - (w * m.pitch - BOARD_GAP) / 2;
+    const top = d.y - lift(h, m.pitch) - (h * m.pitch - BOARD_GAP);
+    const col = Math.round((left - m.rect.left) / m.pitch);
+    const row = Math.round((top - m.rect.top) / m.pitch);
+    // Off the board once less than half the piece would be over it.
+    if (row + h / 2 < 0 || row + h / 2 > SIZE || col + w / 2 < 0 || col + w / 2 > SIZE) return null;
+    return { row, col };
+  }
+
+  const land = drag?.moved ? landing(drag) : null;
+  const preview = (() => {
+    if (!dragPiece || !land) return null;
+    const ok = fits(s.grid, dragPiece.shape, land.row, land.col);
+    const cells = SHAPES[dragPiece.shape]
+      .map(([r, c]) => [land.row + r, land.col + c])
+      .filter(([r, c]) => r >= 0 && r < SIZE && c >= 0 && c < SIZE)
+      .map(([r, c]) => r * SIZE + c);
+    const clearing = ok ? place(s.grid, dragPiece, land.row, land.col, s.combo).cleared : [];
+    return { ok, cells: new Set(cells), clearing: new Set(clearing), color: dragPiece.color };
+  })();
+
+  useEffect(() => {
+    if (!drag) return;
+    const move = (e: PointerEvent) => {
+      setDrag((d) => (d ? { ...d, x: e.clientX, y: e.clientY, moved: d.moved || Math.hypot(e.clientX - d.x, e.clientY - d.y) > 6 } : d));
+    };
+    // The effect re-subscribes every render, so `drag` here is the latest one.
+    const up = () => {
+      const d = drag;
+      setDrag(null);
+      if (!d.moved) return;
+      const at = landing(d);
+      if (at && fits(s.grid, s.tray[d.slot]!.shape, at.row, at.col)) placeAt(d.slot, at.row * SIZE + at.col);
+      else if (at) {
+        haptic.warn();
+        setMsg({ text: t("blocksNoFit"), err: true });
+      }
+    };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+    window.addEventListener("pointercancel", up);
+    return () => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+      window.removeEventListener("pointercancel", up);
+    };
+  });
+
+  function grab(slot: number, e: ReactPointerEvent) {
+    if (s.over || !s.tray[slot]) return;
+    haptic.select();
+    setMsg(null);
+    setS({ ...s, sel: slot });
+    setDrag({ slot, x: e.clientX, y: e.clientY, moved: false });
+  }
+
+  const dragHint = drag?.moved && dragPiece
+    ? preview ? (preview.ok ? (preview.clearing.size ? t("blocksDropClear") : t("blocksDropPlace")) : t("blocksNoFitHere")) : null
+    : null;
 
   // Keyboard: 1–3 pick a piece.
   useEffect(() => {
@@ -294,20 +381,32 @@ export function BlocksPlay({ mode, level = 1 }: { mode: BlocksMode; level?: numb
       )}
 
       <div role="status" style={{ minHeight: 28, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 16px" }}>
-        {msg && <span style={{ fontSize: 13, fontWeight: 600, color: msg.err ? "#F08A7A" : "#F0A83A" }}>{msg.text}</span>}
+        {dragHint ? (
+          <span style={{ fontSize: 13, fontWeight: 600, color: preview?.ok ? "#F0A83A" : "#F08A7A" }}>{dragHint}</span>
+        ) : msg && <span style={{ fontSize: 13, fontWeight: 600, color: msg.err ? "#F08A7A" : "#F0A83A" }}>{msg.text}</span>}
       </div>
 
       <div style={{ position: "relative", alignSelf: "center", padding: 6, borderRadius: 16, background: "var(--surface)" }} dir="ltr">
-        <div role="grid" aria-label={t("blocksBoard")} style={{ display: "grid", gridTemplateColumns: `repeat(${SIZE}, minmax(0, 1fr))`, gap: 2, width: boardWidth }}>
-          {s.grid.map((v, i) => (
-            <button
-              key={i}
-              type="button"
-              onClick={() => tap(i)}
-              aria-label={t("blocksCell", { row: Math.floor(i / SIZE) + 1, col: (i % SIZE) + 1 }) + (v ? `, ${t("blocksFilled")}` : "")}
-              style={{ aspectRatio: "1", padding: 0, borderRadius: 7, border: 0, background: flashCells.includes(i) ? "#EDEBF5" : v ?? EMPTY, boxShadow: v ? "inset 0 -4px 0 rgba(0,0,0,0.18)" : "none", cursor: "pointer", transition: "background 200ms" }}
-            />
-          ))}
+        <div ref={boardRef} role="grid" aria-label={t("blocksBoard")} style={{ display: "grid", gridTemplateColumns: `repeat(${SIZE}, minmax(0, 1fr))`, gap: BOARD_GAP, width: boardWidth }}>
+          {s.grid.map((v, i) => {
+            const ghost = preview?.cells.has(i);
+            const clearing = preview?.clearing.has(i) && !ghost;
+            let bg = flashCells.includes(i) ? "#EDEBF5" : v ?? EMPTY;
+            let border = "0";
+            let shade = v ? "inset 0 -4px 0 rgba(0,0,0,0.18)" : "none";
+            if (ghost && preview!.ok) { bg = `${preview!.color}99`; border = `2px solid ${preview!.color}`; shade = "none"; }
+            else if (ghost) { bg = v ?? "#3A1C22"; border = "2px solid #F08A7A"; shade = "none"; }
+            if (clearing) { bg = v ? preview!.color : EMPTY; border = `2px solid ${preview!.color}`; }
+            return (
+              <button
+                key={i}
+                type="button"
+                onClick={() => tap(i)}
+                aria-label={t("blocksCell", { row: Math.floor(i / SIZE) + 1, col: (i % SIZE) + 1 }) + (v ? `, ${t("blocksFilled")}` : "")}
+                style={{ aspectRatio: "1", padding: 0, boxSizing: "border-box", borderRadius: 7, border, background: bg, boxShadow: shade, cursor: "pointer", transition: drag ? "none" : "background 200ms" }}
+              />
+            );
+          })}
         </div>
         {s.over && (
           <div className="stack center" style={{ position: "absolute", inset: 0, borderRadius: 16, background: "rgba(11,13,26,0.86)", justifyContent: "center", gap: 12, textAlign: "center" }}>
@@ -337,17 +436,19 @@ export function BlocksPlay({ mode, level = 1 }: { mode: BlocksMode; level?: numb
             if (!p) return <div key={i} aria-hidden="true" style={{ height: 112, borderRadius: 18, background: "#10122A", opacity: 0.4 }} />;
             const { w, h } = shapeSize(p.shape);
             const on = i === s.sel;
+            const lifted = drag?.slot === i && drag.moved;
             const cell = w >= 4 || h >= 4 ? 14 : 18;
             return (
               <button
                 key={i}
                 type="button"
-                onClick={() => { haptic.select(); setS({ ...s, sel: i }); setMsg(null); }}
+                onPointerDown={(e) => grab(i, e)}
+                onClick={() => { if (!lifted) { haptic.select(); setS({ ...s, sel: i }); setMsg(null); } }}
                 aria-label={t("blocksPieceN", { n: i + 1, cells: SHAPES[p.shape].length }) + (on ? `, ${t("selected")}` : "")}
                 aria-pressed={on}
-                style={{ height: 112, padding: 0, borderRadius: 18, border: `2px solid ${on ? p.color : "#262A44"}`, background: on ? "#1A1D36" : "var(--surface)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}
+                style={{ height: 112, padding: 0, borderRadius: 18, border: `2px ${lifted ? "dashed" : "solid"} ${on ? p.color : "#262A44"}`, background: lifted ? "#10122A" : on ? "#1A1D36" : "var(--surface)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "grab", touchAction: "none", opacity: lifted ? 0.45 : 1 }}
               >
-                <span style={{ display: "grid", gridTemplateColumns: `repeat(${w}, ${cell}px)`, gap: 2 }} dir="ltr">
+                <span style={{ display: "grid", gridTemplateColumns: `repeat(${w}, ${cell}px)`, gap: 2, transform: lifted ? "scale(0.85)" : undefined }} dir="ltr">
                   {Array.from({ length: w * h }, (_, k) => {
                     const r = Math.floor(k / w);
                     const c = k % w;
@@ -362,7 +463,37 @@ export function BlocksPlay({ mode, level = 1 }: { mode: BlocksMode; level?: numb
       </div>
 
       <div className="small muted" style={{ padding: "0 16px calc(22px + env(safe-area-inset-bottom))", textAlign: "center" }}>{t("blocksHint")}</div>
+      {drag?.moved && dragPiece && <FloatingPiece piece={dragPiece} x={drag.x} y={drag.y} pitch={metrics()?.pitch ?? 40} />}
     </Screen>
+  );
+}
+
+const BOARD_GAP = 2;
+
+/** How far above the finger the dragged piece floats, so the finger never covers it. */
+function lift(rows: number, pitch: number) {
+  return Math.max(28, pitch * 0.9) + (rows > 3 ? pitch / 2 : 0);
+}
+
+function FloatingPiece({ piece, x, y, pitch }: { piece: { shape: number; color: string }; x: number; y: number; pitch: number }) {
+  const { w, h } = shapeSize(piece.shape);
+  const cell = pitch - BOARD_GAP;
+  const width = w * pitch - BOARD_GAP;
+  const height = h * pitch - BOARD_GAP;
+  return (
+    <div
+      aria-hidden="true"
+      dir="ltr"
+      style={{
+        position: "fixed", left: x - width / 2, top: y - lift(h, pitch) - height, width, height, pointerEvents: "none", zIndex: 50,
+        display: "grid", gridTemplateColumns: `repeat(${w}, ${cell}px)`, gridAutoRows: cell, gap: BOARD_GAP, filter: "drop-shadow(0 8px 14px rgba(0,0,0,0.45))",
+      }}
+    >
+      {Array.from({ length: w * h }, (_, k) => {
+        const filled = SHAPES[piece.shape].some(([r, c]) => r === Math.floor(k / w) && c === k % w);
+        return <span key={k} style={{ borderRadius: 7, background: filled ? piece.color : "transparent", boxShadow: filled ? "inset 0 -4px 0 rgba(0,0,0,0.18)" : "none" }} />;
+      })}
+    </div>
   );
 }
 
