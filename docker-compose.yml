@@ -82,6 +82,7 @@ services:
       args:
         VITE_API_BASE_URL: ${PUBLIC_API_BASE_URL:-http://localhost:5299}
         VITE_AGORA_APP_ID: ${AGORA_APP_ID:?AGORA_APP_ID is required}
+        VITE_MINI_APP_URL: ${MINI_APP_BASE_URL:-}
     restart: unless-stopped
     depends_on:
       - api

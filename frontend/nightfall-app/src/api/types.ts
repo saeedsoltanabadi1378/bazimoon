@@ -20,11 +20,17 @@ export type NightActionType = "Investigate" | "Heal" | "Kill";
 export type WinCondition = "None" | "VillagersWin" | "MafiaWin";
 export type DiscussionSegmentType = "Speaker" | "Challenge";
 
+export type EliminationCause = "Night" | "Vote";
+
 export interface PlayerView {
   playerId: string;
   telegramUsername: string;
   isAlive: boolean;
   revealedRole: Role | null;
+  eliminatedBy: EliminationCause | null;
+  eliminatedRound: number | null;
+  /** Only true for viewers allowed to know (Mafia, or everyone once the game has ended). */
+  wasPromoted: boolean;
 }
 
 export interface DetectiveResultView {
@@ -37,6 +43,25 @@ export interface EliminationView {
   wasSaved: boolean;
   wasTie: boolean;
   tiedPlayers: string[] | null;
+  godfatherPromoted: boolean;
+  ballots: VoteView[] | null;
+}
+
+export interface MafiaMemberView {
+  playerId: string;
+  role: Role;
+  rank: number | null;
+  isAlive: boolean;
+}
+
+export interface NightSuggestionView {
+  actorPlayerId: string;
+  targetPlayerId: string;
+}
+
+export interface NightProgressView {
+  submitted: number;
+  required: number;
 }
 
 export interface GameView {
@@ -56,6 +81,21 @@ export interface GameView {
   requiredNightActionsComplete: boolean;
   votes: VoteView[];
   discussion: DiscussionView | null;
+  maxPlayers: number;
+  mafiaTeam: MafiaMemberView[] | null;
+  mafiaSuggestions: NightSuggestionView[] | null;
+  yourNightActionTargetId: string | null;
+  yourInvestigations: DetectiveResultView[] | null;
+  youCannotHealSelf: boolean;
+  nightProgress: NightProgressView | null;
+  rematchGameId: string | null;
+}
+
+/** Your rating outcome for a finished game (from the history service). */
+export interface MyGameResult {
+  won: boolean;
+  rating: number;
+  ratingDelta: number;
 }
 
 export interface DiscussionView {
@@ -67,6 +107,8 @@ export interface DiscussionView {
   yourChallengeIsPending: boolean;
   youCanRequestChallenge: boolean;
   youCanFinish: boolean;
+  speakerOrder: string[] | null;
+  completedSpeakerIds: string[] | null;
 }
 
 export interface VoteView {

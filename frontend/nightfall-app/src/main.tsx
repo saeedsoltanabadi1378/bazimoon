@@ -1,14 +1,14 @@
-import { StrictMode } from 'react'
-import { createRoot } from 'react-dom/client'
-import './index.css'
-import App from './App.tsx'
-import AdminApp from './admin/AdminApp.tsx'
+import { StrictMode } from "react";
+import { createRoot } from "react-dom/client";
+import "./styles/app.css";
+import App from "./App.tsx";
+import AdminApp from "./admin/AdminApp.tsx";
 
-const isAdmin = window.location.pathname.startsWith('/admin')
-document.documentElement.classList.toggle('admin-page', isAdmin)
+const isAdmin = window.location.pathname.startsWith("/admin");
+document.documentElement.classList.toggle("admin-page", isAdmin);
 
-createRoot(document.getElementById('root')!).render(
+createRoot(document.getElementById("root")!).render(
   <StrictMode>
     {isAdmin ? <AdminApp /> : <App />}
   </StrictMode>,
-)
+);
