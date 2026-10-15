@@ -1,6 +1,7 @@
 import type { Route } from "../app/router";
 import { ZipArchive, ZipIntro, ZipResult } from "./zip/ZipScreens";
 import { ZipPlay } from "./zip/ZipPlay";
+import { QueensIntro, QueensPlay, QueensResult } from "./queens/QueensScreens";
 
 type GameRouteProps = { route: Extract<Route, { name: "game" }> };
 
@@ -18,6 +19,10 @@ export function GameRoute({ route }: GameRouteProps) {
       if (route.screen === "result") return <ZipResult params={p} />;
       if (route.screen === "archive") return <ZipArchive />;
       return <ZipIntro />;
+    case "queens":
+      if (route.screen === "play") return <QueensPlay key={JSON.stringify(p)} mode={str(p?.mode, "daily") as "daily" | "practice"} size={num(p?.size)} />;
+      if (route.screen === "result") return <QueensResult params={p} />;
+      return <QueensIntro />;
     default:
       return null;
   }
