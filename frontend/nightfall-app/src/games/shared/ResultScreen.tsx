@@ -15,10 +15,12 @@ export interface Metric {
 
 /** The shared end-of-game screen (ZipResult and siblings): hero, metrics, XP, extras, actions. */
 export function ResultScreen({
-  win, heroIcon, hero, kicker, title, sub, metrics, xp, xpNote, children, share, primary, secondary, accent, accentInk = "#0B0D1A", onClose,
+  win, heroIcon, heroColors, hero, kicker, title, sub, metrics, xp, xpNote, children, share, primary, secondary, accent, accentInk = "#0B0D1A", onClose,
 }: {
   win: boolean;
   heroIcon?: IconName;
+  /** Background and icon colour of the round hero for a win; defaults to teal. */
+  heroColors?: [string, string];
   /** Replaces the round hero icon (e.g. Memory's stars). */
   hero?: ReactNode;
   kicker: string;
@@ -37,8 +39,8 @@ export function ResultScreen({
 }) {
   const { t } = useLanguage();
   const { reset } = useNavigation();
-  const heroBg = win ? "#13302C" : "#2A1418";
-  const heroFg = win ? "#5FD0BE" : "#F08A7A";
+  const heroBg = win ? heroColors?.[0] ?? "#13302C" : "#2A1418";
+  const heroFg = win ? heroColors?.[1] ?? "#5FD0BE" : "#F08A7A";
 
   return (
     <Screen theme="night">

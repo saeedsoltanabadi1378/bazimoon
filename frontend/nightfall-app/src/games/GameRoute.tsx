@@ -10,6 +10,8 @@ import { StackIntro, StackPlay, StackResult } from "./stack/StackScreens";
 import { BlocksIntro, BlocksPlay, BlocksResult } from "./blocks/BlocksScreens";
 import { WordIntro, WordPlay, WordResult } from "./word/WordScreens";
 import { QueensIntro, QueensPlay, QueensResult } from "./queens/QueensScreens";
+import { SudokuIntro, SudokuPlay, SudokuResult } from "./sudoku/SudokuScreens";
+import type { SudokuLevel } from "./sudoku/logic";
 
 type GameRouteProps = { route: Extract<Route, { name: "game" }> };
 
@@ -31,6 +33,13 @@ export function GameRoute({ route }: GameRouteProps) {
       if (route.screen === "play") return <QueensPlay key={JSON.stringify(p)} mode={str(p?.mode, "daily") as "daily" | "practice"} size={num(p?.size)} />;
       if (route.screen === "result") return <QueensResult params={p} />;
       return <QueensIntro />;
+    case "sudoku":
+      if (route.screen === "play") {
+        const level = str(p?.level, "medium");
+        return <SudokuPlay key={JSON.stringify(p)} mode={str(p?.mode, "daily") === "classic" ? "classic" : "daily"} level={(["easy", "medium", "hard", "expert"].includes(level) ? level : "medium") as SudokuLevel} />;
+      }
+      if (route.screen === "result") return <SudokuResult params={p} />;
+      return <SudokuIntro />;
     case "merge":
       if (route.screen === "play") return <MergePlay key={JSON.stringify(p)} mode={str(p?.mode, "classic") as "classic" | "big" | "timed"} />;
       if (route.screen === "result") return <MergeResult params={p} />;

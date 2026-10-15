@@ -837,3 +837,25 @@ html[lang="fa"] .kicker {
     transition: none !important;
   }
 }
+
+/* Sudoku: a placed number pops; a finished row, column or box flashes once. */
+.cell-pop {
+  display: inline-block;
+  animation: cell-pop 220ms ease-out;
+}
+
+@keyframes cell-pop {
+  50% {
+    transform: scale(1.25);
+  }
+}
+
+.unit-done {
+  animation: unit-done 650ms ease-out;
+}
+
+@keyframes unit-done {
+  30% {
+    background: #1f4a66;
+  }
+}

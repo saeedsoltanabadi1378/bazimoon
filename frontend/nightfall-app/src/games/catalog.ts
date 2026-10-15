@@ -25,6 +25,7 @@ export const catalog: CatalogEntry[] = [
   { key: "mines", name: "gameMines", sub: "subMines", category: "Puzzles", tag: "Endless", icon: "mine", bg: "#2A1A1A", fg: "#F08A7A", accent: "#F08A7A" },
   { key: "memory", name: "gameMemory", sub: "subMemory", category: "Arcade", tag: "New", icon: "memory", bg: "#1B2A44", fg: "#8FA8FF", accent: "#8FA8FF" },
   { key: "nard", name: "gameNard", sub: "subNard", category: "Classics", tag: "vsBot", icon: "nard", bg: "#3A2A16", fg: "#F0A83A", accent: "#F0A83A" },
+  { key: "sudoku", name: "gameSudoku", sub: "subSudoku", category: "Puzzles", tag: "New", icon: "grid", bg: "#12304A", fg: "#7CC4FA", accent: "#7CC4FA" },
   { key: "queens", name: "gameQueens", sub: "subQueens", category: "Puzzles", tag: "Daily", icon: "godfather", bg: "#2E2340", fg: "#B79CF2", accent: "#B79CF2" },
   { key: "hokm", name: "gameHokm", sub: "subHokm", category: "Classics", tag: "Soon", icon: "cards", bg: "#3A1C1A", fg: "#F08A7A", accent: "#F08A7A", soon: true },
   { key: "mafiaBots", name: "gameMafiaBots", sub: "subMafiaBots", category: "Classics", tag: "Soon", icon: "moon", bg: "#1E2138", fg: "#9C8CFF", accent: "#9C8CFF", soon: true },

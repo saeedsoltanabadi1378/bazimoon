@@ -8,7 +8,7 @@ import { questionSet } from "../../couple/questions";
 import { formatCountdown, msUntilNextPuzzle } from "../../lib/format";
 
 const GAME_COLORS: Record<string, string> = {
-  zip: "#5FD0BE", queens: "#B79CF2", word: "#9ED98C", ladder: "#F0A83A", mines: "#8FA8FF", stack: "#7FC8E8", blocks: "#F2B8D0",
+  zip: "#5FD0BE", queens: "#B79CF2", sudoku: "#7CC4FA", word: "#9ED98C", ladder: "#F0A83A", mines: "#8FA8FF", stack: "#7FC8E8", blocks: "#F2B8D0",
 };
 
 const DIVISION_COLORS: Record<string, string> = {

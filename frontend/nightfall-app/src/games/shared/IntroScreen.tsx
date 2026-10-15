@@ -40,7 +40,7 @@ export function IntroScreen({
   extra?: (mode: string) => ReactNode;
   secondary?: { label: string; onClick: () => void };
 }) {
-  const { t } = useLanguage();
+  const { t, n } = useLanguage();
   const { back } = useNavigation();
   const [modeIndex, setModeIndex] = useState(Math.min(initialMode, modes.length - 1));
   const mode = modes[modeIndex];
@@ -80,7 +80,7 @@ export function IntroScreen({
           <div className="stat-grid stat-grid--4">
             {stats.map((s) => (
               <div key={s.label} className="stat stat--center" style={{ padding: "10px 8px" }}>
-                <div className="stat__value" style={{ fontSize: 18 }}>{s.value}</div>
+                <div className="stat__value" style={{ fontSize: 18 }}>{typeof s.value === "number" ? n(s.value) : s.value}</div>
                 <div className="stat__label">{s.label}</div>
               </div>
             ))}
@@ -92,7 +92,7 @@ export function IntroScreen({
           {steps.map((step, i) => (
             <div key={step.title} className="row" style={{ gap: 12, alignItems: "flex-start" }}>
               <span style={{ width: 28, height: 28, flex: "none", borderRadius: 999, background: "var(--surface)", color: accent, fontSize: 14, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                {i + 1}
+                {n(i + 1)}
               </span>
               <div>
                 <div style={{ fontSize: 15, fontWeight: 600 }}>{step.title}</div>
