@@ -36,6 +36,11 @@ export function NavigationProvider({ initial, children }: { initial: Route[]; ch
   const reset = useCallback((route: Route) => setStack([route]), []);
   const back = useCallback(() => setStack((s) => (s.length > 1 ? s.slice(0, -1) : [{ name: "home" }])), []);
 
+  // Dev-only hook so screenshot/e2e scripts can open any screen directly.
+  useEffect(() => {
+    if (import.meta.env.DEV) (window as unknown as { __nav?: (r: Route) => void }).__nav = push;
+  }, [push]);
+
   const route = stack[stack.length - 1];
   const depth = stack.length;
 

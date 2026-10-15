@@ -1,6 +1,24 @@
 import type { Route } from "../app/router";
+import { ZipArchive, ZipIntro, ZipResult } from "./zip/ZipScreens";
+import { ZipPlay } from "./zip/ZipPlay";
 
-export function GameRoute({ route }: { route: Extract<Route, { name: "game" }> }) {
-  void route;
-  return null;
+type GameRouteProps = { route: Extract<Route, { name: "game" }> };
+
+const num = (v: unknown) => (typeof v === "number" ? v : typeof v === "string" && v !== "" && !Number.isNaN(Number(v)) ? Number(v) : undefined);
+const str = (v: unknown, fallback: string) => (typeof v === "string" ? v : fallback);
+
+/** Picks the screen for a solo game route: intro, play, result (and Zip's archive). */
+export function GameRoute({ route }: GameRouteProps) {
+  const p = route.params;
+  switch (route.game) {
+    case "zip":
+      if (route.screen === "play") {
+        return <ZipPlay key={JSON.stringify(p)} mode={str(p?.mode, "daily") as "daily" | "practice" | "archive"} number={num(p?.number)} />;
+      }
+      if (route.screen === "result") return <ZipResult params={p} />;
+      if (route.screen === "archive") return <ZipArchive />;
+      return <ZipIntro />;
+    default:
+      return null;
+  }
 }
