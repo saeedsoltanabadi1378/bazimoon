@@ -107,7 +107,7 @@ public sealed class NightfallDbContext : DbContext
             b.HasIndex(x => x.TelegramChatId);
         });
 
-        modelBuilder.Entity<BotSettingsRecord>(b => { b.ToTable("bot_settings"); b.HasKey(x => x.Id); });
+        modelBuilder.Entity<BotSettingsRecord>(b => { b.ToTable("bot_settings"); b.HasKey(x => x.Id); b.Property(x => x.DisabledGamesJson).HasDefaultValue("[]"); });
         modelBuilder.Entity<UserProfileRecord>(b => { b.ToTable("user_profiles"); b.HasKey(x => x.TelegramUserId); b.HasIndex(x => x.Username); });
         modelBuilder.Entity<ChatProfileRecord>(b => { b.ToTable("chat_profiles"); b.HasKey(x => x.TelegramChatId); });
         modelBuilder.Entity<OperationalEventRecord>(b => { b.ToTable("operational_events"); b.HasKey(x => x.Id); b.HasIndex(x => x.CreatedAt); });

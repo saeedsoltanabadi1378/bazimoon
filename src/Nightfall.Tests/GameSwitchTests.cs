@@ -71,3 +71,19 @@ public class GameSwitchTests : IClassFixture<NightfallApiFactory>, IAsyncLifetim
         Assert.True(Progression.StreakGames.Contains("sudoku"));
     }
 }
+
+public class BotSettingsParsingTests
+{
+    [Theory]
+    [InlineData("")]
+    [InlineData("not json")]
+    public void DamagedJsonColumns_FallBackInsteadOfThrowing(string value)
+    {
+        var row = new Nightfall.Infrastructure.Admin.BotSettingsRecord { DisabledGamesJson = value, EnabledCommandsJson = value };
+        var snapshot = Nightfall.Infrastructure.Admin.BotSettingsService.ToSnapshot(row);
+        Assert.Empty(snapshot.DisabledGames!);
+        Assert.True(snapshot.IsGameOn("mafia"));
+        // Unreadable commands fall back to the defaults rather than switching every command off.
+        Assert.Contains("newgame", snapshot.EnabledCommands);
+    }
+}

@@ -15,7 +15,7 @@ namespace Nightfall.Infrastructure.History.Migrations
                 table: "bot_settings",
                 type: "text",
                 nullable: false,
-                defaultValue: "");
+                defaultValue: "[]");
         }
 
         /// <inheritdoc />

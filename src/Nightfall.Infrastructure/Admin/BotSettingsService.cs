@@ -41,7 +41,16 @@ public sealed class BotSettingsService : IBotSettingsService
         finally { _gate.Release(); }
     }
 
-    public static BotSettingsSnapshot ToSnapshot(BotSettingsRecord row) => new(row.Version, row.MinPlayers, row.MaxPlayers, row.MaintenanceMode, row.MaintenanceMessage, JsonSerializer.Deserialize<HashSet<string>>(row.EnabledCommandsJson) ?? [], row.SoloTestEnabled, row.MiniAppBaseUrl, row.HelpMessage, row.WelcomeMessage, row.UpdatedAt,
+    public static BotSettingsSnapshot ToSnapshot(BotSettingsRecord row) => new(row.Version, row.MinPlayers, row.MaxPlayers, row.MaintenanceMode, row.MaintenanceMessage, ParseSet(row.EnabledCommandsJson, BotSettingsDefaults.Commands), row.SoloTestEnabled, row.MiniAppBaseUrl, row.HelpMessage, row.WelcomeMessage, row.UpdatedAt,
         row.MaintenanceMessageFa, row.HelpMessageFa, row.WelcomeMessageFa, row.ReminderMessage, row.ReminderMessageFa,
-        JsonSerializer.Deserialize<HashSet<string>>(row.DisabledGamesJson) ?? []);
+        ParseSet(row.DisabledGamesJson));
+
+    /// <summary>Reads a JSON string list; an empty or damaged value counts as the fallback (none, or the default commands), so one bad
+    /// column can never take the bot, the app and the admin console down with it.</summary>
+    private static HashSet<string> ParseSet(string? json, IEnumerable<string>? fallback = null)
+    {
+        if (string.IsNullOrWhiteSpace(json)) return [.. fallback ?? []];
+        try { return JsonSerializer.Deserialize<HashSet<string>>(json) ?? [.. fallback ?? []]; }
+        catch (JsonException) { return [.. fallback ?? []]; }
+    }
 }

@@ -2,6 +2,7 @@ services:
   postgres:
     image: postgres:16-alpine
     restart: unless-stopped
+    # Postgres allows 100 connections by default; the API and bot pools below stay under that together.
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-nightfall}
       POSTGRES_USER: ${POSTGRES_USER:-nightfall}
@@ -35,7 +36,7 @@ services:
         condition: service_healthy
     environment:
       ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Production}
-      ConnectionStrings__Postgres: "Host=postgres;Database=${POSTGRES_DB:-nightfall};Username=${POSTGRES_USER:-nightfall};Password=${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}"
+      ConnectionStrings__Postgres: "Host=postgres;Database=${POSTGRES_DB:-nightfall};Username=${POSTGRES_USER:-nightfall};Password=${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required};Maximum Pool Size=${API_DB_POOL:-60}"
       ConnectionStrings__Redis: "redis:6379,abortConnect=false"
       Jwt__SigningKey: ${JWT_SIGNING_KEY:?JWT_SIGNING_KEY is required}
       Telegram__BotToken: ${TELEGRAM_BOT_TOKEN:?TELEGRAM_BOT_TOKEN is required}
@@ -66,7 +67,7 @@ services:
         condition: service_started
     environment:
       DOTNET_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Production}
-      ConnectionStrings__Postgres: "Host=postgres;Database=${POSTGRES_DB:-nightfall};Username=${POSTGRES_USER:-nightfall};Password=${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}"
+      ConnectionStrings__Postgres: "Host=postgres;Database=${POSTGRES_DB:-nightfall};Username=${POSTGRES_USER:-nightfall};Password=${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required};Maximum Pool Size=${BOT_DB_POOL:-10}"
       ConnectionStrings__Redis: "redis:6379,abortConnect=false"
       Jwt__SigningKey: ${JWT_SIGNING_KEY:?JWT_SIGNING_KEY is required}
       Telegram__BotToken: ${TELEGRAM_BOT_TOKEN:?TELEGRAM_BOT_TOKEN is required}

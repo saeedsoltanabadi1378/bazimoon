@@ -32,7 +32,9 @@ namespace Nightfall.Infrastructure.History.Migrations
 
                     b.Property<string>("DisabledGamesJson")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("text")
+                        .HasDefaultValue("[]");
 
                     b.Property<string>("EnabledCommandsJson")
                         .IsRequired()
