@@ -8,12 +8,12 @@ The source of truth for the Mini App's look and behaviour is the **Nightfall Gam
 
 https://claude.ai/artifact/BPUhpaNYmSw9yky56fCdbW
 
-It has one artboard per screen (hub, Mafia flow, every solo game's intro, play and result screens, Couple Quiz, app states). The admin dashboard is not part of the design.
+It has one artboard per screen: the Mini App (hub, Mafia flow, every solo game's intro, play and result screens, Couple Quiz, app states) and the admin web console (sign in, overview, games, players, puzzles and leagues, bot settings, system and events).
 
 ## 1. Code and design stay in sync
 
-- Before changing a Mini App screen, open the matching artboard in the design and build to it.
-- Any change to the Mini App's UI or user-facing behaviour must also update the design in the same piece of work: new screens get a new artboard; changed layouts, copy, states, modes or rules get the artboard updated.
+- Before changing a Mini App or admin screen, open the matching artboard in the design and build to it.
+- Any change to the Mini App's or admin console's UI or user-facing behaviour must also update the design in the same piece of work: new screens get a new artboard; changed layouts, copy, states, modes or rules get the artboard updated.
 - If you cannot update the design yourself, stop and tell the person exactly which artboards need which changes. Do not leave the two out of sync silently.
 - If the code and the design disagree and you were not asked to change that screen, flag it rather than picking one.
 - Backend-only changes with no visible effect do not need a design change.
