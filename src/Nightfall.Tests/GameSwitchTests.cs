@@ -70,6 +70,42 @@ public class GameSwitchTests : IClassFixture<NightfallApiFactory>, IAsyncLifetim
         Assert.Equal(xp, Progression.SoloXp(outcome, 1, false));
         Assert.True(Progression.StreakGames.Contains("sudoku"));
     }
+
+    [Theory]
+    [InlineData(12, false, 15)]
+    [InlineData(40, true, 50)]
+    [InlineData(400, true, 150)]
+    public void SnakeXp_IsAPointEachPlusABonus(int score, bool newBest, int xp)
+    {
+        var outcome = new Progression.PuzzleOutcome("snake", "classic", true, null, score, null, null, 0);
+        Assert.Equal(xp, Progression.SoloXp(outcome, 1, newBest));
+        Assert.False(Progression.StreakGames.Contains("snake"));
+        Assert.Equal(1, Progression.DailyNumber("snake", Progression.PuzzleDay(new DateTimeOffset(2026, 10, 15, 12, 0, 0, TimeSpan.Zero))));
+    }
+
+    [Theory]
+    [InlineData("easy", true, 20)]
+    [InlineData("smart", true, 40)]
+    [InlineData("big", true, 50)]
+    [InlineData("smart", false, 5)]
+    public void DoozXp_ByOpponent(string mode, bool won, int xp)
+    {
+        var outcome = new Progression.PuzzleOutcome("dooz", mode, won, null, 3, 0, 1, 0);
+        Assert.Equal(xp, Progression.SoloXp(outcome, 1, false));
+    }
+
+    [Fact]
+    public async Task NewGames_CanBeSwitchedOffAndRecorded()
+    {
+        var admin = await AdminAsync();
+        var player = await AuthTestHelper.CreateAuthenticatedClientAsync(_factory, 893005, "snaker");
+        (await SaveDisabledAsync(admin, "spy", "esmfamil")).EnsureSuccessStatusCode();
+        var config = await player.GetFromJsonAsync<AppConfigDto>("/api/hub/config");
+        Assert.Equal(["esmfamil", "spy"], config!.DisabledGames.Order().ToArray());
+        (await player.PostAsJsonAsync("/api/puzzles/results", new PuzzleSubmitRequest("snake", "daily", null, true, null, 14, 12, 15, 0))).EnsureSuccessStatusCode();
+        (await player.PostAsJsonAsync("/api/puzzles/results", new PuzzleSubmitRequest("dooz", "smart", null, true, null, 3, 1, 2, 0))).EnsureSuccessStatusCode();
+        (await SaveDisabledAsync(admin)).EnsureSuccessStatusCode();
+    }
 }
 
 public class BotSettingsParsingTests

@@ -12,11 +12,16 @@ import { WordIntro, WordPlay, WordResult } from "./word/WordScreens";
 import { QueensIntro, QueensPlay, QueensResult } from "./queens/QueensScreens";
 import { SudokuIntro, SudokuPlay, SudokuResult } from "./sudoku/SudokuScreens";
 import type { SudokuLevel } from "./sudoku/logic";
+import { SnakeIntro, SnakePlay, SnakeResult } from "./snake/SnakeScreens";
+import { DoozIntro, DoozPlay, DoozResult } from "./dooz/DoozScreens";
+import { SpyIntro, SpyPlay, SpyResult } from "./spy/SpyScreens";
+import { EsmFamilIntro, EsmFamilPlay, EsmFamilResult } from "./esmfamil/EsmFamilScreens";
 
 type GameRouteProps = { route: Extract<Route, { name: "game" }> };
 
 const num = (v: unknown) => (typeof v === "number" ? v : typeof v === "string" && v !== "" && !Number.isNaN(Number(v)) ? Number(v) : undefined);
 const str = (v: unknown, fallback: string) => (typeof v === "string" ? v : fallback);
+const clamp = (v: number, min: number, max: number) => Math.min(max, Math.max(min, Math.round(v)));
 
 /** Picks the screen for a solo game route: intro, play, result (and Zip's archive). */
 export function GameRoute({ route }: GameRouteProps) {
@@ -72,6 +77,45 @@ export function GameRoute({ route }: GameRouteProps) {
       if (route.screen === "play") return <BlocksPlay key={JSON.stringify(p)} mode={(["daily", "adventure"].includes(str(p?.mode, "")) ? str(p?.mode, "") : "classic") as "classic" | "daily" | "adventure"} level={num(p?.level)} />;
       if (route.screen === "result") return <BlocksResult params={p} />;
       return <BlocksIntro />;
+    case "snake":
+      if (route.screen === "play") return <SnakePlay key={JSON.stringify(p)} mode={(["daily", "wrap"].includes(str(p?.mode, "")) ? str(p?.mode, "") : "classic") as "classic" | "daily" | "wrap"} />;
+      if (route.screen === "result") return <SnakeResult params={p} />;
+      return <SnakeIntro />;
+    case "dooz":
+      if (route.screen === "play") return <DoozPlay key={JSON.stringify(p)} mode={(["easy", "big", "friend"].includes(str(p?.mode, "")) ? str(p?.mode, "") : "smart") as "easy" | "smart" | "big" | "friend"} />;
+      if (route.screen === "result") return <DoozResult params={p} />;
+      return <DoozIntro />;
+    case "spy":
+      if (route.screen === "play") {
+        const pack = str(p?.pack, "places");
+        const players = clamp(num(p?.players) ?? 5, 3, 12);
+        return (
+          <SpyPlay
+            key={JSON.stringify(p)}
+            pack={(["food", "jobs", "mixed"].includes(pack) ? pack : "places") as "places" | "food" | "jobs" | "mixed"}
+            players={players}
+            spies={clamp(num(p?.spies) ?? 1, 1, 3)}
+            minutes={clamp(num(p?.minutes) ?? 5, 1, 15)}
+          />
+        );
+      }
+      if (route.screen === "result") return <SpyResult params={p} />;
+      return <SpyIntro />;
+    case "esmfamil":
+      if (route.screen === "play") {
+        return (
+          <EsmFamilPlay
+            key={JSON.stringify(p)}
+            mode={str(p?.mode, "classic") === "quick" ? "quick" : "classic"}
+            players={clamp(num(p?.players) ?? 4, 2, 8)}
+            rounds={clamp(num(p?.rounds) ?? 3, 1, 8)}
+            seconds={clamp(num(p?.seconds) ?? 90, 30, 180)}
+            letters={str(p?.letters, "fa") === "en" ? "en" : "fa"}
+          />
+        );
+      }
+      if (route.screen === "result") return <EsmFamilResult params={p} />;
+      return <EsmFamilIntro />;
     default:
       return null;
   }

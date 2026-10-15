@@ -2,7 +2,7 @@ import type { GameKey } from "../app/router";
 import type { IconName } from "../ui/Icon";
 import type { TranslationKey } from "../i18n/LanguageContext";
 
-export type GameCategory = "Puzzles" | "Words" | "Couples" | "Classics" | "Arcade";
+export type GameCategory = "Puzzles" | "Words" | "Party" | "Couples" | "Classics" | "Arcade";
 export type GameTag = "Daily" | "Endless" | "New" | "vsBot" | "Soon";
 
 export interface CatalogEntry {
@@ -34,6 +34,10 @@ export const catalog: CatalogEntry[] = [
   { key: "ladder", name: "gameLadder", sub: "subLadder", category: "Words", tag: "Daily", icon: "ladder", bg: "#3A2A16", fg: "#F0A83A", accent: "#F0A83A" },
   { key: "stack", name: "gameStack", sub: "subStack", category: "Arcade", tag: "Endless", icon: "stack", bg: "#13302C", fg: "#5FD0BE", accent: "#5FD0BE" },
   { key: "couple", name: "gameCouple", sub: "subCouple", category: "Couples", tag: "Daily", icon: "heart", bg: "#24121C", fg: "#F2A7C3", accent: "#F2A7C3" },
+  { key: "esmfamil", name: "gameEsmFamil", sub: "subEsmFamil", category: "Party", tag: "New", icon: "esmFamil", bg: "#2A2113", fg: "#F6C377", accent: "#F6C377" },
+  { key: "spy", name: "gameSpy", sub: "subSpy", category: "Party", tag: "New", icon: "spy", bg: "#2A1418", fg: "#F08A7A", accent: "#F08A7A" },
+  { key: "dooz", name: "gameDooz", sub: "subDooz", category: "Classics", tag: "vsBot", icon: "dooz", bg: "#1E2138", fg: "#C3B9FF", accent: "#C3B9FF" },
+  { key: "snake", name: "gameSnake", sub: "subSnake", category: "Arcade", tag: "Endless", icon: "snake", bg: "#14241A", fg: "#9ED98C", accent: "#9ED98C" },
   { key: "blocks", name: "gameBlocks", sub: "subBlocks", category: "Arcade", tag: "Endless", icon: "blocks", bg: "#25141E", fg: "#F2B8D0", accent: "#F2B8D0" },
 ];
 

@@ -15,7 +15,7 @@ export interface Metric {
 
 /** The shared end-of-game screen (ZipResult and siblings): hero, metrics, XP, extras, actions. */
 export function ResultScreen({
-  win, heroIcon, heroColors, hero, kicker, title, sub, metrics, xp, xpNote, children, share, primary, secondary, accent, accentInk = "#0B0D1A", onClose,
+  win, heroIcon, heroColors, hero, kicker, title, sub, metrics, xp, xpNote, hideXp, children, share, primary, secondary, accent, accentInk = "#0B0D1A", onClose,
 }: {
   win: boolean;
   heroIcon?: IconName;
@@ -29,6 +29,8 @@ export function ResultScreen({
   metrics: Metric[];
   xp: PuzzleResult | null;
   xpNote?: string;
+  /** For results that never reach the server (same-phone party and friend games). */
+  hideXp?: boolean;
   children?: ReactNode;
   share?: { text: string };
   primary: { label: string; onClick: () => void };
@@ -64,7 +66,7 @@ export function ResultScreen({
           ))}
         </div>
 
-        {xp ? <XpCard xp={xp} note={xpNote} /> : (
+        {hideXp ? null : xp ? <XpCard xp={xp} note={xpNote} /> : (
           <div className="card small muted">{t("resultSavedLater")}</div>
         )}
 

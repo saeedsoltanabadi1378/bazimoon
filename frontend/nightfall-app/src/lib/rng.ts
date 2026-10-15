@@ -53,6 +53,7 @@ const dailyEpochs: Record<string, string> = {
   stack: "2026-09-01",
   blocks: "2026-09-01",
   sudoku: "2026-10-15",
+  snake: "2026-10-15",
 };
 
 export function dailyNumber(game: string, isoDate: string) {

@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { showBackButton } from "../lib/telegram";
 
-export type GameKey = "zip" | "queens" | "merge" | "mines" | "memory" | "nard" | "word" | "ladder" | "stack" | "blocks" | "sudoku";
+export type GameKey = "zip" | "queens" | "merge" | "mines" | "memory" | "nard" | "word" | "ladder" | "stack" | "blocks" | "sudoku" | "snake" | "dooz" | "spy" | "esmfamil";
 export type GameScreen = "intro" | "play" | "result" | "archive";
 export type CoupleScreen = "home" | "invite" | "quiz" | "reveal";
 export type TabKey = "home" | "solo" | "mafia" | "league" | "profile";

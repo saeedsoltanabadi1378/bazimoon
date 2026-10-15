@@ -13,4 +13,8 @@ export const GAME_STYLE: Record<string, [string, string, string]> = {
   stack: ["#13302C", "#5FD0BE", "M6 18h12v3H6zM7 13h10v3H7zM8 8h8v3H8zM9 3h6v3H9z"],
   memory: ["#1B2A44", "#8FA8FF", "M4 5h7v14H4zM13 5h7v14h-7z"],
   nard: ["#3A2A16", "#F0A83A", "M3 4h18v16H3zM12 4v16"],
+  snake: ["#14241A", "#9ED98C", "M4 18h9a3 3 0 0 0 0-6H9a3 3 0 0 1 0-6h8M17 6h3"],
+  dooz: ["#1E2138", "#C3B9FF", "M9 3v18M15 3v18M3 9h18M3 15h18"],
+  spy: ["#2A1418", "#F08A7A", "M3 11h18M6 11l1.5-6h9L18 11M8 17a2.5 2.5 0 1 0 0-.01M16 17a2.5 2.5 0 1 0 0-.01M10.5 17h3"],
+  esmfamil: ["#2A2113", "#F6C377", "M5 4h14v16H5zM8 8h8M8 12h8M8 16h5"],
 };

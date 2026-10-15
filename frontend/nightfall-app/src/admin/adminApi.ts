@@ -209,6 +209,6 @@ export interface BotSettings {
 }
 
 /** Every game an admin can switch off, in the order the Games section lists them. */
-export const ALL_GAMES = ["mafia", "couple", "zip", "queens", "sudoku", "word", "ladder", "mines", "merge", "blocks", "stack", "memory", "nard"] as const;
+export const ALL_GAMES = ["mafia", "couple", "zip", "queens", "sudoku", "word", "ladder", "mines", "merge", "blocks", "stack", "memory", "nard", "snake", "dooz", "spy", "esmfamil"] as const;
 
 export const ALL_COMMANDS = ["newgame", "join", "startgame", "myrole", "startnight", "resolvenight", "startvoting", "resolvevoting", "help", "start", "solotest", "solonext"] as const;

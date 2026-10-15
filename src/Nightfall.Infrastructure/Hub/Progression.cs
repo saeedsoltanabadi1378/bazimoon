@@ -27,9 +27,10 @@ public static class Progression
         ["stack"] = new DateOnly(2026, 9, 1),
         ["blocks"] = new DateOnly(2026, 9, 1),
         ["sudoku"] = new DateOnly(2026, 10, 15),
+        ["snake"] = new DateOnly(2026, 10, 15),
     };
 
-    public static readonly IReadOnlySet<string> Games = new HashSet<string> { "zip", "queens", "merge", "mines", "memory", "nard", "word", "ladder", "stack", "blocks", "sudoku" };
+    public static readonly IReadOnlySet<string> Games = new HashSet<string> { "zip", "queens", "merge", "mines", "memory", "nard", "word", "ladder", "stack", "blocks", "sudoku", "snake", "dooz" };
     /// <summary>Daily puzzles that count toward the shared puzzle streak.</summary>
     public static readonly IReadOnlySet<string> StreakGames = new HashSet<string> { "zip", "queens", "word", "ladder", "sudoku" };
 
@@ -156,6 +157,13 @@ public static class Progression
             case "stack":
                 // A floor is worth 1 XP and a perfect drop counts double (Moves = perfect drops).
                 return Math.Min(150, (o.Score ?? 0) + (o.Moves ?? 0) + (newBest ? 14 : 3));
+            case "snake":
+                // A point is worth 1 XP (golden fruit counts 3), plus a bonus for a new best.
+                return Math.Min(150, (o.Score ?? 0) + (newBest ? 10 : 3));
+            case "dooz":
+                // A won match, by opponent; a lost or drawn one earns 5.
+                if (!o.Solved) return 5;
+                return o.Mode switch { "easy" => 20, "big" => 50, _ => 40 };
             case "blocks":
                 return Math.Min(150, (o.Score ?? 0) / 50 + (newBest ? 10 : 0));
             default:

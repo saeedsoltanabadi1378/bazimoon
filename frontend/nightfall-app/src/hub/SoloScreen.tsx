@@ -9,7 +9,7 @@ import { catalog, tagColors, type GameCategory } from "../games/catalog";
 import { readLocal } from "../lib/storage";
 import { haptic } from "../lib/haptics";
 
-const filters: ("All" | GameCategory)[] = ["All", "Puzzles", "Words", "Couples", "Classics", "Arcade"];
+const filters: ("All" | GameCategory)[] = ["All", "Puzzles", "Words", "Party", "Couples", "Classics", "Arcade"];
 
 /** A saved endless game the player can jump back into. Merge stores {score} under this key. */
 function savedMerge(): number | null {

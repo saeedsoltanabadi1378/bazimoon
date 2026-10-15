@@ -166,6 +166,10 @@ const GAMES: Record<string, [string, string]> = {
   ladder: ["Word Ladder", "نردبان کلمه"],
   stack: ["Stack Tower", "برج‌سازی"],
   blocks: ["Blocks", "بلوک‌ها"],
+  snake: ["Snake", "مار"],
+  dooz: ["Dooz", "دوز"],
+  spy: ["Spy", "جاسوس"],
+  esmfamil: ["Esm-Famil", "اسم فامیل"],
 };
 
 export function gameName(game: string | null, lang: AdminLang) {

@@ -859,3 +859,55 @@ html[lang="fa"] .kicker {
     background: #1f4a66;
   }
 }
+
+/* Text inputs on party-game screens (Esm-Famil answers). */
+.text-field {
+  min-width: 0;
+  min-height: 44px;
+  padding: 0 12px;
+  border-radius: 10px;
+  border: 1px solid #3A3F52;
+  background: #101218;
+  color: var(--text);
+  font: inherit;
+  font-size: 16px;
+}
+
+.text-field:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+/* Snake: the golden fruit pulses. */
+.snake-gold {
+  animation: snake-gold 900ms ease-in-out infinite alternate;
+}
+
+@keyframes snake-gold {
+  from { transform: scale(0.8); }
+  to { transform: scale(1.05); }
+}
+
+/* Dooz: a placed mark pops in. */
+.dooz-pop svg {
+  animation: dooz-pop 180ms ease-out;
+}
+
+@keyframes dooz-pop {
+  from { transform: scale(0.4); opacity: 0.2; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+/* Spy: the secret card flips in. */
+.spy-card {
+  animation: spy-card 260ms ease-out;
+}
+
+@keyframes spy-card {
+  from { transform: rotateY(80deg); opacity: 0; }
+  to { transform: rotateY(0); opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .snake-gold, .dooz-pop svg, .spy-card { animation: none; }
+}
