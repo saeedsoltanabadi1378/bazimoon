@@ -14,7 +14,7 @@ public static class GameEndpoints
 
         group.MapPost("/", async (CreateGameRequest request, GameService games, HttpContext http) =>
         {
-            var gameId = await games.CreateGameAsync(request.TelegramChatId, http.User.GetTelegramUserId(), http.User.GetTelegramUsername());
+            var gameId = await games.CreateGameAsync(request.TelegramChatId, http.User.GetTelegramUserId(), http.User.GetTelegramUsername(), request.ChatTitle);
             return Results.Ok(new CreateGameResponse(gameId));
         }).WithName("CreateGame");
 
@@ -164,7 +164,7 @@ public static class GameEndpoints
     }
 }
 
-public sealed record CreateGameRequest(long TelegramChatId);
+public sealed record CreateGameRequest(long TelegramChatId, string? ChatTitle = null);
 
 public sealed record CreateGameResponse(Guid GameId);
 

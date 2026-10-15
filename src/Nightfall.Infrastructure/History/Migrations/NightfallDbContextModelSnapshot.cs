@@ -38,7 +38,15 @@ namespace Nightfall.Infrastructure.History.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<string>("HelpMessageFa")
+                        .IsRequired()
+                        .HasColumnType("text");
+
                     b.Property<string>("MaintenanceMessage")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("MaintenanceMessageFa")
                         .IsRequired()
                         .HasColumnType("text");
 
@@ -55,6 +63,14 @@ namespace Nightfall.Infrastructure.History.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<string>("ReminderMessage")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("ReminderMessageFa")
+                        .IsRequired()
+                        .HasColumnType("text");
+
                     b.Property<bool>("SoloTestEnabled")
                         .HasColumnType("boolean");
 
@@ -65,6 +81,10 @@ namespace Nightfall.Infrastructure.History.Migrations
                         .HasColumnType("integer");
 
                     b.Property<string>("WelcomeMessage")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("WelcomeMessageFa")
                         .IsRequired()
                         .HasColumnType("text");
 
@@ -86,6 +106,9 @@ namespace Nightfall.Infrastructure.History.Migrations
 
                     b.Property<DateTime>("LastSeenAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Title")
+                        .HasColumnType("text");
 
                     b.HasKey("TelegramChatId");
 

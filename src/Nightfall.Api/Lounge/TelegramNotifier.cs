@@ -7,7 +7,8 @@ namespace Nightfall.Api.Lounge;
 /// Best-effort: a failed delivery is logged and never fails the request that caused it.</summary>
 public interface ITelegramNotifier
 {
-    Task NotifyAsync(long telegramUserId, string text, string? startParam = null);
+    /// <summary>Returns whether Telegram accepted the message.</summary>
+    Task<bool> NotifyAsync(long telegramUserId, string text, string? startParam = null);
 }
 
 /// <summary>Talks to the Telegram Bot API directly with the same bot token the API validates
@@ -25,7 +26,7 @@ public sealed class TelegramNotifier : ITelegramNotifier
         _logger = logger;
     }
 
-    public async Task NotifyAsync(long telegramUserId, string text, string? startParam = null)
+    public async Task<bool> NotifyAsync(long telegramUserId, string text, string? startParam = null)
     {
         var options = _options.Value;
         object? markup = null;
@@ -41,10 +42,12 @@ public sealed class TelegramNotifier : ITelegramNotifier
                 new { chat_id = telegramUserId, text, reply_markup = markup });
             if (!response.IsSuccessStatusCode)
                 _logger.LogWarning("Telegram sendMessage to {UserId} failed with {Status}", telegramUserId, (int)response.StatusCode);
+            return response.IsSuccessStatusCode;
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
         {
             _logger.LogWarning(ex, "Telegram sendMessage to {UserId} failed", telegramUserId);
+            return false;
         }
     }
 }

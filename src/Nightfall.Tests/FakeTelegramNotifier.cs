@@ -10,9 +10,9 @@ public sealed class FakeTelegramNotifier : ITelegramNotifier
 {
     public ConcurrentQueue<(long UserId, string Text, string? StartParam)> Sent { get; } = new();
 
-    public Task NotifyAsync(long telegramUserId, string text, string? startParam = null)
+    public Task<bool> NotifyAsync(long telegramUserId, string text, string? startParam = null)
     {
         Sent.Enqueue((telegramUserId, text, startParam));
-        return Task.CompletedTask;
+        return Task.FromResult(true);
     }
 }

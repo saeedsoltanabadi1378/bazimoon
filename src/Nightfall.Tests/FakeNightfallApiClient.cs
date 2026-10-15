@@ -25,7 +25,7 @@ internal sealed class FakeNightfallApiClient : INightfallApiClient
         }
     }
 
-    public Task<Guid> CreateGameAsync(long telegramChatId, TelegramIdentity actor)
+    public Task<Guid> CreateGameAsync(long telegramChatId, TelegramIdentity actor, string? chatTitle = null)
     {
         Calls.Add($"CreateGame({telegramChatId})");
         MaybeThrow();

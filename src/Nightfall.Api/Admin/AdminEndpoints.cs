@@ -76,13 +76,19 @@ public static class AdminEndpoints
     {
         if (!ValidCsrf(http)) return Results.BadRequest(new { detail = "Invalid CSRF token." });
         if (request.MinPlayers < 3 || request.MaxPlayers > 50 || request.MinPlayers > request.MaxPlayers) return Results.BadRequest(new { detail = "Player limits must be between 3 and 50 and minimum cannot exceed maximum." });
-        if (request.MaintenanceMessage.Length > 4096 || request.HelpMessage.Length > 4096 || request.WelcomeMessage.Length > 4096) return Results.BadRequest(new { detail = "Messages cannot exceed 4096 characters." });
+        if (new[] { request.MaintenanceMessage, request.HelpMessage, request.WelcomeMessage, request.MaintenanceMessageFa, request.HelpMessageFa, request.WelcomeMessageFa, request.ReminderMessage, request.ReminderMessageFa }.Any(m => m is { Length: > 4096 })) return Results.BadRequest(new { detail = "Messages cannot exceed 4096 characters." });
         if (request.EnabledCommands.Except(BotSettingsDefaults.Commands).Any()) return Results.BadRequest(new { detail = "Unknown command." });
         if (!string.IsNullOrWhiteSpace(request.MiniAppBaseUrl) && (!Uri.TryCreate(request.MiniAppBaseUrl, UriKind.Absolute, out var uri) || (!env.IsDevelopment() && uri.Scheme != "https"))) return Results.BadRequest(new { detail = "Mini-app URL must be an absolute HTTPS URL." });
         var row=await db.BotSettings.SingleOrDefaultAsync(x=>x.Id==1) ?? new BotSettingsRecord();
         if (row.Version != request.Version) return Results.Conflict(new { detail="Settings were changed by another session. Reload and try again." });
         var before=JsonSerializer.Serialize(BotSettingsService.ToSnapshot(row));
-        row.MinPlayers=request.MinPlayers; row.MaxPlayers=request.MaxPlayers; row.MaintenanceMode=request.MaintenanceMode; row.MaintenanceMessage=request.MaintenanceMessage; row.EnabledCommandsJson=JsonSerializer.Serialize(request.EnabledCommands.Distinct()); row.SoloTestEnabled=request.SoloTestEnabled; row.MiniAppBaseUrl=request.MiniAppBaseUrl.Trim(); row.HelpMessage=request.HelpMessage; row.WelcomeMessage=request.WelcomeMessage; row.Version++; row.UpdatedAt=DateTime.UtcNow;
+        row.MinPlayers=request.MinPlayers; row.MaxPlayers=request.MaxPlayers; row.MaintenanceMode=request.MaintenanceMode; row.MaintenanceMessage=request.MaintenanceMessage; row.EnabledCommandsJson=JsonSerializer.Serialize(request.EnabledCommands.Distinct()); row.SoloTestEnabled=request.SoloTestEnabled; row.MiniAppBaseUrl=request.MiniAppBaseUrl.Trim(); row.HelpMessage=request.HelpMessage; row.WelcomeMessage=request.WelcomeMessage;
+        if (request.MaintenanceMessageFa is not null) row.MaintenanceMessageFa=request.MaintenanceMessageFa;
+        if (request.HelpMessageFa is not null) row.HelpMessageFa=request.HelpMessageFa;
+        if (request.WelcomeMessageFa is not null) row.WelcomeMessageFa=request.WelcomeMessageFa;
+        if (request.ReminderMessage is { Length: > 0 }) row.ReminderMessage=request.ReminderMessage;
+        if (request.ReminderMessageFa is { Length: > 0 }) row.ReminderMessageFa=request.ReminderMessageFa;
+        row.Version++; row.UpdatedAt=DateTime.UtcNow;
         if (db.Entry(row).State == EntityState.Detached) db.BotSettings.Add(row);
         db.OperationalEvents.Add(new() { Category="AdminAudit", Message="Bot settings updated", IsAdminAudit=true, TargetType="Settings", TargetId="1", MetadataJson=JsonSerializer.Serialize(new { before, after=BotSettingsService.ToSnapshot(row), actor=http.User.Identity?.Name }) });
         await db.SaveChangesAsync(); return Results.Ok(BotSettingsService.ToSnapshot(row));
@@ -95,6 +101,7 @@ public static class AdminEndpoints
 
 public sealed record LoginRequest(string Username, string Password);
 public sealed record CancelRequest(string Reason);
-public sealed record SettingsRequest(int Version,int MinPlayers,int MaxPlayers,bool MaintenanceMode,string MaintenanceMessage,string[] EnabledCommands,bool SoloTestEnabled,string MiniAppBaseUrl,string HelpMessage,string WelcomeMessage);
+public sealed record SettingsRequest(int Version,int MinPlayers,int MaxPlayers,bool MaintenanceMode,string MaintenanceMessage,string[] EnabledCommands,bool SoloTestEnabled,string MiniAppBaseUrl,string HelpMessage,string WelcomeMessage,
+    string? MaintenanceMessageFa = null, string? HelpMessageFa = null, string? WelcomeMessageFa = null, string? ReminderMessage = null, string? ReminderMessageFa = null);
 public sealed record AdminGameView(Guid Id, long TelegramChatId, DateTime CreatedAt, DateTime EndedAt, Nightfall.Domain.WinCondition Result, string Status, string? CancellationReason, IReadOnlyList<AdminGamePlayerView> Players);
 public sealed record AdminGamePlayerView(Guid PlayerId, long? TelegramUserId, string TelegramUsername, Nightfall.Domain.Role? Role, bool SurvivedToEnd, int? GodfatherRank);

@@ -18,6 +18,9 @@ public sealed class CommandDispatcher
     private readonly ILogger<CommandDispatcher> _logger;
     private readonly IBotSettingsService? _settings;
     private BotSettingsSnapshot? _currentSettings;
+    // The sender's Telegram language and the chat's title for the message being handled.
+    private string? _currentLanguage;
+    private string? _currentChatTitle;
 
     public CommandDispatcher(
         INightfallApiClient api,
@@ -50,6 +53,8 @@ public sealed class CommandDispatcher
 
         long chatId = message.Chat.Id;
         var actor = ToIdentity(message.From);
+        _currentLanguage = message.From.LanguageCode;
+        _currentChatTitle = message.Chat.Title;
 
         try
         {
@@ -121,9 +126,9 @@ public sealed class CommandDispatcher
             return;
         }
 
-        var gameId = await _api.CreateGameAsync(chatId, actor);
+        var gameId = await _api.CreateGameAsync(chatId, actor, _currentChatTitle);
         await _messenger.SendWithUrlButtonAsync(chatId,
-            (_currentSettings?.WelcomeMessage ?? "🌙 New Nightfall game created by {creator}! Open the lobby to join, or use /join. Once everyone's in, /startgame.").Replace("{creator}", DisplayName(actor)),
+            (_currentSettings is { } welcome ? BotMessages.Pick(welcome.WelcomeMessage, welcome.WelcomeMessageFa, _currentLanguage) : "🌙 New Nightfall game created by {creator}! Open the lobby to join, or use /join. Once everyone's in, /startgame.").Replace("{creator}", DisplayName(actor)),
             BuildMiniAppUrl(gameId));
     }
 
@@ -456,12 +461,12 @@ public sealed class CommandDispatcher
             ? $"{baseUrl}?startapp={gameId}"
             : null;
 
-    private Task HandleHelpAsync(long chatId) => _messenger.SendTextAsync(chatId, _currentSettings?.HelpMessage ?? BotSettingsDefaults.HelpMessage);
+    private Task HandleHelpAsync(long chatId) => _messenger.SendTextAsync(chatId, _currentSettings is { } help ? BotMessages.Pick(help.HelpMessage, help.HelpMessageFa, _currentLanguage) : BotSettingsDefaults.HelpMessage);
 
     private async Task<bool> RejectMaintenanceAsync(long chatId)
     {
         if (_currentSettings?.MaintenanceMode != true) return false;
-        await _messenger.SendTextAsync(chatId, _currentSettings.MaintenanceMessage);
+        await _messenger.SendTextAsync(chatId, BotMessages.Pick(_currentSettings.MaintenanceMessage, _currentSettings.MaintenanceMessageFa, _currentLanguage));
         return true;
     }
 }

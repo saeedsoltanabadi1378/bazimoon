@@ -35,7 +35,7 @@ public sealed class GameService
         _mutationLock = mutationLock;
     }
 
-    public async Task<Guid> CreateGameAsync(long telegramChatId, long creatorTelegramUserId, string creatorUsername)
+    public async Task<Guid> CreateGameAsync(long telegramChatId, long creatorTelegramUserId, string creatorUsername, string? chatTitle = null)
     {
         var settings = await _settings.GetAsync();
         var game = new GameState(new GameConfig { MinPlayers = settings.MinPlayers, MaxPlayers = settings.MaxPlayers }, telegramChatId: telegramChatId);
@@ -45,7 +45,7 @@ public sealed class GameService
         await _sessionStore.SaveAsync(game);
         await _chatGameIndex.SetActiveGameAsync(telegramChatId, game.GameId);
         await _rosterStore.AddAsync(game.GameId, creatorTelegramUserId, creatorUsername);
-        await TrackActivityAsync(telegramChatId, creatorTelegramUserId, creatorUsername);
+        await TrackActivityAsync(telegramChatId, creatorTelegramUserId, creatorUsername, chatTitle);
         _db.OperationalEvents.Add(new() { Category = "Game", Message = "Game created", TargetType = "Game", TargetId = game.GameId.ToString() });
         await _db.SaveChangesAsync();
         return game.GameId;
@@ -244,10 +244,10 @@ public sealed class GameService
         await _sessionStore.RemoveAsync(gameId); if(game.TelegramChatId is { } chat) await _chatGameIndex.ClearActiveGameAsync(chat); await _rosterStore.RemoveAsync(gameId); await _notifier.NotifyGameUpdatedAsync(game); return true;
     }
 
-    private async Task TrackActivityAsync(long chatId, long userId, string username)
+    private async Task TrackActivityAsync(long chatId, long userId, string username, string? chatTitle = null)
     {
         var now=DateTime.UtcNow; var user=await _db.UserProfiles.FindAsync(userId); if(user is null)_db.UserProfiles.Add(new(){TelegramUserId=userId,Username=username,FirstSeenAt=now,LastSeenAt=now}); else {user.Username=username;user.LastSeenAt=now;}
-        var chat=await _db.ChatProfiles.FindAsync(chatId); if(chat is null)_db.ChatProfiles.Add(new(){TelegramChatId=chatId,FirstSeenAt=now,LastSeenAt=now}); else chat.LastSeenAt=now;
+        var chat=await _db.ChatProfiles.FindAsync(chatId); if(chat is null)_db.ChatProfiles.Add(new(){TelegramChatId=chatId,Title=chatTitle,FirstSeenAt=now,LastSeenAt=now}); else { chat.LastSeenAt=now; if(!string.IsNullOrWhiteSpace(chatTitle)) chat.Title=chatTitle; }
         var member = await _db.ChatMembers.FindAsync(chatId, userId);
         if (member is null) _db.ChatMembers.Add(new() { TelegramChatId = chatId, TelegramUserId = userId, LastSeenAt = now });
         else member.LastSeenAt = now;

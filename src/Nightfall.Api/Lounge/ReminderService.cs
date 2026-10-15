@@ -1,8 +1,30 @@
 using Microsoft.EntityFrameworkCore;
+using Nightfall.Infrastructure.Admin;
 using Nightfall.Infrastructure.History;
 using Nightfall.Infrastructure.Hub;
 
 namespace Nightfall.Api.Lounge;
+
+/// <summary>What the reminder job did today, for the admin health page.</summary>
+public sealed class ReminderStatus
+{
+    private readonly object _gate = new();
+    public DateTimeOffset? LastRunAt { get; private set; }
+    public int Day { get; private set; }
+    public int SentToday { get; private set; }
+    public int FailedToday { get; private set; }
+
+    public void Record(DateTimeOffset now, int day, int sent, int failed)
+    {
+        lock (_gate)
+        {
+            if (day != Day) { Day = day; SentToday = 0; FailedToday = 0; }
+            LastRunAt = now;
+            SentToday += sent;
+            FailedToday += failed;
+        }
+    }
+}
 
 /// <summary>Once a minute, sends the reminders players asked for: the daily-puzzle reminder at the
 /// time set in their profile, and the Couple Quiz reminder at the couple's time. Times are Tehran
@@ -11,12 +33,14 @@ public sealed class ReminderService : BackgroundService
 {
     private readonly IServiceScopeFactory _scopes;
     private readonly TimeProvider _clock;
+    private readonly ReminderStatus _status;
     private readonly ILogger<ReminderService> _logger;
 
-    public ReminderService(IServiceScopeFactory scopes, TimeProvider clock, ILogger<ReminderService> logger)
+    public ReminderService(IServiceScopeFactory scopes, TimeProvider clock, ReminderStatus status, ILogger<ReminderService> logger)
     {
         _scopes = scopes;
         _clock = clock;
+        _status = status;
         _logger = logger;
     }
 
@@ -28,8 +52,9 @@ public sealed class ReminderService : BackgroundService
             try
             {
                 using var scope = _scopes.CreateScope();
+                var settings = await scope.ServiceProvider.GetRequiredService<IBotSettingsService>().GetAsync(stoppingToken);
                 await SendDueAsync(scope.ServiceProvider.GetRequiredService<NightfallDbContext>(),
-                    scope.ServiceProvider.GetRequiredService<ITelegramNotifier>(), _clock.GetUtcNow(), stoppingToken);
+                    scope.ServiceProvider.GetRequiredService<ITelegramNotifier>(), _clock.GetUtcNow(), settings, _status, stoppingToken);
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
@@ -39,10 +64,14 @@ public sealed class ReminderService : BackgroundService
     }
 
     /// <summary>Sends every reminder whose time has come today and has not gone out yet.</summary>
-    public static async Task SendDueAsync(NightfallDbContext db, ITelegramNotifier notifier, DateTimeOffset now, CancellationToken ct = default)
+    public static async Task SendDueAsync(NightfallDbContext db, ITelegramNotifier notifier, DateTimeOffset now,
+        BotSettingsSnapshot? settings = null, ReminderStatus? status = null, CancellationToken ct = default)
     {
         int today = Progression.PuzzleDay(now);
         string clock = TehranClock(now);
+        string english = settings?.ReminderMessage is { Length: > 0 } en ? en : BotSettingsDefaults.ReminderMessage;
+        string persian = settings?.ReminderMessageFa is { Length: > 0 } fa ? fa : BotSettingsDefaults.ReminderMessageFa;
+        int sent = 0, failed = 0;
 
         // ReminderTime is "HH:mm", so an ordinal string comparison is a time comparison.
         var players = await db.PlayerStats
@@ -54,10 +83,11 @@ public sealed class ReminderService : BackgroundService
             // Nobody needs a nudge once they've already solved today's daily.
             if (player.LastPuzzleDay == today) continue;
             int streak = Progression.CurrentStreak(player.PuzzleStreak, player.LastPuzzleDay, player.StreakFreezes, today);
-            string text = player.Language == "fa"
-                ? streak > 0 ? $"پازل‌های امروز آماده‌اند. رکورد {streak} روزه‌ات را حفظ کن!" : "پازل‌های امروز آماده‌اند."
-                : streak > 0 ? $"Today's puzzles are ready. Keep your {streak}-day streak going!" : "Today's puzzles are ready.";
-            await notifier.NotifyAsync(player.TelegramUserId, text);
+            // The editable message talks about the streak; with no streak to keep, a plain line is sent.
+            string text = streak > 0
+                ? (player.Language == "fa" ? persian : english).Replace("{streak}", streak.ToString())
+                : player.Language == "fa" ? "پازل‌های امروز آماده‌اند." : "Today's puzzles are ready.";
+            if (await notifier.NotifyAsync(player.TelegramUserId, text)) sent++; else failed++;
         }
 
         var couples = await db.Couples
@@ -70,11 +100,22 @@ public sealed class ReminderService : BackgroundService
             foreach (long id in new[] { couple.InviterId, couple.PartnerId!.Value }.Except(played))
             {
                 string text = couple.Language == "fa" ? "سؤال‌های امروز کوییز زوج‌ها منتظر شماست." : "Today's Couple Quiz questions are waiting for you.";
-                await notifier.NotifyAsync(id, text, "couple");
+                if (await notifier.NotifyAsync(id, text, "couple")) sent++; else failed++;
             }
         }
 
+        if (sent > 0 || failed > 0)
+        {
+            db.OperationalEvents.Add(new OperationalEventRecord
+            {
+                Category = "Reminders",
+                Severity = failed > 0 ? "Warning" : "Information",
+                Message = failed > 0 ? $"Sent {sent} reminders; {failed} could not be delivered" : $"Sent {sent} reminders",
+                TargetType = "Reminders",
+            });
+        }
         await db.SaveChangesAsync(ct);
+        status?.Record(now, today, sent, failed);
     }
 
     /// <summary>"HH:mm" in Tehran time (UTC+3:30, no daylight saving), matching the puzzle day.</summary>
