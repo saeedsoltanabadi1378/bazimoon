@@ -15,10 +15,12 @@ export interface Metric {
 
 /** The shared end-of-game screen (ZipResult and siblings): hero, metrics, XP, extras, actions. */
 export function ResultScreen({
-  win, heroIcon, kicker, title, sub, metrics, xp, xpNote, children, share, primary, secondary, accent, accentInk = "#0B0D1A", onClose,
+  win, heroIcon, hero, kicker, title, sub, metrics, xp, xpNote, children, share, primary, secondary, accent, accentInk = "#0B0D1A", onClose,
 }: {
   win: boolean;
   heroIcon?: IconName;
+  /** Replaces the round hero icon (e.g. Memory's stars). */
+  hero?: ReactNode;
   kicker: string;
   title: string;
   sub: string;
@@ -45,7 +47,7 @@ export function ResultScreen({
       </div>
       <Body style={{ paddingTop: 0, paddingBottom: 20 }}>
         <section className="stack center" style={{ gap: 8, textAlign: "center" }}>
-          <IconDisc icon={heroIcon ?? (win ? "check" : "warning")} size={76} iconSize={36} bg={heroBg} fg={heroFg} strokeWidth={2} />
+          {hero ?? <IconDisc icon={heroIcon ?? (win ? "check" : "warning")} size={76} iconSize={36} bg={heroBg} fg={heroFg} strokeWidth={2} />}
           <div className="kicker" style={{ color: heroFg }}>{kicker}</div>
           <h1 className="display" style={{ fontSize: 32, lineHeight: 1.05 }}>{title}</h1>
           <p style={{ fontSize: 15, color: "var(--text-2)" }}>{sub}</p>

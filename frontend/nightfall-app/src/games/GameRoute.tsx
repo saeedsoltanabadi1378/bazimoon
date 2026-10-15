@@ -2,6 +2,7 @@ import type { Route } from "../app/router";
 import { ZipArchive, ZipIntro, ZipResult } from "./zip/ZipScreens";
 import { ZipPlay } from "./zip/ZipPlay";
 import { MergeIntro, MergePlay, MergeResult } from "./merge/MergeScreens";
+import { MemoryIntro, MemoryPlay, MemoryResult } from "./memory/MemoryScreens";
 import { MinesIntro, MinesPlay, MinesResult } from "./mines/MinesScreens";
 import { QueensIntro, QueensPlay, QueensResult } from "./queens/QueensScreens";
 
@@ -33,6 +34,10 @@ export function GameRoute({ route }: GameRouteProps) {
       if (route.screen === "play") return <MinesPlay key={JSON.stringify(p)} mode={str(p?.mode, "easy") as "daily" | "easy" | "medium" | "hard"} />;
       if (route.screen === "result") return <MinesResult params={p} />;
       return <MinesIntro />;
+    case "memory":
+      if (route.screen === "play") return <MemoryPlay key={JSON.stringify(p)} mode={str(p?.mode, "4x4") as "4x4" | "4x5" | "6x6" | "timed"} />;
+      if (route.screen === "result") return <MemoryResult params={p} />;
+      return <MemoryIntro />;
     default:
       return null;
   }
