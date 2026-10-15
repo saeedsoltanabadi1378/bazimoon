@@ -12,6 +12,7 @@ It has one artboard per screen: the Mini App (hub, Mafia flow, every solo game's
 
 ## 1. Code and design stay in sync
 
+- Design first: a new screen or game needs its artboards in the design, approved by the project owner, before any code is written for it. Draw the artboards, stop and ask for approval, then build to them.
 - Before changing a Mini App or admin screen, open the matching artboard in the design and build to it.
 - Any change to the Mini App's or admin console's UI or user-facing behaviour must also update the design in the same piece of work: new screens get a new artboard; changed layouts, copy, states, modes or rules get the artboard updated.
 - If you cannot update the design yourself, stop and tell the person exactly which artboards need which changes. Do not leave the two out of sync silently.
