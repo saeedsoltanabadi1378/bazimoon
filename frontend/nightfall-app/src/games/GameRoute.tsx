@@ -7,6 +7,7 @@ import { MinesIntro, MinesPlay, MinesResult } from "./mines/MinesScreens";
 import { NardIntro, NardPlay, NardResult } from "./nard/NardScreens";
 import { LadderIntro, LadderPlay, LadderResult } from "./ladder/LadderScreens";
 import { StackIntro, StackPlay, StackResult } from "./stack/StackScreens";
+import { BlocksIntro, BlocksPlay, BlocksResult } from "./blocks/BlocksScreens";
 import { WordIntro, WordPlay, WordResult } from "./word/WordScreens";
 import { QueensIntro, QueensPlay, QueensResult } from "./queens/QueensScreens";
 
@@ -58,6 +59,10 @@ export function GameRoute({ route }: GameRouteProps) {
       if (route.screen === "play") return <StackPlay key={JSON.stringify(p)} mode={(["daily", "zen"].includes(str(p?.mode, "")) ? str(p?.mode, "") : "classic") as "classic" | "daily" | "zen"} />;
       if (route.screen === "result") return <StackResult params={p} />;
       return <StackIntro />;
+    case "blocks":
+      if (route.screen === "play") return <BlocksPlay key={JSON.stringify(p)} mode={(["daily", "adventure"].includes(str(p?.mode, "")) ? str(p?.mode, "") : "classic") as "classic" | "daily" | "adventure"} level={num(p?.level)} />;
+      if (route.screen === "result") return <BlocksResult params={p} />;
+      return <BlocksIntro />;
     default:
       return null;
   }
