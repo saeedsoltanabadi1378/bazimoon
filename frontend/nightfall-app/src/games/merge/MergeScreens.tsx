@@ -12,7 +12,11 @@ import { IntroScreen, PreviewGrid } from "../shared/IntroScreen";
 import { XpCard } from "../shared/ResultScreen";
 import { parseXp, useFinish, useSavedState, useStopwatch, type ResultParams } from "../shared/play";
 import { canMove, move, newGame, tileStyle, type Dir, type MergeState } from "./logic";
-import { readLocal, removeLocal } from "../../lib/storage";
+import { readLocal, removeLocal, writeLocal } from "../../lib/storage";
+import { MergeBoardView, SwipeHint, useMergeTiles } from "./MergeBoard";
+
+/** Set once the player has made their first move, so the swipe hint shows only on the first game. */
+const HINT_KEY = "nightfall-merge-hint-seen";
 
 const ACCENT = "#9C8CFF";
 type MergeMode = "classic" | "big" | "timed";
@@ -94,6 +98,10 @@ export function MergePlay({ mode }: { mode: MergeMode }) {
   const wonPause = state.won && !state.keepGoing;
   const over = stuck || timeUp;
   const start = useRef<{ x: number; y: number } | null>(null);
+  const { tiles, animate } = useMergeTiles(state.grid);
+  const [shake, setShake] = useState(0);
+  const [gain, setGain] = useState<{ value: number; key: number } | null>(null);
+  const [hint, setHint] = useState(() => !readLocal<boolean>(HINT_KEY, false));
 
   useEffect(() => {
     if (over !== state.over) setState((s) => ({ ...s, over, elapsed }));
@@ -110,9 +118,16 @@ export function MergePlay({ mode }: { mode: MergeMode }) {
     const next = move(state, dir);
     if (!next) {
       haptic.warn();
+      setShake((k) => k + 1);
       return;
     }
     haptic.tap();
+    animate(state.grid, next.grid, size, dir);
+    if (next.score > state.score) setGain({ value: next.score - state.score, key: next.moves });
+    if (hint) {
+      setHint(false);
+      writeLocal(HINT_KEY, true);
+    }
     setConfirmNew(false);
     setState({ ...next, over: false, elapsed });
   }
@@ -146,14 +161,7 @@ export function MergePlay({ mode }: { mode: MergeMode }) {
     setConfirmNew(false);
   }
 
-  const boardPx = 340;
-  const gap = size === 5 ? 8 : 10;
-  const tilePx = (boardPx - 20 - gap * (size - 1)) / size;
-  const arrow = (dir: Dir, path: string, label: string) => (
-    <button type="button" onClick={() => doMove(dir)} aria-label={label} style={{ height: 52, borderRadius: 14, border: 0, background: "#1E2138", color: "var(--text)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={path} /></svg>
-    </button>
-  );
+  const boardPx = Math.min(340, (typeof window !== "undefined" ? window.innerWidth : 390) - 32);
 
   return (
     <Screen theme="night">
@@ -165,9 +173,14 @@ export function MergePlay({ mode }: { mode: MergeMode }) {
         </div>
         <div className="row" style={{ gap: 6 }}>
           {[[t("score"), state.score], [t("statBest"), Math.max(best, state.score)]].map(([label, value]) => (
-            <div key={String(label)} style={{ minWidth: 64, padding: "6px 10px", borderRadius: 12, background: "var(--surface)", textAlign: "center" }}>
+            <div key={String(label)} style={{ position: "relative", minWidth: 64, padding: "6px 10px", borderRadius: 12, background: "var(--surface)", textAlign: "center" }}>
               <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: 0.8, textTransform: "uppercase", color: "var(--muted)" }}>{label}</div>
               <div className="num" style={{ fontSize: 17, fontWeight: 700 }}>{n(Number(value))}</div>
+              {label === t("score") && gain && (
+                <span key={gain.key} className="score-gain num" aria-hidden="true" style={{ position: "absolute", insetInline: 0, top: -14, color: ACCENT, fontSize: 15, fontWeight: 800, pointerEvents: "none" }}>
+                  +{n(gain.value)}
+                </span>
+              )}
             </div>
           ))}
         </div>
@@ -197,19 +210,10 @@ export function MergePlay({ mode }: { mode: MergeMode }) {
             if (Math.abs(dx) > Math.abs(dy)) doMove(dx > 0 ? "right" : "left");
             else doMove(dy > 0 ? "down" : "up");
           }}
-          style={{ position: "relative", alignSelf: "center", width: boardPx, height: boardPx, padding: 10, borderRadius: 22, background: "var(--surface)", touchAction: "none", userSelect: "none" }}
+          style={{ alignSelf: "center", touchAction: "none", userSelect: "none" }}
         >
-          <div style={{ display: "grid", gridTemplateColumns: `repeat(${size}, minmax(0, 1fr))`, gap }}>
-            {state.grid.map((v, i) => {
-              const [bg, fg] = tileStyle(v);
-              const fontSize = (size === 5 ? 0.8 : 1) * (v >= 1024 ? 24 : v >= 128 ? 28 : 32);
-              return (
-                <div key={i} className="display" style={{ height: tilePx, borderRadius: 12, background: bg, color: fg, display: "flex", alignItems: "center", justifyContent: "center", fontSize, fontWeight: 800, boxShadow: v >= 512 ? `0 0 18px ${bg}66` : "none", transition: "background 120ms ease" }}>
-                  {v || ""}
-                </div>
-              );
-            })}
-          </div>
+          <MergeBoardView tiles={tiles} size={size} boardPx={boardPx} shake={shake}>
+          {hint && !over && <SwipeHint label={t("mergeSwipeHint")} />}
           {(over || wonPause) && (
             <div style={{ position: "absolute", inset: 0, borderRadius: 22, background: "rgba(11,13,26,0.86)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12, textAlign: "center" }}>
               <div className="display" style={{ fontSize: 28 }}>{wonPause && !over ? t("youMade2048") : timeUp ? t("timesUp") : t("noMovesLeft")}</div>
@@ -222,15 +226,7 @@ export function MergePlay({ mode }: { mode: MergeMode }) {
               </button>
             </div>
           )}
-        </div>
-
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 8, width: 216, alignSelf: "center" }} dir="ltr">
-          <span />
-          {arrow("up", "m6 15 6-6 6 6", t("moveUp"))}
-          <span />
-          {arrow("left", "m15 6-6 6 6 6", t("moveLeft"))}
-          {arrow("down", "m6 9 6 6 6-6", t("moveDown"))}
-          {arrow("right", "m9 6 6 6-6 6", t("moveRight"))}
+          </MergeBoardView>
         </div>
       </Body>
 

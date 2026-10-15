@@ -773,6 +773,60 @@ html[lang="fa"] .kicker {
   white-space: nowrap;
 }
 
+/* 2048: tiles grow in when they spawn and pop when they merge (after the slide lands). */
+.tile-born {
+  animation: tile-born 160ms ease-out 90ms backwards;
+}
+
+@keyframes tile-born {
+  from {
+    opacity: 0;
+    transform: scale(0.2);
+  }
+}
+
+.tile-pop {
+  animation: tile-pop 200ms ease-out 100ms;
+}
+
+@keyframes tile-pop {
+  50% {
+    transform: scale(1.18);
+  }
+}
+
+/* Score "+N" that floats up and fades. */
+.score-gain {
+  animation: score-gain 700ms ease-out forwards;
+}
+
+@keyframes score-gain {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-26px);
+  }
+}
+
+/* First-game hint: a hand swiping left and right across the board. */
+.swipe-hand {
+  animation: swipe-hand 1.8s ease-in-out infinite;
+}
+
+@keyframes swipe-hand {
+  0%,
+  100% {
+    transform: translateX(-46px) rotate(-8deg);
+  }
+  45%,
+  55% {
+    transform: translateX(46px) rotate(8deg);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   * {
     animation: none !important;

@@ -98,3 +98,30 @@ export const tileStyles: Record<number, [string, string]> = {
 export function tileStyle(v: number): [string, string] {
   return tileStyles[v] ?? ["#F6C377", "#1A1206"];
 }
+
+/** One tile's trip in a move: from cell, to cell, and its part in a merge. "keep" is the tile that
+ * stays and doubles; "absorb" slides into it and disappears. Used to animate the board. */
+export interface Slide {
+  from: number;
+  to: number;
+  merge: "keep" | "absorb" | null;
+}
+
+/** Where every tile goes when the board moves toward `dir` (same rules as `move`). */
+export function slidePlan(grid: number[], size: number, dir: Dir): Slide[] {
+  const plan: Slide[] = [];
+  for (let line = 0; line < size; line++) {
+    const cells = Array.from({ length: size }, (_, k) => index(size, dir, line, k)).filter((at) => grid[at]);
+    let slot = 0;
+    for (let i = 0; i < cells.length; i++) {
+      const to = index(size, dir, line, slot++);
+      if (i + 1 < cells.length && grid[cells[i]] === grid[cells[i + 1]]) {
+        plan.push({ from: cells[i], to, merge: "keep" }, { from: cells[i + 1], to, merge: "absorb" });
+        i++;
+      } else {
+        plan.push({ from: cells[i], to, merge: null });
+      }
+    }
+  }
+  return plan;
+}
