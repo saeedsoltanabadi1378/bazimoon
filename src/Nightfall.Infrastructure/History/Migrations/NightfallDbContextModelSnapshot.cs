@@ -401,6 +401,45 @@ namespace Nightfall.Infrastructure.History.Migrations
                     b.ToTable("couples", (string)null);
                 });
 
+            modelBuilder.Entity("Nightfall.Infrastructure.Hub.MafiaTableRecord", b =>
+                {
+                    b.Property<Guid>("GameId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<long>("CreatorTelegramUserId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("InviteCode")
+                        .IsRequired()
+                        .HasMaxLength(8)
+                        .HasColumnType("character varying(8)");
+
+                    b.Property<bool>("IsOpen")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Name")
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
+
+                    b.Property<long>("TelegramChatId")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("GameId");
+
+                    b.HasIndex("InviteCode")
+                        .IsUnique();
+
+                    b.HasIndex("TelegramChatId");
+
+                    b.HasIndex("IsOpen", "CreatedAt");
+
+                    b.ToTable("mafia_tables", (string)null);
+                });
+
             modelBuilder.Entity("Nightfall.Infrastructure.Hub.PlayerStatsRecord", b =>
                 {
                     b.Property<long>("TelegramUserId")

@@ -21,6 +21,7 @@ public sealed class NightfallDbContext : DbContext
     public DbSet<ChatMemberRecord> ChatMembers => Set<ChatMemberRecord>();
     public DbSet<CoupleRecord> Couples => Set<CoupleRecord>();
     public DbSet<CoupleAnswerRecord> CoupleAnswers => Set<CoupleAnswerRecord>();
+    public DbSet<MafiaTableRecord> MafiaTables => Set<MafiaTableRecord>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -93,6 +94,17 @@ public sealed class NightfallDbContext : DbContext
             b.HasKey(x => x.Id);
             b.Property(x => x.Answers).HasMaxLength(32);
             b.HasIndex(x => new { x.CoupleId, x.Day, x.TelegramUserId }).IsUnique();
+        });
+
+        modelBuilder.Entity<MafiaTableRecord>(b =>
+        {
+            b.ToTable("mafia_tables");
+            b.HasKey(x => x.GameId);
+            b.Property(x => x.Name).HasMaxLength(40);
+            b.Property(x => x.InviteCode).HasMaxLength(8);
+            b.HasIndex(x => x.InviteCode).IsUnique();
+            b.HasIndex(x => new { x.IsOpen, x.CreatedAt });
+            b.HasIndex(x => x.TelegramChatId);
         });
 
         modelBuilder.Entity<BotSettingsRecord>(b => { b.ToTable("bot_settings"); b.HasKey(x => x.Id); });

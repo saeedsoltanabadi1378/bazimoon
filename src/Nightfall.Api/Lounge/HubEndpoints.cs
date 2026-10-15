@@ -24,13 +24,13 @@ public static class HubEndpoints
         hubGroup.MapGet("/home", (HubService hub, HttpContext http) =>
             hub.GetHomeAsync(http.User.GetTelegramUserId(), http.User.GetTelegramUsername())).WithName("GetHome");
 
-        hubGroup.MapGet("/tables", (HubService hub, HttpContext http) =>
-            hub.GetTablesAsync(http.User.GetTelegramUserId())).WithName("GetTables");
+        hubGroup.MapGet("/tables", (TableService tables, HttpContext http) =>
+            tables.GetGroupTablesAsync(http.User.GetTelegramUserId())).WithName("GetTables");
 
-        hubGroup.MapPost("/quick-match", async (HubService hub, Games.GameService games, HttpContext http) =>
+        hubGroup.MapPost("/quick-match", async (TableService tables, Games.GameService games, HttpContext http) =>
         {
             long userId = http.User.GetTelegramUserId();
-            var gameId = await hub.FindQuickMatchAsync(userId);
+            var gameId = await tables.FindQuickMatchAsync(userId);
             if (gameId is null) return Results.NotFound(new { detail = "No open table in your groups right now." });
             await games.JoinGameAsync(gameId.Value, userId, http.User.GetTelegramUsername());
             return Results.Ok(new Games.CreateGameResponse(gameId.Value));
@@ -74,7 +74,6 @@ public sealed record MyGameResultDto(bool Won, int Rating, int RatingDelta);
 
 public sealed record DailyStatusDto(string Game, int Number, bool Played, bool Solved, int? TimeMs, int? Moves);
 public sealed record LeagueSummaryDto(int Season, int DaysLeft, string Division, int Tier, int? Rank, int PlayerCount, string? Zone);
-public sealed record TableDto(Guid GameId, GamePhase Phase, int Seated, int MaxPlayers, int MinPlayers, DateTimeOffset CreatedAt, IReadOnlyList<string> Players, bool YouAreSeated);
 public sealed record HomeDto(int Streak, string Date, IReadOnlyList<DailyStatusDto> Daily, int? MergeBest, LeagueSummaryDto League, TableDto? Table);
 
 public sealed record QualificationDto(int Played, int Needed);

@@ -14,9 +14,11 @@ public sealed class HubService
     private readonly IChatGameIndex _chatGameIndex;
     private readonly IGameSessionStore _sessions;
     private readonly TimeProvider _clock;
+    private readonly TableService _tables;
 
-    public HubService(NightfallDbContext db, IChatGameIndex chatGameIndex, IGameSessionStore sessions, TimeProvider clock)
+    public HubService(NightfallDbContext db, IChatGameIndex chatGameIndex, IGameSessionStore sessions, TimeProvider clock, TableService tables)
     {
+        _tables = tables;
         _db = db;
         _chatGameIndex = chatGameIndex;
         _sessions = sessions;
@@ -128,7 +130,7 @@ public sealed class HubService
 
         int? mergeBest = await _db.PuzzleResults.Where(r => r.TelegramUserId == userId && r.Game == "merge").MaxAsync(r => r.Score);
         var league = await GetLeagueAsync(userId, username, "mafia");
-        var tables = await GetTablesAsync(userId);
+        var tables = await _tables.GetGroupTablesAsync(userId);
         return new HomeDto(
             Progression.CurrentStreak(stats.PuzzleStreak, stats.LastPuzzleDay, stats.StreakFreezes, today),
             Progression.DateOfDay(today).ToString("yyyy-MM-dd"),
@@ -136,35 +138,6 @@ public sealed class HubService
             mergeBest,
             new LeagueSummaryDto(league.Season, league.DaysLeft, league.Division, league.Tier, league.You.Rank, league.PlayerCount, league.You.Zone),
             tables.FirstOrDefault());
-    }
-
-    // ------------------------------------------------------------------ tables
-
-    public async Task<IReadOnlyList<TableDto>> GetTablesAsync(long userId)
-    {
-        var chats = await _db.ChatMembers.Where(m => m.TelegramUserId == userId)
-            .OrderByDescending(m => m.LastSeenAt).Select(m => m.TelegramChatId).Take(20).ToListAsync();
-        var tables = new List<TableDto>();
-        foreach (var chat in chats)
-        {
-            var gameId = await _chatGameIndex.GetActiveGameAsync(chat);
-            if (gameId is null) continue;
-            var game = await _sessions.GetAsync(gameId.Value);
-            if (game is null || game.CurrentPhase == GamePhase.Ended) continue;
-            var you = PlayerIdentity.DeriveId(game.GameId, userId);
-            tables.Add(new TableDto(
-                game.GameId, game.CurrentPhase, game.Players.Count, game.Config.MaxPlayers, game.Config.MinPlayers, game.CreatedAt,
-                game.Players.Select(p => p.TelegramUsername).Take(6).ToList(), game.GetPlayer(you) is not null));
-        }
-        // Open lobbies first (fullest first), then games already under way.
-        return tables.OrderBy(t => t.Phase == GamePhase.Lobby ? 0 : 1).ThenByDescending(t => t.Seated).ToList();
-    }
-
-    /// <summary>Picks the fullest open lobby in any of your groups that still has a seat.</summary>
-    public async Task<Guid?> FindQuickMatchAsync(long userId)
-    {
-        var tables = await GetTablesAsync(userId);
-        return tables.FirstOrDefault(t => t.Phase == GamePhase.Lobby && t.Seated < t.MaxPlayers)?.GameId;
     }
 
     // ------------------------------------------------------------------ league

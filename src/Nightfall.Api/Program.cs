@@ -30,6 +30,7 @@ builder.Services.AddOptions<AdminOptions>().Bind(builder.Configuration.GetSectio
 
 builder.Services.AddScoped<GameService>();
 builder.Services.AddScoped<HubService>();
+builder.Services.AddScoped<TableService>();
 builder.Services.AddScoped<CoupleService>();
 builder.Services.AddSingleton<ReminderStatus>();
 builder.Services.AddScoped<Nightfall.Api.Admin.AdminDashboardService>();
@@ -129,6 +130,7 @@ app.MapAuthEndpoints();
 app.MapAdminEndpoints();
 app.MapGameEndpoints();
 app.MapHubEndpoints();
+app.MapTableEndpoints();
 app.MapCoupleEndpoints();
 app.MapHub<GameHub>("/hubs/game");
 

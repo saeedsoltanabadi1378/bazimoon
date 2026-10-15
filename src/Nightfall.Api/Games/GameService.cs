@@ -35,10 +35,11 @@ public sealed class GameService
         _mutationLock = mutationLock;
     }
 
-    public async Task<Guid> CreateGameAsync(long telegramChatId, long creatorTelegramUserId, string creatorUsername, string? chatTitle = null)
+    public async Task<Guid> CreateGameAsync(long telegramChatId, long creatorTelegramUserId, string creatorUsername, string? chatTitle = null, TableOptions? table = null)
     {
         var settings = await _settings.GetAsync();
-        var game = new GameState(new GameConfig { MinPlayers = settings.MinPlayers, MaxPlayers = settings.MaxPlayers }, telegramChatId: telegramChatId);
+        int seats = Math.Clamp(table?.Seats ?? settings.MaxPlayers, settings.MinPlayers, settings.MaxPlayers);
+        var game = new GameState(new GameConfig { MinPlayers = settings.MinPlayers, MaxPlayers = seats }, telegramChatId: telegramChatId);
         var creatorId = PlayerIdentity.DeriveId(game.GameId, creatorTelegramUserId);
         game.AddPlayer(new Player(creatorId, creatorUsername));
 
@@ -46,6 +47,15 @@ public sealed class GameService
         await _chatGameIndex.SetActiveGameAsync(telegramChatId, game.GameId);
         await _rosterStore.AddAsync(game.GameId, creatorTelegramUserId, creatorUsername);
         await TrackActivityAsync(telegramChatId, creatorTelegramUserId, creatorUsername, chatTitle);
+        _db.MafiaTables.Add(new()
+        {
+            GameId = game.GameId,
+            TelegramChatId = telegramChatId,
+            CreatorTelegramUserId = creatorTelegramUserId,
+            Name = string.IsNullOrWhiteSpace(table?.Name) ? null : table.Name.Trim()[..Math.Min(40, table.Name.Trim().Length)],
+            IsOpen = table?.IsOpen ?? false,
+            InviteCode = await NewInviteCodeAsync(),
+        });
         _db.OperationalEvents.Add(new() { Category = "Game", Message = "Game created", TargetType = "Game", TargetId = game.GameId.ToString() });
         await _db.SaveChangesAsync();
         return game.GameId;
@@ -89,7 +99,9 @@ public sealed class GameService
         }
 
         var chatId = game.TelegramChatId ?? throw new GameException("This game has no chat to start a rematch in.");
-        var rematchId = await CreateGameAsync(chatId, telegramUserId, username);
+        var previous = await _db.MafiaTables.FindAsync(gameId);
+        var rematchId = await CreateGameAsync(chatId, telegramUserId, username, null,
+            previous is null ? null : new TableOptions(previous.Name, previous.IsOpen, game.Config.MaxPlayers));
         game.SetRematch(rematchId);
         // The finished game is already in history; only refresh the live copy so players see the rematch.
         await _sessionStore.SaveAsync(game);
@@ -244,6 +256,21 @@ public sealed class GameService
         await _sessionStore.RemoveAsync(gameId); if(game.TelegramChatId is { } chat) await _chatGameIndex.ClearActiveGameAsync(chat); await _rosterStore.RemoveAsync(gameId); await _notifier.NotifyGameUpdatedAsync(game); return true;
     }
 
+    private const string CodeAlphabet = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+
+    /// <summary>A six-character code without look-alike letters (no I, L, O, 0 or 1).</summary>
+    private async Task<string> NewInviteCodeAsync()
+    {
+        while (true)
+        {
+            var code = string.Create(6, 0, (span, _) =>
+            {
+                for (int i = 0; i < span.Length; i++) span[i] = CodeAlphabet[System.Security.Cryptography.RandomNumberGenerator.GetInt32(CodeAlphabet.Length)];
+            });
+            if (!await _db.MafiaTables.AnyAsync(t => t.InviteCode == code)) return code;
+        }
+    }
+
     private async Task TrackActivityAsync(long chatId, long userId, string username, string? chatTitle = null)
     {
         var now=DateTime.UtcNow; var user=await _db.UserProfiles.FindAsync(userId); if(user is null)_db.UserProfiles.Add(new(){TelegramUserId=userId,Username=username,FirstSeenAt=now,LastSeenAt=now}); else {user.Username=username;user.LastSeenAt=now;}
@@ -253,3 +280,6 @@ public sealed class GameService
         else member.LastSeenAt = now;
     }
 }
+
+/// <summary>How a table is set up when it is created from the app (or copied into a rematch).</summary>
+public sealed record TableOptions(string? Name, bool IsOpen, int? Seats);
