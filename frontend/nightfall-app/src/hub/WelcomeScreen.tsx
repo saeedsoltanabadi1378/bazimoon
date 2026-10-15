@@ -4,15 +4,19 @@ import { useNavigation } from "../app/router";
 import { IconDisc, Screen, Switch } from "../ui/components";
 import type { IconName } from "../ui/Icon";
 import { useHub } from "./HubData";
+import { LogoTiles } from "../ui/LogoTiles";
 import { writeLocal } from "../lib/storage";
 import { haptic } from "../lib/haptics";
 
 export const WELCOMED_KEY = "nightfall-welcomed";
 
-const features: { icon: IconName; bg: string; fg: string; title: "welcomeF1" | "welcomeF2" | "welcomeF3"; text: "welcomeF1Text" | "welcomeF2Text" | "welcomeF3Text" }[] = [
+const AMBER = "#F0A83A";
+
+const features: { icon: IconName; bg: string; fg: string; title: `welcomeF${1 | 2 | 3 | 4}`; text: `welcomeF${1 | 2 | 3 | 4}Text` }[] = [
   { icon: "zip", bg: "#173A36", fg: "#5FD0BE", title: "welcomeF1", text: "welcomeF1Text" },
-  { icon: "moon", bg: "#2E2340", fg: "#B79CF2", title: "welcomeF2", text: "welcomeF2Text" },
-  { icon: "trophy", bg: "#2A2113", fg: "#F0A83A", title: "welcomeF3", text: "welcomeF3Text" },
+  { icon: "blocks", bg: "#25141E", fg: "#F2B8D0", title: "welcomeF2", text: "welcomeF2Text" },
+  { icon: "people", bg: "#2E2340", fg: "#B79CF2", title: "welcomeF3", text: "welcomeF3Text" },
+  { icon: "trophy", bg: "#2A2113", fg: AMBER, title: "welcomeF4", text: "welcomeF4Text" },
 ];
 
 /** First launch: language first (Persian flips the layout), what's inside, then the daily reminder. */
@@ -36,7 +40,7 @@ export function WelcomeScreen() {
       <div className="row row--between" style={{ padding: "14px 16px" }}>
         <div className="row" style={{ gap: 6 }} role="img" aria-label={t("stepOf", { step: step + 1, total: 3 })}>
           {[0, 1, 2].map((i) => (
-            <span key={i} style={{ width: i === step ? 24 : 8, height: 8, borderRadius: 999, background: i <= step ? "#9C8CFF" : "#2E3252", transition: "width 200ms ease" }} />
+            <span key={i} style={{ width: i === step ? 24 : 8, height: 8, borderRadius: 999, background: i <= step ? AMBER : "#2E3252", transition: "width 200ms ease" }} />
           ))}
         </div>
         <button type="button" className="btn btn--ghost btn--auto" style={{ fontSize: 15, fontWeight: 600, color: "var(--text-2)", padding: "0 8px" }} onClick={finish}>
@@ -47,7 +51,7 @@ export function WelcomeScreen() {
       <div className="fade-in" key={step} style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", gap: step === 0 ? 22 : 18, padding: "0 24px", overflowY: "auto" }}>
         {step === 0 && (
           <>
-            <IconDisc icon="moon" size={96} iconSize={48} bg="#1E1A40" fg="#9C8CFF" radius={28} strokeWidth={1.6} />
+            <LogoTiles size={96} />
             <h1 className="display" style={{ fontSize: 36 }}>{t("welcomeTitle")}</h1>
             <p style={{ fontSize: 16, lineHeight: 1.5, color: "var(--text-2)" }}>{t("welcomeBody")}</p>
             <div className="stack">
@@ -64,7 +68,7 @@ export function WelcomeScreen() {
                       setLanguage(lang);
                     }}
                     style={{
-                      minHeight: 56, borderRadius: 16, border: `2px solid ${language === lang ? "#9C8CFF" : "#2E3252"}`, background: "var(--surface)",
+                      minHeight: 56, borderRadius: 16, border: `2px solid ${language === lang ? AMBER : "#2E3252"}`, background: "var(--surface)",
                       color: "var(--text)", fontFamily: lang === "fa" ? "Vazirmatn, sans-serif" : "'IBM Plex Sans', sans-serif",
                       fontSize: lang === "fa" ? 17 : 16, fontWeight: lang === "fa" ? 700 : 600, cursor: "pointer",
                     }}
@@ -114,9 +118,9 @@ export function WelcomeScreen() {
 
       <div style={{ padding: "12px 16px calc(24px + var(--safe-bottom))" }}>
         {step < 2 ? (
-          <button type="button" className="btn btn--primary" style={{ minHeight: 54 }} onClick={() => setStep((s) => s + 1)}>{t("continue")}</button>
+          <button type="button" className="btn" style={{ minHeight: 54, background: AMBER, color: "#1A1206" }} onClick={() => setStep((s) => s + 1)}>{t("continue")}</button>
         ) : (
-          <button type="button" className="btn btn--primary" style={{ minHeight: 54 }} onClick={finish}>{t("startPlaying")}</button>
+          <button type="button" className="btn" style={{ minHeight: 54, background: AMBER, color: "#1A1206" }} onClick={finish}>{t("startPlaying")}</button>
         )}
       </div>
     </Screen>

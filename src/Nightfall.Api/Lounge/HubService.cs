@@ -137,7 +137,8 @@ public sealed class HubService
             daily,
             mergeBest,
             new LeagueSummaryDto(league.Season, league.DaysLeft, league.Division, league.Tier, league.You.Rank, league.PlayerCount, league.You.Zone),
-            tables.FirstOrDefault());
+            tables.FirstOrDefault(),
+            (await _tables.GetOpenTablesAsync(userId)).Count(t => t.Phase == GamePhase.Lobby && t.Seated < t.MaxPlayers));
     }
 
     // ------------------------------------------------------------------ league

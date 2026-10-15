@@ -67,9 +67,18 @@ export function ProfileScreen() {
           </div>
         </header>
 
+        <section className="stack" style={{ gap: 12, padding: 16, borderRadius: 18, background: "var(--surface)" }}>
+          <h2 style={{ fontSize: 16, fontWeight: 600 }}>{t("sectionPuzzles")}</h2>
+          <div className="stat-grid">
+            <MiniStat label={t("streak")} value={t("daysCount", { count: p.puzzles.streak })} muted />
+            <MiniStat label={t("solved")} value={n(p.puzzles.solved)} muted />
+            <MiniStat label={t("bestZip")} value={formatClock(p.puzzles.bestZipMs, language)} muted />
+          </div>
+        </section>
+
         <section className="stack" style={{ gap: 12, padding: 16, borderRadius: 18, background: "#22161A", border: "1px solid #3D2328" }}>
           <div className="row row--between row--baseline">
-            <h2 style={{ fontSize: 16, fontWeight: 600 }}>{t("tabMafia")}</h2>
+            <h2 style={{ fontSize: 16, fontWeight: 600 }}>{t("sectionMafia")}</h2>
             <span className="small" style={{ color: "#B9A6A9" }}>{t("gamesThisSeason", { count: p.mafia.gamesThisSeason })}</span>
           </div>
           <div className="stat-grid">
@@ -84,15 +93,6 @@ export function ProfileScreen() {
               <span className="num" style={{ width: 78, textAlign: "end", fontSize: 13 }}>{t("pctGames", { pct: side.pct, games: side.games })}</span>
             </div>
           ))}
-        </section>
-
-        <section className="stack" style={{ gap: 12, padding: 16, borderRadius: 18, background: "var(--surface)" }}>
-          <h2 style={{ fontSize: 16, fontWeight: 600 }}>{t("tabPuzzles")}</h2>
-          <div className="stat-grid">
-            <MiniStat label={t("streak")} value={t("daysCount", { count: p.puzzles.streak })} muted />
-            <MiniStat label={t("solved")} value={n(p.puzzles.solved)} muted />
-            <MiniStat label={t("bestZip")} value={formatClock(p.puzzles.bestZipMs, language)} muted />
-          </div>
         </section>
 
         <section className="stack">

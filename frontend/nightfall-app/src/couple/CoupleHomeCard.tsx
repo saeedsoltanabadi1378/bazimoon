@@ -6,9 +6,9 @@ import { useCoupleApi } from "./CoupleRoute";
 const PINK = "#F2A7C3";
 
 /** The Couple Quiz row on Home: today's status for a couple, or an invitation to start one. */
-export function CoupleHomeCard() {
+/** Today's Couple Quiz status, shared by the Together row and the Home tile. */
+export function useCoupleSummary() {
   const { t, n } = useLanguage();
-  const { push } = useNavigation();
   const { profile } = useHub();
   const capi = useCoupleApi();
   const { data } = useLoad(() => capi.state(), [capi]);
@@ -25,6 +25,12 @@ export function CoupleHomeCard() {
         : couple.today.partnerDone ? t("coupleCardYourTurn", { name: couple.partnerName })
           : t("coupleCardNew")
     : data?.status === "pending" ? t("coupleCardPending") : t("coupleCardInvite");
+  return { data, couple, me, partner, title, sub };
+}
+
+export function CoupleHomeCard() {
+  const { push } = useNavigation();
+  const { couple, me, partner, title, sub } = useCoupleSummary();
 
   return (
     <button

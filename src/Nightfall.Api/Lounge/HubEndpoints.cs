@@ -74,7 +74,7 @@ public sealed record MyGameResultDto(bool Won, int Rating, int RatingDelta);
 
 public sealed record DailyStatusDto(string Game, int Number, bool Played, bool Solved, int? TimeMs, int? Moves);
 public sealed record LeagueSummaryDto(int Season, int DaysLeft, string Division, int Tier, int? Rank, int PlayerCount, string? Zone);
-public sealed record HomeDto(int Streak, string Date, IReadOnlyList<DailyStatusDto> Daily, int? MergeBest, LeagueSummaryDto League, TableDto? Table);
+public sealed record HomeDto(int Streak, string Date, IReadOnlyList<DailyStatusDto> Daily, int? MergeBest, LeagueSummaryDto League, TableDto? Table, int OpenTables);
 
 public sealed record QualificationDto(int Played, int Needed);
 public sealed record LeagueYouDto(int? Rank, int Score, int Third, string? Zone);

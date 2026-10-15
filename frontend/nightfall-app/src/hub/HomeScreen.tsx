@@ -1,16 +1,16 @@
-import { useState, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import { useLanguage } from "../i18n/LanguageContext";
 import { useNavigation, type GameKey } from "../app/router";
 import { useSession } from "../app/session";
-import { Avatar, Body, ProgressBar, Screen, Toast } from "../ui/components";
+import { Body, ProgressBar, Screen } from "../ui/components";
 import { Icon } from "../ui/Icon";
+import { LogoTiles } from "../ui/LogoTiles";
 import { TabBar } from "../ui/TabBar";
 import { useHub, useLoad } from "./HubData";
 import type { DailyStatus, Home } from "../api/hub";
-import { formatClock, formatShortDate, formatTimeOfDay } from "../lib/format";
-import { roomCode } from "../mafia/roomCode";
+import { formatClock, formatShortDate } from "../lib/format";
 import { dailyLadder } from "../games/ladder/logic";
-import { CoupleHomeCard } from "../couple/CoupleHomeCard";
+import { useCoupleSummary } from "../couple/CoupleHomeCard";
 import { haptic } from "../lib/haptics";
 
 const avatarColors = ["#F0A83A", "#5FD0BE", "#B79CF2", "#E5604D", "#8FA8FF", "#E9D8A6"];
@@ -21,7 +21,6 @@ export function HomeScreen() {
   const session = useSession();
   const { api, profile } = useHub();
   const home = useLoad(() => api.home(), [api]);
-  const [toast, setToast] = useState<string | null>(null);
   const data = home.data;
 
   const daily = (game: string) => data?.daily.find((d) => d.game === game);
@@ -30,16 +29,6 @@ export function HomeScreen() {
     push({ name: "game", game, screen, params });
   };
 
-  async function quickMatch() {
-    try {
-      const { gameId } = await api.quickMatch();
-      push({ name: "mafia", gameId });
-    } catch {
-      setToast(t("noOpenTable"));
-      window.setTimeout(() => setToast(null), 2500);
-    }
-  }
-
   const ladder = daily("ladder");
   const ladderPuzzle = ladder ? dailyLadder(ladder.number) : null;
 
@@ -47,9 +36,12 @@ export function HomeScreen() {
     <Screen theme="hub">
       <Body style={{ padding: "20px 16px 24px", gap: 22 }}>
         <header className="row row--between">
-          <div className="display" style={{ fontSize: 28, letterSpacing: -0.5 }}>Nightfall</div>
+          <div className="row" style={{ gap: 10 }}>
+            <LogoTiles />
+            <div className="display" style={{ fontSize: 28, letterSpacing: -0.5 }}>Nightfall</div>
+          </div>
           <div className="row">
-            <span className="pill" style={{ background: "#2A2113", color: "#F0A83A", fontSize: 14 }}>
+            <span className="pill" style={{ background: "#2A2113", color: "#F0A83A", fontSize: 14, whiteSpace: "nowrap" }}>
               <Icon name="flame" size={16} />
               {t("streakDays", { count: data?.streak ?? profile?.puzzles.streak ?? 0 })}
             </span>
@@ -110,58 +102,13 @@ export function HomeScreen() {
           </button>
         </section>
 
-        <TableCard data={data} onSeat={(gameId) => push({ name: "mafia", gameId })} onQuickMatch={() => void quickMatch()} />
-
-        <CoupleHomeCard />
+        <PlayTogether data={data} />
 
         <LeagueCard data={data} onOpen={() => push({ name: "league" })} />
       </Body>
       <TabBar />
-      <Toast message={toast} />
     </Screen>
   );
-
-  function TableCard({ data, onSeat, onQuickMatch }: { data: Home | null; onSeat: (id: string) => void; onQuickMatch: () => void }) {
-    const table = data?.table;
-    return (
-      <section className="stack stack--lg" style={{ padding: 18, borderRadius: 22, background: "#22161A", border: "1px solid #3D2328" }} aria-label={t("tonightsTable")}>
-        <div className="row row--between">
-          <div className="stack" style={{ gap: 2 }}>
-            <span className="kicker" style={{ color: "#F08A7A" }}>{t("tonightsTable")}</span>
-            <span className="display" style={{ fontSize: 22, fontWeight: 700 }}>
-              {table ? t("mafiaRoom", { code: roomCode(table.gameId) }) : t("noTableYet")}
-            </span>
-          </div>
-          {table && (
-            <div style={{ textAlign: "end" }}>
-              <div style={{ fontSize: 22, fontWeight: 600 }}>{formatTimeOfDay(table.createdAt, language)}</div>
-              <div className="tiny" style={{ color: "#B9A6A9" }}>{t("classicPlayers", { count: table.maxPlayers })}</div>
-            </div>
-          )}
-        </div>
-        {table ? (
-          <>
-            <div className="row row--between">
-              <div className="row" style={{ gap: 0 }} aria-hidden="true">
-                {table.players.map((name, i) => (
-                  <Avatar key={`${name}-${i}`} name={name} color={avatarColors[i % avatarColors.length]} size={34} fontSize={13} style={{ marginInlineEnd: -8, border: "2px solid #22161A", color: "#101218" }} />
-                ))}
-              </div>
-              <span style={{ fontSize: 14, color: "#E7D9DB" }}>{t("seatedOf", { seated: table.seated, max: table.maxPlayers })}</span>
-            </div>
-            <div className="row" style={{ gap: 10 }}>
-              <button type="button" className="btn btn--md grow" style={{ background: "#E5604D", color: "#1C0905" }} onClick={() => onSeat(table.gameId)}>
-                {table.youAreSeated ? t("returnToTable") : t("takeASeat")}
-              </button>
-              <button type="button" className="btn btn--md btn--outline grow" style={{ borderColor: "#5A3439" }} onClick={onQuickMatch}>{t("quickMatch")}</button>
-            </div>
-          </>
-        ) : (
-          <p className="small" style={{ color: "#E7D9DB" }}>{t("noTableHint")}</p>
-        )}
-      </section>
-    );
-  }
 
   function LeagueCard({ data, onOpen }: { data: Home | null; onOpen: () => void }) {
     const league = data?.league;
@@ -239,4 +186,55 @@ function MergeGlyph() {
 
 export function roman(tier: number) {
   return ["", "I", "II", "III"][tier] ?? "";
+}
+
+/** Home's "Play together": equal Mafia and Couple Quiz tiles, so neither leads the hub. */
+function PlayTogether({ data }: { data: Home | null }) {
+  const { t } = useLanguage();
+  const { push } = useNavigation();
+  const couple = useCoupleSummary();
+  const table = data?.table ?? null;
+  const open = data?.openTables ?? 0;
+  const mafiaSub = table && table.phase === "Lobby" && table.chatTitle
+    ? t("mafiaTileYourTable", { group: table.chatTitle })
+    : open === 1 ? t("mafiaTileOneOpen") : open > 1 ? t("mafiaTileOpen", { count: open }) : t("mafiaTileNone");
+  const tile = { display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 10, padding: 14, borderRadius: 18, background: "var(--surface)", border: 0, color: "var(--text)", textAlign: "start", font: "inherit", cursor: "pointer", minWidth: 0 } as const;
+  const iconBox = (bg: string, fg: string) => ({ width: 44, height: 44, borderRadius: 14, background: bg, color: fg, display: "flex", alignItems: "center", justifyContent: "center" });
+
+  return (
+    <section className="stack" style={{ gap: 12 }} aria-labelledby="together-title">
+      <div className="row row--between row--baseline">
+        <h2 id="together-title" className="display" style={{ fontSize: 20, fontWeight: 700 }}>{t("playTogether")}</h2>
+        <button type="button" onClick={() => push({ name: "mafia" })} style={{ background: "none", border: 0, padding: 0, color: "#F0A83A", font: "inherit", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>{t("seeAll")}</button>
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 10 }}>
+        <button type="button" style={tile} onClick={() => push(table && table.phase === "Lobby" ? { name: "mafia", gameId: table.gameId } : { name: "mafia" })}>
+          <span style={iconBox("#2E2340", "#B79CF2")}><Icon name="moon" size={22} /></span>
+          <span>
+            <span style={{ display: "block", fontWeight: 600, fontSize: 16 }}>{t("roleMafia")}</span>
+            <span style={{ display: "block", fontSize: 13, color: "var(--muted)" }}>{mafiaSub}</span>
+          </span>
+          {table && table.players.length > 0 && (
+            <span className="row" style={{ gap: 0 }} aria-hidden="true">
+              {table.players.slice(0, 4).map((name, i) => (
+                <span key={`${name}-${i}`} style={{ width: 26, height: 26, marginInlineEnd: -7, borderRadius: 999, border: "2px solid var(--surface)", background: avatarColors[i % avatarColors.length], color: "#101218", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700 }}>
+                  {Array.from(name)[0]?.toUpperCase()}
+                </span>
+              ))}
+            </span>
+          )}
+        </button>
+        <button type="button" style={tile} onClick={() => push({ name: "couple", screen: couple.couple ? "home" : "invite" })}>
+          <span style={iconBox("#24121C", "#F2A7C3")}><Icon name="heart" size={22} /></span>
+          <span>
+            <span style={{ display: "block", fontWeight: 600, fontSize: 16 }}>{t("coupleQuiz")}</span>
+            <span style={{ display: "block", fontSize: 13, color: "var(--muted)" }}>{couple.couple ? couple.sub : t("coupleTileInvite")}</span>
+          </span>
+          {couple.couple && couple.couple.streak > 0 && (
+            <span style={{ padding: "3px 10px", borderRadius: 999, background: "#24121C", color: "#F2A7C3", fontSize: 12, fontWeight: 600 }}>{t("streakDays", { count: couple.couple.streak })}</span>
+          )}
+        </button>
+      </div>
+    </section>
+  );
 }

@@ -6,7 +6,7 @@ import { haptic } from "../lib/haptics";
 const tabs: { key: TabKey; icon: IconName; route: Route }[] = [
   { key: "home", icon: "home", route: { name: "home" } },
   { key: "solo", icon: "grid", route: { name: "solo" } },
-  { key: "mafia", icon: "moon", route: { name: "mafia" } },
+  { key: "mafia", icon: "people", route: { name: "mafia" } },
   { key: "league", icon: "trophyFull", route: { name: "league" } },
   { key: "profile", icon: "user", route: { name: "profile" } },
 ];

@@ -21,8 +21,8 @@ export const core: Record<keyof typeof en, string> = {
   players: "بازیکنان",
   mainNav: "منوی اصلی",
   tabHome: "خانه",
-  tabPuzzles: "معماها",
-  tabMafia: "مافیا",
+  tabPuzzles: "بازی‌ها",
+  tabMafia: "با هم",
   tabLeague: "لیگ",
   tabProfile: "پروفایل",
 

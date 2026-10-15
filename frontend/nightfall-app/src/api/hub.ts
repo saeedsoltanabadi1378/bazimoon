@@ -83,6 +83,8 @@ export interface Home {
   mergeBest: number | null;
   league: { season: number; daysLeft: number; division: string; tier: number; rank: number | null; playerCount: number; zone: string | null };
   table: Table | null;
+  /** Open lobbies with a free seat, across all groups. */
+  openTables: number;
 }
 
 export interface LeagueRow {

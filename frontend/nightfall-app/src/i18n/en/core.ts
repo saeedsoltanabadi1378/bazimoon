@@ -20,8 +20,8 @@ export const core = {
   players: "Players",
   mainNav: "Main",
   tabHome: "Home",
-  tabPuzzles: "Puzzles",
-  tabMafia: "Mafia",
+  tabPuzzles: "Games",
+  tabMafia: "Together",
   tabLeague: "League",
   tabProfile: "Profile",
 

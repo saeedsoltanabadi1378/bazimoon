@@ -18,7 +18,7 @@ const zoneStyle = {
 export function LeagueScreen() {
   const { t, n } = useLanguage();
   const { api } = useHub();
-  const [board, setBoard] = useState<"mafia" | "puzzles">("mafia");
+  const [board, setBoard] = useState<"mafia" | "puzzles">("puzzles");
   const { data, loading, error, reload } = useLoad(() => api.league(board), [api, board]);
   const mafia = board === "mafia";
 
@@ -49,7 +49,7 @@ export function LeagueScreen() {
           label={t("tabLeague")}
           value={board}
           onChange={setBoard}
-          options={[{ value: "mafia", label: t("tabMafia") }, { value: "puzzles", label: t("tabPuzzles") }]}
+          options={[{ value: "puzzles", label: t("sectionPuzzles") }, { value: "mafia", label: t("sectionMafia") }]}
         />
 
         {error && (
