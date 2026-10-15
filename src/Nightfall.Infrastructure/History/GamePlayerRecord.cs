@@ -13,4 +13,11 @@ public sealed class GamePlayerRecord
     public Role? Role { get; set; }
     public bool SurvivedToEnd { get; set; }
     public int? GodfatherRank { get; set; }
+    public EliminationCause? EliminatedBy { get; set; }
+    public int? EliminatedRound { get; set; }
+    public bool WasPromoted { get; set; }
+    /// <summary>Mafia rating before this game and the change it caused (null when unrated).</summary>
+    public int? RatingBefore { get; set; }
+    public int? RatingDelta { get; set; }
+    public bool? Won { get; set; }
 }

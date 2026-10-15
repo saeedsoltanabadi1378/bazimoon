@@ -24,6 +24,12 @@ public static class GameEndpoints
             return Results.Ok();
         }).WithName("JoinGame");
 
+        group.MapPost("/{gameId:guid}/rematch", async (Guid gameId, GameService games, HttpContext http) =>
+        {
+            var rematchId = await games.RematchAsync(gameId, http.User.GetTelegramUserId(), http.User.GetTelegramUsername());
+            return Results.Ok(new CreateGameResponse(rematchId));
+        }).WithName("Rematch");
+
         group.MapDelete("/{gameId:guid}/players", async (Guid gameId, GameService games, HttpContext http) =>
         {
             await games.LeaveGameAsync(gameId, http.User.GetTelegramUserId());

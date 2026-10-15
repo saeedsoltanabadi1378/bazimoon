@@ -9,6 +9,7 @@ using Nightfall.Api.Auth;
 using Nightfall.Api.Admin;
 using Nightfall.Api.Errors;
 using Nightfall.Api.Games;
+using Nightfall.Api.Lounge;
 using Nightfall.Api.Hubs;
 using Nightfall.Infrastructure;
 using Nightfall.Infrastructure.Auth;
@@ -28,6 +29,8 @@ builder.Services.AddSingleton<TelegramInitDataValidator>();
 builder.Services.AddOptions<AdminOptions>().Bind(builder.Configuration.GetSection(AdminOptions.SectionName));
 
 builder.Services.AddScoped<GameService>();
+builder.Services.AddScoped<HubService>();
+builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton<GameMutationLock>();
 builder.Services.AddHostedService<DiscussionDeadlineService>();
 builder.Services.AddSingleton<IGameNotifier, SignalRGameNotifier>();
@@ -118,6 +121,7 @@ app.MapGet("/health", () => Results.Ok(new { status = "healthy" })).AllowAnonymo
 app.MapAuthEndpoints();
 app.MapAdminEndpoints();
 app.MapGameEndpoints();
+app.MapHubEndpoints();
 app.MapHub<GameHub>("/hubs/game");
 
 // Applies pending EF Core migrations before serving traffic. IsRelational() guards this so it's a

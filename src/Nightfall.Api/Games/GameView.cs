@@ -28,7 +28,8 @@ public sealed record GameView(
     Guid? YourNightActionTargetId = null,
     IReadOnlyList<DetectiveResultView>? YourInvestigations = null,
     bool YouCannotHealSelf = false,
-    NightProgressView? NightProgress = null)
+    NightProgressView? NightProgress = null,
+    Guid? RematchGameId = null)
 {
     public static GameView For(GameState game, Guid viewerId)
     {
@@ -127,7 +128,8 @@ public sealed record GameView(
             yourTarget,
             investigations,
             viewer?.Role == Role.Doctor && game.DoctorSelfHealBlocked,
-            progress);
+            progress,
+            game.RematchGameId);
     }
 }
 

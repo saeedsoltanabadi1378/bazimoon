@@ -72,6 +72,31 @@ public sealed class GameService
         }
     }
 
+    /// <summary>Starts (or joins) a follow-up game in the same chat from a finished game.</summary>
+    public async Task<Guid> RematchAsync(Guid gameId, long telegramUserId, string username)
+    {
+        using var held = await _mutationLock.EnterAsync(gameId);
+        var game = await LoadOrThrowAsync(gameId);
+        if (game.CurrentPhase != GamePhase.Ended)
+            throw new GameException("A rematch can only be started once the game is over.");
+        if (game.GetPlayer(PlayerIdentity.DeriveId(gameId, telegramUserId)) is null)
+            throw new ForbiddenGameActionException("You are not a player in this game.");
+
+        if (game.RematchGameId is { } existing && await _sessionStore.GetAsync(existing) is { CurrentPhase: GamePhase.Lobby })
+        {
+            await JoinGameAsync(existing, telegramUserId, username);
+            return existing;
+        }
+
+        var chatId = game.TelegramChatId ?? throw new GameException("This game has no chat to start a rematch in.");
+        var rematchId = await CreateGameAsync(chatId, telegramUserId, username);
+        game.SetRematch(rematchId);
+        // The finished game is already in history; only refresh the live copy so players see the rematch.
+        await _sessionStore.SaveAsync(game);
+        await _notifier.NotifyGameUpdatedAsync(game);
+        return rematchId;
+    }
+
     public async Task LeaveGameAsync(Guid gameId, long telegramUserId)
     {
         using var held = await _mutationLock.EnterAsync(gameId);
@@ -223,5 +248,8 @@ public sealed class GameService
     {
         var now=DateTime.UtcNow; var user=await _db.UserProfiles.FindAsync(userId); if(user is null)_db.UserProfiles.Add(new(){TelegramUserId=userId,Username=username,FirstSeenAt=now,LastSeenAt=now}); else {user.Username=username;user.LastSeenAt=now;}
         var chat=await _db.ChatProfiles.FindAsync(chatId); if(chat is null)_db.ChatProfiles.Add(new(){TelegramChatId=chatId,FirstSeenAt=now,LastSeenAt=now}); else chat.LastSeenAt=now;
+        var member = await _db.ChatMembers.FindAsync(chatId, userId);
+        if (member is null) _db.ChatMembers.Add(new() { TelegramChatId = chatId, TelegramUserId = userId, LastSeenAt = now });
+        else member.LastSeenAt = now;
     }
 }

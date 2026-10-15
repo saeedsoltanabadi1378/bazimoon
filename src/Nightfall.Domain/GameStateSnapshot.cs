@@ -21,7 +21,8 @@ public sealed record GameStateSnapshot(
     int? LastDoctorSelfHealNight,
     NightResult? LastNightResult,
     VotingResult? LastVotingResult,
-    DiscussionStateSnapshot? Discussion = null);
+    DiscussionStateSnapshot? Discussion = null,
+    Guid? RematchGameId = null);
 
 public sealed record PlayerSnapshot(
     Guid Id,

@@ -31,6 +31,9 @@ public sealed class GameState
     public VotingResult? LastVotingResult { get; private set; }
     public DiscussionStateSnapshot? Discussion { get; private set; }
 
+    /// <summary>The follow-up game started from this one's Game over screen, if any.</summary>
+    public Guid? RematchGameId { get; private set; }
+
     public GameState(GameConfig? config = null, Guid? gameId = null, long? telegramChatId = null)
     {
         Config = config ?? GameConfig.Default;
@@ -56,7 +59,8 @@ public sealed class GameState
         _lastDoctorSelfHealNight,
         LastNightResult,
         LastVotingResult,
-        Discussion);
+        Discussion,
+        RematchGameId);
 
     /// <summary>Reconstructs a GameState (including in-flight submissions) from a snapshot, bypassing normal transition guards.</summary>
     public static GameState FromSnapshot(GameStateSnapshot snapshot)
@@ -67,7 +71,8 @@ public sealed class GameState
             CurrentPhase = snapshot.CurrentPhase,
             NightNumber = snapshot.NightNumber,
             LastNightResult = snapshot.LastNightResult,
-            LastVotingResult = snapshot.LastVotingResult
+            LastVotingResult = snapshot.LastVotingResult,
+            RematchGameId = snapshot.RematchGameId
         };
 
         foreach (var ps in snapshot.Players)
@@ -123,6 +128,14 @@ public sealed class GameState
             throw new GameException($"Lobby is full (max {Config.MaxPlayers} players).");
 
         _players.Add(player);
+    }
+
+    /// <summary>Links a finished game to the rematch its players can join.</summary>
+    public void SetRematch(Guid rematchGameId)
+    {
+        if (CurrentPhase != GamePhase.Ended)
+            throw new GameException("A rematch can only be started once the game is over.");
+        RematchGameId ??= rematchGameId;
     }
 
     /// <summary>Removes a player who changed their mind while the lobby is still open.</summary>
