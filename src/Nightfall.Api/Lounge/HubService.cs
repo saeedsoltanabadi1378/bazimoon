@@ -106,6 +106,8 @@ public sealed class HubService
             .Where(p => p.TelegramUserId == userId && p.Won != null && p.GameRecord.Status == "Completed")
             .Select(p => new RatedGame(p.Role, p.Won, p.GameRecord.EndedAt, p.RatingDelta));
 
+    private static bool IsDaily(string mode) => mode == "daily" || mode.StartsWith("daily-", StringComparison.Ordinal);
+
     private static int Percent(int part, int whole) => whole == 0 ? 0 : (int)Math.Round(100.0 * part / whole);
 
     // ------------------------------------------------------------------ home
@@ -192,10 +194,10 @@ public sealed class HubService
                     var s = sameDivision[g.Key];
                     return new LeagueEntry(g.Key, s.Username, g.Sum(r => r.Points), g.Where(r => r.Day >= weekStart).Sum(r => r.Points),
                         Progression.CurrentStreak(s.PuzzleStreak, s.LastPuzzleDay, s.StreakFreezes, today), 0,
-                        g.Count(r => r.Mode == "daily" && r.Solved && r.Day >= weekStart) >= Progression.PuzzleQualifyingSolves);
+                        g.Count(r => IsDaily(r.Mode) && r.Solved && r.Day >= weekStart) >= Progression.PuzzleQualifyingSolves);
                 })
                 .ToList();
-            int mySolves = results.Count(r => r.TelegramUserId == userId && r.Mode == "daily" && r.Solved && r.Day >= weekStart);
+            int mySolves = results.Count(r => r.TelegramUserId == userId && IsDaily(r.Mode) && r.Solved && r.Day >= weekStart);
             qualification = new QualificationDto(mySolves, Progression.PuzzleQualifyingSolves);
         }
         else
@@ -257,11 +259,13 @@ public sealed class HubService
         var today = Today;
         int? number = null;
         bool countsAsDaily = false;
-        if (mode == "daily")
+        // "daily" or a language/variant daily such as "daily-fa" (Daily Word has one per language).
+        if (IsDaily(mode))
         {
             number = Progression.DailyNumber(request.Game, today);
+            var dailyMode = mode;
             // Only the first daily attempt counts; replays are recorded as practice.
-            countsAsDaily = !await _db.PuzzleResults.AnyAsync(r => r.TelegramUserId == userId && r.Game == request.Game && r.Mode == "daily" && r.PuzzleNumber == number);
+            countsAsDaily = !await _db.PuzzleResults.AnyAsync(r => r.TelegramUserId == userId && r.Game == request.Game && r.Mode == dailyMode && r.PuzzleNumber == number);
             if (!countsAsDaily) mode = "practice";
         }
         else if (mode == "archive" && request.PuzzleNumber is { } archived)
@@ -301,7 +305,7 @@ public sealed class HubService
 
         _db.PuzzleResults.Add(new PuzzleResultRecord
         {
-            TelegramUserId = userId, Game = request.Game, Mode = countsAsDaily ? "daily" : mode, PuzzleNumber = number, Day = today,
+            TelegramUserId = userId, Game = request.Game, Mode = mode, PuzzleNumber = number, Day = today,
             Solved = request.Solved, TimeMs = request.TimeMs, Score = request.Score, Moves = request.Moves, Detail = request.Detail,
             Hints = Math.Max(0, request.Hints), XpGained = xp, Points = points
         });
@@ -310,7 +314,7 @@ public sealed class HubService
         int? percentile = null;
         if (countsAsDaily && request.Solved)
         {
-            var others = await _db.PuzzleResults.Where(r => r.Game == request.Game && r.Mode == "daily" && r.PuzzleNumber == number && r.TelegramUserId != userId)
+            var others = await _db.PuzzleResults.Where(r => r.Game == request.Game && r.Mode == mode && r.PuzzleNumber == number && r.TelegramUserId != userId)
                 .Select(r => new { r.Solved, r.TimeMs, r.Moves }).ToListAsync();
             if (others.Count > 0)
             {
@@ -336,7 +340,7 @@ public sealed class HubService
         var scored = rows.Where(r => r.Score.HasValue).ToList();
 
         // Daily streak for this game alone: consecutive days with a solved daily up to today/yesterday.
-        var solvedDays = rows.Where(r => r.Mode == "daily" && r.Solved).Select(r => r.Day).ToHashSet();
+        var solvedDays = rows.Where(r => IsDaily(r.Mode) && r.Solved).Select(r => r.Day).ToHashSet();
         int gameStreak = 0;
         for (int d = solvedDays.Contains(today) ? today : today - 1; solvedDays.Contains(d); d--) gameStreak++;
 
@@ -362,7 +366,8 @@ public sealed class HubService
             Progression.DailyNumber(game, today),
             todays is null ? null : new DailyStatusDto(game, todays.PuzzleNumber ?? 0, true, todays.Solved, todays.TimeMs, todays.Moves),
             rows.GroupBy(r => r.Mode).ToDictionary(g => g.Key, g => g.Count(x => x.Solved)),
-            timed.GroupBy(r => r.Mode).ToDictionary(g => g.Key, g => g.Min(x => x.TimeMs!.Value)));
+            timed.GroupBy(r => r.Mode).ToDictionary(g => g.Key, g => g.Min(x => x.TimeMs!.Value)),
+            solved.Where(r => r.Moves.HasValue).GroupBy(r => r.Moves!.Value).ToDictionary(g => g.Key, g => g.Count()));
     }
 
     public async Task<BoardDto> GetBoardAsync(long userId, string game, int? number)
