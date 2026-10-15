@@ -4,6 +4,7 @@ import { ZipPlay } from "./zip/ZipPlay";
 import { MergeIntro, MergePlay, MergeResult } from "./merge/MergeScreens";
 import { MemoryIntro, MemoryPlay, MemoryResult } from "./memory/MemoryScreens";
 import { MinesIntro, MinesPlay, MinesResult } from "./mines/MinesScreens";
+import { NardIntro, NardPlay, NardResult } from "./nard/NardScreens";
 import { QueensIntro, QueensPlay, QueensResult } from "./queens/QueensScreens";
 
 type GameRouteProps = { route: Extract<Route, { name: "game" }> };
@@ -38,6 +39,10 @@ export function GameRoute({ route }: GameRouteProps) {
       if (route.screen === "play") return <MemoryPlay key={JSON.stringify(p)} mode={str(p?.mode, "4x4") as "4x4" | "4x5" | "6x6" | "timed"} />;
       if (route.screen === "result") return <MemoryResult params={p} />;
       return <MemoryIntro />;
+    case "nard":
+      if (route.screen === "play") return <NardPlay key={JSON.stringify(p)} resume={p?.resume === true} />;
+      if (route.screen === "result") return <NardResult params={p} />;
+      return <NardIntro />;
     default:
       return null;
   }
