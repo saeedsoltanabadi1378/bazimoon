@@ -31,6 +31,8 @@ builder.Services.AddOptions<AdminOptions>().Bind(builder.Configuration.GetSectio
 builder.Services.AddScoped<GameService>();
 builder.Services.AddScoped<HubService>();
 builder.Services.AddScoped<CoupleService>();
+builder.Services.AddSingleton<ReminderStatus>();
+builder.Services.AddScoped<Nightfall.Api.Admin.AdminDashboardService>();
 builder.Services.AddHttpClient<ITelegramNotifier, TelegramNotifier>(c => c.Timeout = TimeSpan.FromSeconds(10));
 // Tests drive ReminderService.SendDueAsync directly instead of waiting on the timer.
 if (!builder.Environment.IsEnvironment("Testing"))

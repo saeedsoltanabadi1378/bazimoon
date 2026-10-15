@@ -5,7 +5,9 @@ using Nightfall.Infrastructure.History;
 
 namespace Nightfall.Infrastructure.Admin;
 
-public sealed record BotSettingsSnapshot(int Version, int MinPlayers, int MaxPlayers, bool MaintenanceMode, string MaintenanceMessage, IReadOnlySet<string> EnabledCommands, bool SoloTestEnabled, string MiniAppBaseUrl, string HelpMessage, string WelcomeMessage, DateTime UpdatedAt);
+public sealed record BotSettingsSnapshot(int Version, int MinPlayers, int MaxPlayers, bool MaintenanceMode, string MaintenanceMessage, IReadOnlySet<string> EnabledCommands, bool SoloTestEnabled, string MiniAppBaseUrl, string HelpMessage, string WelcomeMessage, DateTime UpdatedAt,
+    string MaintenanceMessageFa = "", string HelpMessageFa = "", string WelcomeMessageFa = "",
+    string ReminderMessage = BotSettingsDefaults.ReminderMessage, string ReminderMessageFa = BotSettingsDefaults.ReminderMessageFa);
 public interface IBotSettingsService { Task<BotSettingsSnapshot> GetAsync(CancellationToken ct = default); }
 
 public sealed class BotSettingsService : IBotSettingsService
@@ -32,5 +34,6 @@ public sealed class BotSettingsService : IBotSettingsService
         finally { _gate.Release(); }
     }
 
-    public static BotSettingsSnapshot ToSnapshot(BotSettingsRecord row) => new(row.Version, row.MinPlayers, row.MaxPlayers, row.MaintenanceMode, row.MaintenanceMessage, JsonSerializer.Deserialize<HashSet<string>>(row.EnabledCommandsJson) ?? [], row.SoloTestEnabled, row.MiniAppBaseUrl, row.HelpMessage, row.WelcomeMessage, row.UpdatedAt);
+    public static BotSettingsSnapshot ToSnapshot(BotSettingsRecord row) => new(row.Version, row.MinPlayers, row.MaxPlayers, row.MaintenanceMode, row.MaintenanceMessage, JsonSerializer.Deserialize<HashSet<string>>(row.EnabledCommandsJson) ?? [], row.SoloTestEnabled, row.MiniAppBaseUrl, row.HelpMessage, row.WelcomeMessage, row.UpdatedAt,
+        row.MaintenanceMessageFa, row.HelpMessageFa, row.WelcomeMessageFa, row.ReminderMessage, row.ReminderMessageFa);
 }

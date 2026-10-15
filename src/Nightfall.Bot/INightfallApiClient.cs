@@ -5,7 +5,7 @@ namespace Nightfall.Bot;
 
 public interface INightfallApiClient
 {
-    Task<Guid> CreateGameAsync(long telegramChatId, TelegramIdentity actor);
+    Task<Guid> CreateGameAsync(long telegramChatId, TelegramIdentity actor, string? chatTitle = null);
     Task JoinGameAsync(Guid gameId, TelegramIdentity actor);
     Task StartGameAsync(Guid gameId, TelegramIdentity actor);
     Task<GameViewDto> GetGameAsync(Guid gameId, TelegramIdentity actor);

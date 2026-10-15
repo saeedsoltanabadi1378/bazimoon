@@ -23,9 +23,9 @@ public sealed class NightfallApiClient : INightfallApiClient
         _tokenService = tokenService;
     }
 
-    public async Task<Guid> CreateGameAsync(long telegramChatId, TelegramIdentity actor)
+    public async Task<Guid> CreateGameAsync(long telegramChatId, TelegramIdentity actor, string? chatTitle = null)
     {
-        var response = await SendAsync<CreateGameResponseDto>(HttpMethod.Post, "/api/games", actor, new { telegramChatId });
+        var response = await SendAsync<CreateGameResponseDto>(HttpMethod.Post, "/api/games", actor, new { telegramChatId, chatTitle });
         return response.GameId;
     }
 
