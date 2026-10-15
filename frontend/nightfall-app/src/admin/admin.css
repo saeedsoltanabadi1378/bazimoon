@@ -41,7 +41,7 @@
 .adm :focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
 
 /* side menu */
-.adm-side { flex: 1 1 220px; max-width: 100%; padding: 20px 14px; background: var(--side); border-inline-end: 1px solid var(--line); display: flex; flex-direction: column; gap: 6px; }
+.adm-side { flex: 0 0 240px; max-width: 100%; padding: 20px 14px; background: var(--side); border-inline-end: 1px solid var(--line); display: flex; flex-direction: column; gap: 6px; }
 .adm-brand { display: flex; align-items: center; gap: 10px; padding: 4px 8px 18px; }
 .adm-logo { width: 36px; height: 36px; flex: none; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 3px; }
 .adm-logo span { border-radius: 5px; }
@@ -59,7 +59,7 @@
 .adm-link { border: 0; background: transparent; color: var(--amber); font-weight: 600; font-size: 13px; cursor: pointer; padding: 0; min-height: 32px; }
 
 /* page */
-.adm-main { flex: 999 1 560px; min-width: 0; max-width: 1240px; padding: 28px clamp(16px, 3vw, 40px) 40px; display: flex; flex-direction: column; gap: 20px; position: relative; }
+.adm-main { flex: 1 1 560px; min-width: 0; max-width: 1600px; padding: 28px clamp(16px, 3vw, 40px) 40px; display: flex; flex-direction: column; gap: 20px; position: relative; }
 .adm-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px; }
 .adm-kicker { font-size: 12px; font-weight: 600; letter-spacing: 1.2px; text-transform: uppercase; color: var(--amber); }
 .adm[dir="rtl"] .adm-kicker { letter-spacing: 0; }
@@ -135,6 +135,10 @@
   .adm-navrow { order: 4; flex-basis: 100%; display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; margin: 0 -16px; padding: 0 16px; }
   .adm-navrow .adm-nav { flex: none; min-height: 40px; font-size: 14px; }
 }
-@media (min-width: 761px) { .adm-navrow { display: contents; } }
+@media (min-width: 761px) {
+  .adm-navrow { display: contents; }
+  /* Fixed-width menu that stays put while the page scrolls. */
+  .adm-side { position: sticky; top: 0; height: 100vh; overflow-y: auto; }
+}
 .adm-input, .adm-textarea { font-weight: 400; }
 .adm-input::placeholder, .adm-textarea::placeholder { color: var(--muted); }
