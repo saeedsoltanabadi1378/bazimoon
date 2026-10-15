@@ -12,7 +12,8 @@ export type Route =
   | { name: "solo" }
   | { name: "league" }
   | { name: "profile" }
-  | { name: "mafia"; gameId?: string }
+  | { name: "mafia"; gameId?: string; code?: string }
+  | { name: "createTable" }
   | { name: "game"; game: GameKey; screen: GameScreen; params?: Record<string, string | number | boolean | null> }
   | { name: "couple"; screen: CoupleScreen; token?: string; number?: number };
 
@@ -75,6 +76,7 @@ export function tabFor(route: Route): TabKey | null {
     case "game":
       return "solo";
     case "mafia":
+    case "createTable":
       return "mafia";
     case "league":
       return "league";

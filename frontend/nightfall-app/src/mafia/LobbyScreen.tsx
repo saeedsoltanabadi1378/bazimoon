@@ -6,13 +6,19 @@ import { Icon } from "../ui/Icon";
 import { playerColor, roleMeta, rolesFor } from "./roles";
 import { ActionError, ReconnectingBanner, useRoleName } from "./parts";
 import { roomCode } from "./roomCode";
+import { useHub, useLoad } from "../hub/HubData";
+import { InviteBox } from "./InviteBox";
 
 export function LobbyScreen() {
   const { view, busy, joinGame, leaveGame, startGame } = useGame();
   const { t, language, setLanguage } = useLanguage();
   const { back } = useNavigation();
   const roleName = useRoleName();
+  const { api } = useHub();
+  const gameId = view?.gameId;
+  const table = useLoad(() => (gameId ? api.tableInfo(gameId) : Promise.resolve(null)), [api, gameId]);
   if (!view) return null;
+  const info = table.data;
 
   const joined = view.players.some((p) => p.playerId === view.yourPlayerId);
   const count = view.players.length;
@@ -32,7 +38,15 @@ export function LobbyScreen() {
       <header className="topbar">
         <IconButton icon="back" label={t("backToGames")} onClick={back} />
         <div className="topbar__text">
-          <div className="tiny muted">{t("roomLabel", { code: roomCode(view.gameId) })}</div>
+          <div className="row tiny muted" style={{ gap: 6 }}>
+            <span>{info?.name ?? info?.chatTitle ?? t("roomLabel", { code: roomCode(view.gameId) })}</span>
+            {info && (
+              <span className="row" style={{ gap: 4, padding: "1px 8px", borderRadius: 999, background: info.isOpen ? "#13302C" : "#1E2138", color: info.isOpen ? "#5FD0BE" : "#B79CF2", fontWeight: 600 }}>
+                <Icon name={info.isOpen ? "globe" : "lock"} size={11} strokeWidth={2.6} />
+                {info.isOpen ? t("tableOpen") : t("tableGroupOnly")}
+              </span>
+            )}
+          </div>
           <div className="display" style={{ fontSize: 22 }}>Nightfall</div>
         </div>
         <button type="button" className="btn btn--outline btn--pill" style={{ fontSize: 13, padding: "0 14px" }} onClick={() => setLanguage(language === "en" ? "fa" : "en")}>
@@ -55,6 +69,8 @@ export function LobbyScreen() {
           </div>
           <div className="small muted">{t("atLeastToStart", { min: view.minPlayers })}</div>
         </section>
+
+        {joined && info?.isHost && info.inviteCode && <InviteBox info={info} onChange={table.setData} />}
 
         <section className="stack">
           <h2 className="h2">{t("rolesForPlayers", { count })}</h2>

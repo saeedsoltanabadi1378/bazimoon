@@ -5,6 +5,7 @@ import { NavigationProvider, useNavigation, type Route } from "./app/router";
 import { LoadingScreen, StateScreen } from "./app/StateScreen";
 import { MafiaRoute } from "./mafia/MafiaRoute";
 import { MafiaTablesScreen } from "./hub/MafiaTablesScreen";
+import { CreateTableScreen } from "./hub/CreateTableScreen";
 import { HomeScreen } from "./hub/HomeScreen";
 import { WelcomeScreen, WELCOMED_KEY } from "./hub/WelcomeScreen";
 import { SoloScreen } from "./hub/SoloScreen";
@@ -23,6 +24,7 @@ const GUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 function initialRoutes(): Route[] {
   const start = telegram.initDataUnsafe.start_param ?? "";
   if (GUID.test(start)) return [{ name: "home" }, { name: "mafia", gameId: start }];
+  if (start.startsWith("t_")) return [{ name: "home" }, { name: "mafia", code: start.slice(2) }];
   if (start.startsWith("couple_")) return [{ name: "home" }, { name: "couple", screen: "invite", token: start.slice("couple_".length) }];
   if (start === "couple") return [{ name: "home" }, { name: "couple", screen: "home" }];
   if (!readLocal<boolean>(WELCOMED_KEY, false)) return [{ name: "welcome" }];
@@ -43,7 +45,9 @@ function CurrentScreen() {
     case "profile":
       return <ProfileScreen />;
     case "mafia":
-      return route.gameId ? <MafiaRoute gameId={route.gameId} /> : <MafiaTablesScreen />;
+      return route.gameId ? <MafiaRoute gameId={route.gameId} /> : <MafiaTablesScreen code={route.code} />;
+    case "createTable":
+      return <CreateTableScreen />;
     case "game":
       return <GameRoute route={route} />;
     case "couple":

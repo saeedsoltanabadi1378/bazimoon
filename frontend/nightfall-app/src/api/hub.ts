@@ -43,13 +43,37 @@ export interface DailyStatus {
 
 export interface Table {
   gameId: string;
+  name: string | null;
+  chatTitle: string | null;
+  host: string | null;
+  isOpen: boolean;
   phase: GamePhase;
+  round: number;
   seated: number;
   maxPlayers: number;
   minPlayers: number;
   createdAt: string;
   players: string[];
   youAreSeated: boolean;
+}
+
+/** A group you can start a table in. */
+export interface TableGroup {
+  telegramChatId: number;
+  title: string | null;
+  players: number;
+  since: string | null;
+  activeGameId: string | null;
+}
+
+export interface TableInfo {
+  gameId: string;
+  name: string | null;
+  chatTitle: string | null;
+  isOpen: boolean;
+  isHost: boolean;
+  /** Only the host gets the code. */
+  inviteCode: string | null;
 }
 
 export interface Home {
@@ -182,7 +206,13 @@ export const hubApi = (api: NightfallApiClient) => ({
   profile: () => api.request<Profile>("GET", "/api/me/profile"),
   saveSettings: (settings: Settings) => api.request<Settings>("PUT", "/api/me/settings", settings),
   home: () => api.request<Home>("GET", "/api/hub/home"),
-  tables: () => api.request<Table[]>("GET", "/api/hub/tables"),
+  tables: (scope: "open" | "groups") => api.request<Table[]>("GET", `/api/tables?scope=${scope}`),
+  tableGroups: () => api.request<TableGroup[]>("GET", "/api/tables/groups"),
+  createTable: (body: { telegramChatId: number; name: string | null; isOpen: boolean; seats: number }) =>
+    api.request<{ gameId: string }>("POST", "/api/tables", body),
+  resolveTable: (code: string) => api.request<{ gameId: string }>("GET", `/api/tables/code/${encodeURIComponent(code)}`),
+  tableInfo: (gameId: string) => api.request<TableInfo>("GET", `/api/tables/${gameId}`),
+  setTableOpen: (gameId: string, isOpen: boolean) => api.request<TableInfo>("PUT", `/api/tables/${gameId}/open`, { isOpen }),
   quickMatch: () => api.request<{ gameId: string }>("POST", "/api/hub/quick-match"),
   league: (board: "mafia" | "puzzles") => api.request<League>("GET", `/api/hub/league?board=${board}`),
   submit: (result: PuzzleSubmit) => api.request<PuzzleResult>("POST", "/api/puzzles/results", { hints: 0, ...result }),
