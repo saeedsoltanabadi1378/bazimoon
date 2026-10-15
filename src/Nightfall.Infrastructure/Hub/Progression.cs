@@ -26,11 +26,12 @@ public static class Progression
         ["mines"] = new DateOnly(2026, 9, 1),
         ["stack"] = new DateOnly(2026, 9, 1),
         ["blocks"] = new DateOnly(2026, 9, 1),
+        ["sudoku"] = new DateOnly(2026, 10, 15),
     };
 
-    public static readonly IReadOnlySet<string> Games = new HashSet<string> { "zip", "queens", "merge", "mines", "memory", "nard", "word", "ladder", "stack", "blocks" };
+    public static readonly IReadOnlySet<string> Games = new HashSet<string> { "zip", "queens", "merge", "mines", "memory", "nard", "word", "ladder", "stack", "blocks", "sudoku" };
     /// <summary>Daily puzzles that count toward the shared puzzle streak.</summary>
-    public static readonly IReadOnlySet<string> StreakGames = new HashSet<string> { "zip", "queens", "word", "ladder" };
+    public static readonly IReadOnlySet<string> StreakGames = new HashSet<string> { "zip", "queens", "word", "ladder", "sudoku" };
 
     public static DateOnly PuzzleDate(DateTimeOffset now) => DateOnly.FromDateTime(now.ToOffset(PuzzleUtcOffset).DateTime);
 
@@ -133,6 +134,11 @@ public static class Progression
             case "queens":
                 if (!o.Solved) return 5;
                 return o.Hints > 0 ? 15 : 30;
+            case "sudoku":
+                // Daily: 30 with no hints; Classic by level. Each hint costs 5.
+                if (!o.Solved) return 5;
+                int sudokuBase = daily ? 30 : o.Mode switch { "easy" => 15, "hard" => 30, "expert" => 40, _ => 20 };
+                return Math.Max(5, sudokuBase - 5 * o.Hints);
             case "word":
                 return o.Solved ? 20 + Math.Max(0, 6 - (o.Moves ?? 6)) * 5 : 5;
             case "ladder":

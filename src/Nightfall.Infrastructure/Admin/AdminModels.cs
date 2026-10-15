@@ -22,11 +22,17 @@ public sealed class BotSettingsRecord
     /// <summary>Daily puzzle reminder; {streak} is replaced with the player's current streak.</summary>
     public string ReminderMessage { get; set; } = BotSettingsDefaults.ReminderMessage;
     public string ReminderMessageFa { get; set; } = BotSettingsDefaults.ReminderMessageFa;
+    /// <summary>Games an admin switched off (keys from BotSettingsDefaults.Games). Hidden from the app; new Mafia tables and couple invites are refused.</summary>
+    public string DisabledGamesJson { get; set; } = "[]";
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 }
 
 public static class BotSettingsDefaults
 {
+    /// <summary>Every game an admin can switch on or off.</summary>
+    public static readonly string[] Games = ["mafia", "couple", "zip", "queens", "sudoku", "word", "ladder", "mines", "merge", "blocks", "stack", "memory", "nard"];
+    public const string MafiaOff = "Mafia is switched off for now. Try again later.";
+    public const string MafiaOffFa = "مافیا فعلاً خاموش است. بعداً دوباره امتحان کنید.";
     public static readonly string[] Commands = ["newgame", "join", "startgame", "resolvenight", "startvoting", "resolvevoting", "startnight", "myrole", "solotest", "solonext", "help", "start"];
     public const string MaintenanceMessageFa = "نایت‌فال موقتاً برای به‌روزرسانی در دسترس نیست.";
     public const string HelpMessageFa = "دستورهای نایت‌فال:\n/newgame — باز کردن لابی در این گروه\n/join — پیوستن به لابی\n/startgame — پخش نقش‌ها و شروع\n/resolvenight — پایان شب\n/startvoting — شروع رأی‌گیری\n/resolvevoting — شمارش آرا\n/startnight — شروع شب بعد\n/myrole — دریافت نقش به‌صورت خصوصی";

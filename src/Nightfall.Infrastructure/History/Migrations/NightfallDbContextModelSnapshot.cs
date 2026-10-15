@@ -30,6 +30,10 @@ namespace Nightfall.Infrastructure.History.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
+                    b.Property<string>("DisabledGamesJson")
+                        .IsRequired()
+                        .HasColumnType("text");
+
                     b.Property<string>("EnabledCommandsJson")
                         .IsRequired()
                         .HasColumnType("text");

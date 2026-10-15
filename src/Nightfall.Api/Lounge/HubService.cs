@@ -122,7 +122,7 @@ public sealed class HubService
         var todays = await _db.PuzzleResults
             .Where(r => r.TelegramUserId == userId && r.Day == today && r.Mode == "daily")
             .ToListAsync();
-        var daily = new[] { "zip", "queens", "word", "ladder" }.Select(game =>
+        var daily = new[] { "zip", "queens", "sudoku", "word", "ladder" }.Select(game =>
         {
             var solved = todays.Where(r => r.Game == game).OrderByDescending(r => r.Solved).FirstOrDefault();
             return new DailyStatusDto(game, Progression.DailyNumber(game, today) ?? 0, solved is not null, solved?.Solved ?? false, solved?.TimeMs, solved?.Moves);
@@ -271,7 +271,7 @@ public sealed class HubService
         var outcome = new Progression.PuzzleOutcome(request.Game, countsAsDaily ? "daily" : mode, request.Solved, request.TimeMs, request.Score, request.Moves, request.Detail, Math.Max(0, request.Hints));
         int xp = Progression.SoloXp(outcome, streak, newBest);
         int points = Progression.LeaguePoints(outcome, xp);
-        if (mode == "practice" && request.Game is "zip" or "queens" or "word" or "ladder") points = 0;
+        if (mode == "practice" && request.Game is "zip" or "queens" or "word" or "ladder" or "sudoku") points = 0;
 
         int xpBefore = stats.Xp;
         stats.Xp += xp;

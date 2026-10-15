@@ -91,6 +91,7 @@ public sealed class ReminderService : BackgroundService
         }
 
         var couples = await db.Couples
+            .Where(c => settings == null || settings.IsGameOn("couple"))
             .Where(c => c.PartnerId != null && (c.LastReminderDay == null || c.LastReminderDay < today) && string.Compare(c.ReminderTime, clock) <= 0)
             .ToListAsync(ct);
         foreach (var couple in couples)

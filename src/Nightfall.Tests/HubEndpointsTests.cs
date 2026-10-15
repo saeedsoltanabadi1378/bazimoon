@@ -111,7 +111,7 @@ public class HubEndpointsTests : IClassFixture<NightfallApiFactory>, IAsyncLifet
         Assert.Null(league.You.Rank); // 15 games are needed to qualify.
 
         var home = await clients[1].GetFromJsonAsync<HomeDto>("/api/hub/home");
-        Assert.Equal(4, home!.Daily.Count);
+        Assert.Equal(5, home!.Daily.Count); // zip, queens, sudoku, word, ladder
         Assert.Null(home.Table); // the finished game is no longer an open table
     }
 }

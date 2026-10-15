@@ -7,7 +7,11 @@ namespace Nightfall.Infrastructure.Admin;
 
 public sealed record BotSettingsSnapshot(int Version, int MinPlayers, int MaxPlayers, bool MaintenanceMode, string MaintenanceMessage, IReadOnlySet<string> EnabledCommands, bool SoloTestEnabled, string MiniAppBaseUrl, string HelpMessage, string WelcomeMessage, DateTime UpdatedAt,
     string MaintenanceMessageFa = "", string HelpMessageFa = "", string WelcomeMessageFa = "",
-    string ReminderMessage = BotSettingsDefaults.ReminderMessage, string ReminderMessageFa = BotSettingsDefaults.ReminderMessageFa);
+    string ReminderMessage = BotSettingsDefaults.ReminderMessage, string ReminderMessageFa = BotSettingsDefaults.ReminderMessageFa,
+    IReadOnlySet<string>? DisabledGames = null)
+{
+    public bool IsGameOn(string game) => DisabledGames is null || !DisabledGames.Contains(game);
+}
 public interface IBotSettingsService { Task<BotSettingsSnapshot> GetAsync(CancellationToken ct = default); }
 
 public sealed class BotSettingsService : IBotSettingsService
@@ -17,6 +21,9 @@ public sealed class BotSettingsService : IBotSettingsService
     private DateTime _expires;
     private readonly SemaphoreSlim _gate = new(1, 1);
     public BotSettingsService(IServiceScopeFactory scopes) => _scopes = scopes;
+
+    /// <summary>Drops the cached copy so a save in this process takes effect at once.</summary>
+    public void Invalidate() => _expires = DateTime.MinValue;
 
     public async Task<BotSettingsSnapshot> GetAsync(CancellationToken ct = default)
     {
@@ -35,5 +42,6 @@ public sealed class BotSettingsService : IBotSettingsService
     }
 
     public static BotSettingsSnapshot ToSnapshot(BotSettingsRecord row) => new(row.Version, row.MinPlayers, row.MaxPlayers, row.MaintenanceMode, row.MaintenanceMessage, JsonSerializer.Deserialize<HashSet<string>>(row.EnabledCommandsJson) ?? [], row.SoloTestEnabled, row.MiniAppBaseUrl, row.HelpMessage, row.WelcomeMessage, row.UpdatedAt,
-        row.MaintenanceMessageFa, row.HelpMessageFa, row.WelcomeMessageFa, row.ReminderMessage, row.ReminderMessageFa);
+        row.MaintenanceMessageFa, row.HelpMessageFa, row.WelcomeMessageFa, row.ReminderMessage, row.ReminderMessageFa,
+        JsonSerializer.Deserialize<HashSet<string>>(row.DisabledGamesJson) ?? []);
 }

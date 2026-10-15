@@ -21,6 +21,9 @@ public static class HubEndpoints
 
         var hubGroup = app.MapGroup("/api/hub").RequireAuthorization();
 
+        hubGroup.MapGet("/config", async (Nightfall.Infrastructure.Admin.IBotSettingsService settings) =>
+            new AppConfigDto((await settings.GetAsync()).DisabledGames?.ToList() ?? [])).WithName("GetAppConfig");
+
         hubGroup.MapGet("/home", (HubService hub, HttpContext http) =>
             hub.GetHomeAsync(http.User.GetTelegramUserId(), http.User.GetTelegramUsername())).WithName("GetHome");
 
@@ -74,6 +77,8 @@ public sealed record MyGameResultDto(bool Won, int Rating, int RatingDelta);
 
 public sealed record DailyStatusDto(string Game, int Number, bool Played, bool Solved, int? TimeMs, int? Moves);
 public sealed record LeagueSummaryDto(int Season, int DaysLeft, string Division, int Tier, int? Rank, int PlayerCount, string? Zone);
+/// <summary>App-wide switches the Mini App reads once at start.</summary>
+public sealed record AppConfigDto(IReadOnlyList<string> DisabledGames);
 public sealed record HomeDto(int Streak, string Date, IReadOnlyList<DailyStatusDto> Daily, int? MergeBest, LeagueSummaryDto League, TableDto? Table, int OpenTables);
 
 public sealed record QualificationDto(int Played, int Needed);

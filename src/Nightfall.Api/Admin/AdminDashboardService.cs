@@ -233,7 +233,7 @@ public sealed class AdminDashboardService
         int today = Today;
         var rows = await _db.PuzzleResults.AsNoTracking().Where(r => r.Day == today).ToListAsync();
         var dailies = new List<AdminDailyDto>();
-        foreach (var game in new[] { "zip", "queens", "word", "ladder", "mines", "stack", "blocks" })
+        foreach (var game in new[] { "zip", "queens", "sudoku", "word", "ladder", "mines", "stack", "blocks" })
         {
             if (Progression.DailyNumber(game, today) is not { } number) continue;
             foreach (var mode in game == "word" ? new[] { "daily", "daily-fa" } : new[] { "daily" })

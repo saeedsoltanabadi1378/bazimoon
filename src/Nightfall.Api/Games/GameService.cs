@@ -38,6 +38,7 @@ public sealed class GameService
     public async Task<Guid> CreateGameAsync(long telegramChatId, long creatorTelegramUserId, string creatorUsername, string? chatTitle = null, TableOptions? table = null)
     {
         var settings = await _settings.GetAsync();
+        if (!settings.IsGameOn("mafia")) throw new GameException(BotSettingsDefaults.MafiaOff);
         int seats = Math.Clamp(table?.Seats ?? settings.MaxPlayers, settings.MinPlayers, settings.MaxPlayers);
         var game = new GameState(new GameConfig { MinPlayers = settings.MinPlayers, MaxPlayers = seats }, telegramChatId: telegramChatId);
         var creatorId = PlayerIdentity.DeriveId(game.GameId, creatorTelegramUserId);

@@ -60,6 +60,9 @@ public sealed class CommandDispatcher
         {
             switch (command)
             {
+                case "newgame" when _currentSettings?.IsGameOn("mafia") == false:
+                    await _messenger.SendTextAsync(chatId, BotMessages.Pick(BotSettingsDefaults.MafiaOff, BotSettingsDefaults.MafiaOffFa, _currentLanguage));
+                    break;
                 case "newgame": await HandleNewGameAsync(chatId, actor); break;
                 case "join": await HandleJoinAsync(chatId, actor); break;
                 case "startgame": await HandleStartGameAsync(chatId, actor); break;

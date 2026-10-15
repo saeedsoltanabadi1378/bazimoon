@@ -1,3 +1,4 @@
+using Nightfall.Infrastructure.Admin;
 using System.Security.Cryptography;
 using Microsoft.EntityFrameworkCore;
 using Nightfall.Domain;
@@ -16,8 +17,11 @@ public sealed class CoupleService
     private readonly TimeProvider _clock;
     private readonly ITelegramNotifier _notifier;
 
-    public CoupleService(NightfallDbContext db, TimeProvider clock, ITelegramNotifier notifier)
+    private readonly IBotSettingsService _settings;
+
+    public CoupleService(NightfallDbContext db, TimeProvider clock, ITelegramNotifier notifier, IBotSettingsService settings)
     {
+        _settings = settings;
         _db = db;
         _clock = clock;
         _notifier = notifier;
@@ -86,8 +90,14 @@ public sealed class CoupleService
             history);
     }
 
+    private async Task EnsureOnAsync()
+    {
+        if (!(await _settings.GetAsync()).IsGameOn("couple")) throw new GameException("Couple Quiz is switched off for now.");
+    }
+
     public async Task<CoupleStateDto> CreateInviteAsync(long userId, string username)
     {
+        await EnsureOnAsync();
         await _db.GetOrCreateStatsAsync(userId, username);
         var existing = await FindAsync(userId);
         if (existing?.PartnerId is not null) throw new GameException("You are already in a couple space.");
@@ -118,6 +128,7 @@ public sealed class CoupleService
 
     public async Task<CoupleStateDto> AcceptAsync(long userId, string username, string token)
     {
+        await EnsureOnAsync();
         await _db.GetOrCreateStatsAsync(userId, username);
         var couple = await _db.Couples.FirstOrDefaultAsync(c => c.InviteToken == token)
             ?? throw new GameException("This invite link is not valid.");
