@@ -150,6 +150,15 @@ export interface Board {
   rows: BoardRow[];
 }
 
+export interface Weekly {
+  game: string;
+  division: string;
+  tier: number;
+  daysLeft: number;
+  yourRank: number | null;
+  rows: { rank: number; name: string; isYou: boolean; score: number }[];
+}
+
 export interface ArchiveDay {
   day: number;
   number: number | null;
@@ -176,6 +185,7 @@ export const hubApi = (api: NightfallApiClient) => ({
   stats: (game: string) => api.request<GameStats>("GET", `/api/puzzles/${game}/stats`),
   board: (game: string, number?: number | null) =>
     api.request<Board>("GET", `/api/puzzles/${game}/board${number ? `?number=${number}` : ""}`),
+  weekly: (game: string) => api.request<Weekly>("GET", `/api/puzzles/${game}/weekly`),
   archive: (game: string, year: number, month: number) =>
     api.request<Archive>("GET", `/api/puzzles/${game}/archive?year=${year}&month=${month}`),
 });

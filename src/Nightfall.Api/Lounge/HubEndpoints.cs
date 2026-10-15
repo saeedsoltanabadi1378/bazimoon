@@ -48,6 +48,9 @@ public static class HubEndpoints
         puzzles.MapGet("/{game}/stats", (string game, HubService hub, HttpContext http) =>
             hub.GetGameStatsAsync(http.User.GetTelegramUserId(), game)).WithName("GetPuzzleStats");
 
+        puzzles.MapGet("/{game}/weekly", (string game, HubService hub, HttpContext http) =>
+            hub.GetWeeklyAsync(http.User.GetTelegramUserId(), http.User.GetTelegramUsername(), game)).WithName("GetWeeklyScores");
+
         puzzles.MapGet("/{game}/board", (string game, int? number, HubService hub, HttpContext http) =>
             hub.GetBoardAsync(http.User.GetTelegramUserId(), game, number)).WithName("GetPuzzleBoard");
 
@@ -89,5 +92,7 @@ public sealed record GameStatsDto(
     DailyStatusDto? Today, IReadOnlyDictionary<string, int> WinsByMode);
 public sealed record BoardRowDto(int? Rank, string Name, bool IsYou, bool Solved, int? TimeMs, int? Score, int? Moves);
 public sealed record BoardDto(string Game, int? Number, int SolvedCount, IReadOnlyList<BoardRowDto> Rows);
+public sealed record WeeklyRowDto(int Rank, string Name, bool IsYou, int Score);
+public sealed record WeeklyDto(string Game, string Division, int Tier, int DaysLeft, int? YourRank, IReadOnlyList<WeeklyRowDto> Rows);
 public sealed record ArchiveDayDto(int Day, int? Number, string Status, int? TimeMs);
 public sealed record ArchiveDto(string Game, int Year, int Month, int FirstWeekday, IReadOnlyList<ArchiveDayDto> Days);

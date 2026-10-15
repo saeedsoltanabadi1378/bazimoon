@@ -405,6 +405,29 @@ public sealed class HubService
         return new ArchiveDto(game, year, month, (int)first.DayOfWeek, list);
     }
 
+    /// <summary>This week's best score per player in your division for an endless game (Merge, Stack, Blocks…).</summary>
+    public async Task<WeeklyDto> GetWeeklyAsync(long userId, string username, string game)
+    {
+        if (!Progression.Games.Contains(game)) throw new GameException("Unknown game.");
+        var me = await _db.GetOrCreateStatsAsync(userId, username);
+        await _db.SaveChangesAsync();
+        var today = Today;
+        int weekStart = Progression.WeekStartDay(today);
+        var (division, tier) = Progression.Division(me.Rating);
+        var everyone = await _db.PlayerStats.AsNoTracking().ToListAsync();
+        var sameDivision = everyone.Where(s => Progression.Division(s.Rating).Division == division).ToDictionary(s => s.TelegramUserId, s => s.Username);
+        var scores = await _db.PuzzleResults
+            .Where(r => r.Game == game && r.Day >= weekStart && r.Score != null)
+            .GroupBy(r => r.TelegramUserId)
+            .Select(g => new { UserId = g.Key, Best = g.Max(r => r.Score!.Value) })
+            .ToListAsync();
+        var ranked = scores.Where(x => sameDivision.ContainsKey(x.UserId)).OrderByDescending(x => x.Best).ToList();
+        int myIndex = ranked.FindIndex(x => x.UserId == userId);
+        var rows = ranked.Select((x, i) => new WeeklyRowDto(i + 1, sameDivision[x.UserId], x.UserId == userId, x.Best))
+            .Where(r => r.Rank <= 5 || r.IsYou).ToList();
+        return new WeeklyDto(game, division, tier, 7 - (today - weekStart), myIndex >= 0 ? myIndex + 1 : null, rows);
+    }
+
     private async Task<HashSet<long>> GroupMembersAsync(long userId)
     {
         var chats = await _db.ChatMembers.Where(m => m.TelegramUserId == userId).Select(m => m.TelegramChatId).ToListAsync();

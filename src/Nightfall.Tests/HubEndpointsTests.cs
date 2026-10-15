@@ -44,6 +44,18 @@ public class HubEndpointsTests : IClassFixture<NightfallApiFactory>, IAsyncLifet
     }
 
     [Fact]
+    public async Task EndlessScores_FeedTheWeeklyLadder()
+    {
+        var client = await AuthTestHelper.CreateAuthenticatedClientAsync(_factory, 880004, "merger");
+        foreach (var score in new[] { 1200, 3400, 900 })
+            (await client.PostAsJsonAsync("/api/puzzles/results", new PuzzleSubmitRequest("merge", "classic", null, true, null, score, 300, 256, 0))).EnsureSuccessStatusCode();
+        var weekly = await client.GetFromJsonAsync<WeeklyDto>("/api/puzzles/merge/weekly");
+        var me = Assert.Single(weekly!.Rows, r => r.IsYou);
+        Assert.Equal(3400, me.Score);
+        Assert.NotNull(weekly.YourRank);
+    }
+
+    [Fact]
     public async Task UnknownGame_IsRejected()
     {
         var client = await AuthTestHelper.CreateAuthenticatedClientAsync(_factory, 880002, "solver2");

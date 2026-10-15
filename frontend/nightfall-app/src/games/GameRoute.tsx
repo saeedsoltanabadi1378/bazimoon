@@ -1,6 +1,7 @@
 import type { Route } from "../app/router";
 import { ZipArchive, ZipIntro, ZipResult } from "./zip/ZipScreens";
 import { ZipPlay } from "./zip/ZipPlay";
+import { MergeIntro, MergePlay, MergeResult } from "./merge/MergeScreens";
 import { QueensIntro, QueensPlay, QueensResult } from "./queens/QueensScreens";
 
 type GameRouteProps = { route: Extract<Route, { name: "game" }> };
@@ -23,6 +24,10 @@ export function GameRoute({ route }: GameRouteProps) {
       if (route.screen === "play") return <QueensPlay key={JSON.stringify(p)} mode={str(p?.mode, "daily") as "daily" | "practice"} size={num(p?.size)} />;
       if (route.screen === "result") return <QueensResult params={p} />;
       return <QueensIntro />;
+    case "merge":
+      if (route.screen === "play") return <MergePlay key={JSON.stringify(p)} mode={str(p?.mode, "classic") as "classic" | "big" | "timed"} />;
+      if (route.screen === "result") return <MergeResult params={p} />;
+      return <MergeIntro />;
     default:
       return null;
   }
