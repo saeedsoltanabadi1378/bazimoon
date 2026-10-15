@@ -9,7 +9,7 @@ import { useHub, useLoad } from "./HubData";
 import type { DailyStatus, Home } from "../api/hub";
 import { formatClock, formatShortDate, formatTimeOfDay } from "../lib/format";
 import { roomCode } from "../mafia/roomCode";
-import { dailyLadder } from "../games/ladder/words";
+import { dailyLadder } from "../games/ladder/logic";
 import { CoupleHomeCard } from "../couple/CoupleHomeCard";
 import { haptic } from "../lib/haptics";
 

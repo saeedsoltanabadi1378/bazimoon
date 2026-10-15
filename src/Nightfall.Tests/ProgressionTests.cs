@@ -75,6 +75,16 @@ public class ProgressionTests
     }
 
     [Fact]
+    public void LadderXp_FollowsParRewardsAndHintCost()
+    {
+        var atPar = new Progression.PuzzleOutcome("ladder", "daily", true, 86_000, null, 4, 0, 0);
+        Assert.Equal(25, Progression.SoloXp(atPar, 1, false));
+        Assert.Equal(40, Progression.SoloXp(atPar with { Detail = -1 }, 1, false));
+        Assert.Equal(10, Progression.SoloXp(atPar with { Detail = 1, Hints = 1 }, 1, false));
+        Assert.Equal(5, Progression.SoloXp(atPar with { Solved = false }, 1, false));
+    }
+
+    [Fact]
     public void RatingDelta_IsSymmetricForEvenTeams()
     {
         Assert.Equal(16, Progression.RatingDelta(1500, 1500, won: true));

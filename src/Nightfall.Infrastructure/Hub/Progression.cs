@@ -138,7 +138,7 @@ public static class Progression
             case "ladder":
                 if (!o.Solved) return 5;
                 int overPar = o.Detail ?? 0;
-                return overPar < 0 ? 35 : overPar == 0 ? 25 : 15;
+                return Math.Max(5, (overPar < 0 ? 40 : overPar == 0 ? 25 : 15) - 5 * o.Hints);
             case "mines":
                 return o.Solved ? (o.Mode switch { "hard" => 40, "medium" => 30, _ => 20 }) : 5;
             case "memory":

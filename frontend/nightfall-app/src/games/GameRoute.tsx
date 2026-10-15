@@ -5,6 +5,7 @@ import { MergeIntro, MergePlay, MergeResult } from "./merge/MergeScreens";
 import { MemoryIntro, MemoryPlay, MemoryResult } from "./memory/MemoryScreens";
 import { MinesIntro, MinesPlay, MinesResult } from "./mines/MinesScreens";
 import { NardIntro, NardPlay, NardResult } from "./nard/NardScreens";
+import { LadderIntro, LadderPlay, LadderResult } from "./ladder/LadderScreens";
 import { WordIntro, WordPlay, WordResult } from "./word/WordScreens";
 import { QueensIntro, QueensPlay, QueensResult } from "./queens/QueensScreens";
 
@@ -48,6 +49,10 @@ export function GameRoute({ route }: GameRouteProps) {
       if (route.screen === "play") return <WordPlay key={JSON.stringify(p)} lang={str(p?.lang, "en") === "fa" ? "fa" : "en"} />;
       if (route.screen === "result") return <WordResult params={p} />;
       return <WordIntro />;
+    case "ladder":
+      if (route.screen === "play") return <LadderPlay key={JSON.stringify(p)} mode={str(p?.mode, "daily") === "endless" ? "endless" : "daily"} />;
+      if (route.screen === "result") return <LadderResult params={p} />;
+      return <LadderIntro />;
     default:
       return null;
   }

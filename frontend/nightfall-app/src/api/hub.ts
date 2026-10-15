@@ -133,6 +133,8 @@ export interface GameStats {
   winsByMode: Record<string, number>;
   bestTimeByMode: Record<string, number>;
   solvedByMoves: Record<string, number>;
+  /** Solved games counted by their detail value (Ladder: steps over par). */
+  solvedByDetail: Record<string, number>;
 }
 
 export interface BoardRow {
