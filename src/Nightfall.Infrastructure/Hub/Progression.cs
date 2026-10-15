@@ -148,7 +148,8 @@ public static class Progression
             case "merge":
                 return Math.Min(150, (o.Score ?? 0) / 50);
             case "stack":
-                return Math.Min(150, (o.Score ?? 0) + (newBest ? 14 : 3));
+                // A floor is worth 1 XP and a perfect drop counts double (Moves = perfect drops).
+                return Math.Min(150, (o.Score ?? 0) + (o.Moves ?? 0) + (newBest ? 14 : 3));
             case "blocks":
                 return Math.Min(150, (o.Score ?? 0) / 50 + (newBest ? 10 : 0));
             default:

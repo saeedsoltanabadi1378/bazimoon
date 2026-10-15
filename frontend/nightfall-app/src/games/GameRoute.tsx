@@ -6,6 +6,7 @@ import { MemoryIntro, MemoryPlay, MemoryResult } from "./memory/MemoryScreens";
 import { MinesIntro, MinesPlay, MinesResult } from "./mines/MinesScreens";
 import { NardIntro, NardPlay, NardResult } from "./nard/NardScreens";
 import { LadderIntro, LadderPlay, LadderResult } from "./ladder/LadderScreens";
+import { StackIntro, StackPlay, StackResult } from "./stack/StackScreens";
 import { WordIntro, WordPlay, WordResult } from "./word/WordScreens";
 import { QueensIntro, QueensPlay, QueensResult } from "./queens/QueensScreens";
 
@@ -53,6 +54,10 @@ export function GameRoute({ route }: GameRouteProps) {
       if (route.screen === "play") return <LadderPlay key={JSON.stringify(p)} mode={str(p?.mode, "daily") === "endless" ? "endless" : "daily"} />;
       if (route.screen === "result") return <LadderResult params={p} />;
       return <LadderIntro />;
+    case "stack":
+      if (route.screen === "play") return <StackPlay key={JSON.stringify(p)} mode={(["daily", "zen"].includes(str(p?.mode, "")) ? str(p?.mode, "") : "classic") as "classic" | "daily" | "zen"} />;
+      if (route.screen === "result") return <StackResult params={p} />;
+      return <StackIntro />;
     default:
       return null;
   }
