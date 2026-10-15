@@ -103,7 +103,7 @@ public class HubEndpointsTests : IClassFixture<NightfallApiFactory>, IAsyncLifet
             var mine = await clients[i].GetFromJsonAsync<MyGameResultDto>($"/api/me/games/{gameId}");
             bool town = views[i].YourPlayerId != godfather;
             Assert.Equal(town, mine!.Won);
-            Assert.Equal(town ? mine.RatingDelta > 0 : mine.RatingDelta < 0, true);
+            Assert.True(town ? mine.RatingDelta > 0 : mine.RatingDelta < 0);
         }
 
         var league = await clients[1].GetFromJsonAsync<LeagueDto>("/api/hub/league?board=mafia");

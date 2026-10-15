@@ -19,6 +19,8 @@ public sealed class NightfallDbContext : DbContext
     public DbSet<PlayerStatsRecord> PlayerStats => Set<PlayerStatsRecord>();
     public DbSet<PuzzleResultRecord> PuzzleResults => Set<PuzzleResultRecord>();
     public DbSet<ChatMemberRecord> ChatMembers => Set<ChatMemberRecord>();
+    public DbSet<CoupleRecord> Couples => Set<CoupleRecord>();
+    public DbSet<CoupleAnswerRecord> CoupleAnswers => Set<CoupleAnswerRecord>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -71,6 +73,26 @@ public sealed class NightfallDbContext : DbContext
             b.ToTable("chat_members");
             b.HasKey(x => new { x.TelegramChatId, x.TelegramUserId });
             b.HasIndex(x => x.TelegramUserId);
+        });
+
+        modelBuilder.Entity<CoupleRecord>(b =>
+        {
+            b.ToTable("couples");
+            b.HasKey(x => x.Id);
+            b.Property(x => x.InviteToken).HasMaxLength(32);
+            b.Property(x => x.ReminderTime).HasMaxLength(5);
+            b.Property(x => x.Language).HasMaxLength(8);
+            b.HasIndex(x => x.InviteToken).IsUnique();
+            b.HasIndex(x => x.InviterId);
+            b.HasIndex(x => x.PartnerId);
+        });
+
+        modelBuilder.Entity<CoupleAnswerRecord>(b =>
+        {
+            b.ToTable("couple_answers");
+            b.HasKey(x => x.Id);
+            b.Property(x => x.Answers).HasMaxLength(32);
+            b.HasIndex(x => new { x.CoupleId, x.Day, x.TelegramUserId }).IsUnique();
         });
 
         modelBuilder.Entity<BotSettingsRecord>(b => { b.ToTable("bot_settings"); b.HasKey(x => x.Id); });

@@ -30,6 +30,8 @@ builder.Services.AddOptions<AdminOptions>().Bind(builder.Configuration.GetSectio
 
 builder.Services.AddScoped<GameService>();
 builder.Services.AddScoped<HubService>();
+builder.Services.AddScoped<CoupleService>();
+builder.Services.AddHttpClient<ITelegramNotifier, TelegramNotifier>(c => c.Timeout = TimeSpan.FromSeconds(10));
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton<GameMutationLock>();
 builder.Services.AddHostedService<DiscussionDeadlineService>();
@@ -122,6 +124,7 @@ app.MapAuthEndpoints();
 app.MapAdminEndpoints();
 app.MapGameEndpoints();
 app.MapHubEndpoints();
+app.MapCoupleEndpoints();
 app.MapHub<GameHub>("/hubs/game");
 
 // Applies pending EF Core migrations before serving traffic. IsRelational() guards this so it's a

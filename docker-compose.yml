@@ -39,6 +39,7 @@ services:
       ConnectionStrings__Redis: "redis:6379,abortConnect=false"
       Jwt__SigningKey: ${JWT_SIGNING_KEY:?JWT_SIGNING_KEY is required}
       Telegram__BotToken: ${TELEGRAM_BOT_TOKEN:?TELEGRAM_BOT_TOKEN is required}
+      Telegram__MiniAppUrl: ${MINI_APP_BASE_URL:-}
       Agora__AppId: ${AGORA_APP_ID:?AGORA_APP_ID is required}
       Agora__AppCertificate: ${AGORA_APP_CERTIFICATE:?AGORA_APP_CERTIFICATE is required}
       Cors__AllowedOrigins__0: ${PUBLIC_FRONTEND_ORIGIN:-http://localhost:8080}

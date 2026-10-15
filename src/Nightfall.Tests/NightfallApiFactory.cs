@@ -31,6 +31,9 @@ public sealed class NightfallApiFactory : WebApplicationFactory<ApiProgram>
 
     private readonly string _databaseName = $"nightfall-tests-{Guid.NewGuid()}";
 
+    /// <summary>Bot messages the API would have sent (couple nudges, invites, leaving).</summary>
+    public FakeTelegramNotifier Notifier { get; } = new();
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Testing");
@@ -75,6 +78,9 @@ public sealed class NightfallApiFactory : WebApplicationFactory<ApiProgram>
             services.RemoveAll<IKeyValueCache>();
             services.AddSingleton<IKeyValueCache, InMemoryKeyValueCache>();
             services.AddSingleton<IGameSessionStore, GameSessionStore>();
+
+            services.RemoveAll<ApiAssembly::Nightfall.Api.Lounge.ITelegramNotifier>();
+            services.AddSingleton<ApiAssembly::Nightfall.Api.Lounge.ITelegramNotifier>(Notifier);
         });
     }
 
