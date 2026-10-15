@@ -361,7 +361,8 @@ public sealed class HubService
             winStreak,
             Progression.DailyNumber(game, today),
             todays is null ? null : new DailyStatusDto(game, todays.PuzzleNumber ?? 0, true, todays.Solved, todays.TimeMs, todays.Moves),
-            rows.GroupBy(r => r.Mode).ToDictionary(g => g.Key, g => g.Count(x => x.Solved)));
+            rows.GroupBy(r => r.Mode).ToDictionary(g => g.Key, g => g.Count(x => x.Solved)),
+            timed.GroupBy(r => r.Mode).ToDictionary(g => g.Key, g => g.Min(x => x.TimeMs!.Value)));
     }
 
     public async Task<BoardDto> GetBoardAsync(long userId, string game, int? number)

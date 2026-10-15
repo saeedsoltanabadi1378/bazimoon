@@ -89,7 +89,7 @@ public sealed record PuzzleResultDto(
 public sealed record GameStatsDto(
     string Game, int Played, int Solved, int WinRate, int? BestTimeMs, int? AverageTimeMs, int? BestScore, int? AverageScore,
     int? BestMoves, double AverageMoves, int? MaxDetail, int SumDetail, int DailyStreak, int WinStreak, int? TodayNumber,
-    DailyStatusDto? Today, IReadOnlyDictionary<string, int> WinsByMode);
+    DailyStatusDto? Today, IReadOnlyDictionary<string, int> WinsByMode, IReadOnlyDictionary<string, int> BestTimeByMode);
 public sealed record BoardRowDto(int? Rank, string Name, bool IsYou, bool Solved, int? TimeMs, int? Score, int? Moves);
 public sealed record BoardDto(string Game, int? Number, int SolvedCount, IReadOnlyList<BoardRowDto> Rows);
 public sealed record WeeklyRowDto(int Rank, string Name, bool IsYou, int Score);

@@ -131,6 +131,7 @@ export interface GameStats {
   todayNumber: number | null;
   today: DailyStatus | null;
   winsByMode: Record<string, number>;
+  bestTimeByMode: Record<string, number>;
 }
 
 export interface BoardRow {
