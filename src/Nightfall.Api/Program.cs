@@ -32,6 +32,9 @@ builder.Services.AddScoped<GameService>();
 builder.Services.AddScoped<HubService>();
 builder.Services.AddScoped<CoupleService>();
 builder.Services.AddHttpClient<ITelegramNotifier, TelegramNotifier>(c => c.Timeout = TimeSpan.FromSeconds(10));
+// Tests drive ReminderService.SendDueAsync directly instead of waiting on the timer.
+if (!builder.Environment.IsEnvironment("Testing"))
+    builder.Services.AddHostedService<ReminderService>();
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton<GameMutationLock>();
 builder.Services.AddHostedService<DiscussionDeadlineService>();
