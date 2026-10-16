@@ -6,6 +6,8 @@ in the code, which artboards it needs, and what to test.
 Per `AGENTS.md`, each milestone starts with its artboards in the
 [Nightfall Games Hub design](https://claude.ai/artifact/BPUhpaNYmSw9yky56fCdbW) and the
 owner's approval. Every string ships in English and Persian. Nothing here is built yet.
+The owner's answers to the open questions are recorded under **Decisions** at the end and
+are reflected in each section.
 
 ## Where Mafia stands today
 
@@ -87,7 +89,7 @@ once timers (M1) and AFK handling (M2) exist.
 1. A tied vote opens **Defence**. Each tied player speaks once, in seat order, for
    `DefenceSeconds` (default 30), and nobody can challenge.
 2. **Voting round 2** follows. Only the tied players can be voted for.
-3. If round 2 ties again, nobody goes out, as today.
+3. If round 2 ties again, nobody goes out, as today (decided).
 
 **Domain:**
 - Add `GamePhase.Defence`, appended at the end of the enum (it's string-serialised, so the
@@ -121,8 +123,9 @@ written in both languages.
 ### 2. Last words
 **Rules:**
 - A player voted out gets `LastWordsSeconds` (default 20) to speak before Results.
-- Night victims don't get last words by default (the usual table convention). A rule toggle
-  `LastWordsForNightKills` could change that.
+- Night victims don't get last words by default (the usual table convention). The creator
+  can turn them on with the table option `LastWordsForNightKills` (default off). When it's
+  on, a night victim speaks at the start of the Day, before the first speaker.
 
 **Domain:**
 - Add `GamePhase.LastWords`. `ResolveVoting` enters it whenever someone is eliminated, even
@@ -136,7 +139,10 @@ a dead player may speak.
 **App:** a LastWords screen (the eliminated player's card, a countdown, the speaking
 indicator) plus a speaker view with "Finish early".
 
-**Artboards:** Last words — listener view and speaker view (EN/FA).
+**App (Create a table):** a "Last words for night kills" switch, off by default.
+
+**Artboards:** Last words — listener view and speaker view (EN/FA), the night-victim
+variant at the start of the Day, and the switch on Create a table.
 
 **Tests:**
 - Phase order after a vote elimination.
@@ -207,8 +213,9 @@ countdown.
 - Each missed turn is a strike. After 2 strikes in a row the player is removed. They count as
   eliminated with the new `EliminationCause.Left`, and their role is revealed by the normal
   rules.
-- A player who leaves on purpose mid-game gets the same treatment, and it counts as a loss
-  for their rating.
+- A player who leaves on purpose mid-game gets the same treatment.
+- A player removed for inactivity or who leaves mid-game always counts as a **loss** for
+  rating and XP, even if their team goes on to win (decided).
 
 **Domain:**
 - Add `_strikes` to the snapshot.
@@ -312,7 +319,7 @@ and `parts.tsx`.
 | **Sniper** | Town | One night shot per game (new `NightActionType.Shoot`). If the target is Mafia, they die (the Doctor can still save them). If the target is Town, the Sniper dies instead. | Optional action: doesn't count towards `RequiredNightActionCount`. |
 | **Die Hard** | Town | Survives the first night kill without being revealed. Once per game, during the day, can call an **Inquiry**: the roles of every eliminated player are announced. | The Inquiry only matters when roles are hidden (4). Hide the option otherwise. |
 | **Silencer** | Mafia | Each night, silences one player (new `NightActionType.Silence`). The next day that player's turn is skipped and their voice is listen-only, but they can still vote. | Mafia-aligned for the Detective and for the win check. |
-| **Joker** | Independent | Wins alone if voted out during the day. The game ends there. | New `WinCondition.JokerWins`. Counts as non-Mafia for parity. Not rated. |
+| **Joker** | Independent | Wins if voted out during the day. | Table option `JokerWinEndsGame` (default on): when on, the game ends there with the new `WinCondition.JokerWins` and everyone else loses. When off, the Joker is recorded as a winner, leaves the game, and play continues until Town or Mafia wins. Counts as non-Mafia for parity. Rated like everyone else. |
 | **Mayor** | Town | Can reveal themselves during their speaking turn. Once revealed, their vote counts twice and everyone knows their role. | Add a `Revealed` flag on `Player`. `ResolveVoting` weights the ballots. |
 
 **Domain:**
@@ -325,6 +332,8 @@ and `parts.tsx`.
   used, Mayor revealed).
 - Extend `NightResult` with `SniperTarget`, `SniperOutcome` and `SilencedPlayer`.
 - `CheckWinCondition` becomes team-based.
+- Add a separate per-player `Won` result next to the team result, so a Joker can win while
+  the game goes on.
 
 **Voice:**
 - A silenced player gets Subscriber in `main` for that whole day.
@@ -341,14 +350,18 @@ and `parts.tsx`.
   - Mafia must be fewer than half the players;
   - the setup must fit the minimum player count.
 - A setup that doesn't fit the players present blocks Start, with a clear reason.
+- **Godfather appears innocent:** a table option `GodfatherAppearsInnocent`, off by default
+  (today's rule). When on, the Detective's check on the Godfather comes back "not Mafia".
+  The Iranian preset turns it on; the creator can change it.
 
 **Domain:**
 - Add a `RoleSetup` record to `GameConfig`.
 - `AssignRolesCore` deals from the setup instead of the fixed sequence.
 - `DetermineMafiaCount` becomes the Classic preset.
 
-**Rating:** only Classic and Iranian games without a Joker count for league rating. Every
-setup still earns XP.
+**Rating:** every game counts for league rating and XP, whatever the setup (decided).
+`RatingDelta` keeps comparing each player's team with the other side. A Joker is rated
+against the average of all other players.
 
 **App:**
 - A role picker on `CreateTableScreen`.
@@ -400,10 +413,20 @@ All of them in EN and FA.
 - Dead players and spectators share a **graveyard** voice channel, where they can talk freely
   without the living hearing.
 - Dead players can switch between the room (listen) and the graveyard (talk).
+- The graveyard also has a **text chat** (decided), for the same people: dead players and
+  spectators. The living never see it.
+  - Messages are plain text, at most 300 characters, rate-limited to one every 2 s.
+  - They go out over the existing SignalR game connection, and the last 200 are kept with
+    the live game in Redis so a reconnect shows history. They are deleted when the game
+    ends and are not part of the recap.
+  - The table creator can mute a spectator in the chat.
 
 **Domain and API:**
 - Add a `Spectators` list to `GameState` and the snapshot.
 - Add a `POST /games/{id}/spectate` endpoint.
+- Add `POST /games/{id}/graveyard/messages` (send) and a `GraveyardMessage` SignalR event,
+  sent only to dead players and spectators. Graveyard messages stay out of `GameState`:
+  store them next to the session in `IGameSessionStore`.
 - `GameView` gets a spectator projection. Today a non-player is refused, so this is a new
   path.
 - `GetVoiceToken` accepts `channel=graveyard` for dead players and spectators, and rejects it
@@ -414,16 +437,20 @@ All of them in EN and FA.
 - A "Watch" button on `MafiaTablesScreen` for games in progress.
 - A spectator banner.
 - A room/graveyard switch in the voice bar for dead players.
+- A graveyard chat panel (bottom sheet) with unread badge, RTL-aware.
 
 **Artboards:**
 - the Open tables list with a "Watch" entry;
 - the spectator view of the Night, Day and Voting screens;
-- the graveyard voice switch.
+- the graveyard voice switch;
+- the graveyard chat panel (EN/FA), including the muted-spectator state.
 
 **Tests:**
 - A spectator's view never contains living players' roles.
 - Voice tokens are given out by channel and status.
 - Spectators can't vote or act.
+- Living players can't send or receive graveyard messages; the rate limit and length cap
+  hold.
 
 ---
 
@@ -431,8 +458,8 @@ All of them in EN and FA.
 
 - **Persian:** every new string goes into `i18n/en/mafia.ts` and `i18n/fa/mafia.ts`, with
   numbers through `n()`. Bot messages go in both languages, chosen from the player's setting.
-  Role names in Persian use the familiar table terms (پدرخوانده, تک‌تیرانداز, جان‌سخت,
-  ناتو/سایلنسر, جوکر, شهردار); the owner should confirm them.
+  Persian role names, confirmed by the owner: پدرخوانده (Godfather), تک‌تیرانداز (Sniper),
+  جان‌سخت (Die Hard), ناتو/سایلنسر (Silencer), جوکر (Joker), شهردار (Mayor).
 - **RTL:** the recap timeline and the vote lists use logical CSS, and the countdowns use
   Persian digits.
 - **Bot:** each new phase needs handling in `CommandDispatcher` and `GameViewDto`, or bot-run
@@ -444,17 +471,28 @@ All of them in EN and FA.
 - **Checks:** `npx tsc -b && npm run lint` and `dotnet test src/Nightfall.Tests` must pass on
   every milestone.
 
-## Decisions for the owner
+## Decisions
 
-1. Tie-break: if round 2 ties again, nobody goes out (proposed)? Or both tied players go out,
-   or one is picked at random?
-2. Should night victims get last words too?
-3. Should the Godfather show as "not Mafia" to the Detective? This is common in Iranian
-   tables, but it changes today's rule.
-4. AFK: remove a player after 2 missed turns (proposed)? And should leaving mid-game count as
-   a loss?
-5. Joker: should the game end when the Joker wins (proposed), or continue with the Joker
-   recorded as a winner?
-6. Which setups are rated: only Classic and Iranian (proposed)?
-7. The graveyard as voice only (proposed), or also a text chat?
-8. Confirm the Persian role names.
+Answered by the owner on 2026-10-16.
+
+| # | Question | Decision |
+|---|----------|----------|
+| 1 | Re-vote ties again | Nobody goes out. |
+| 2 | Last words for night victims | Creator's table option `LastWordsForNightKills`, default off. |
+| 3 | Godfather shows "not Mafia" to the Detective | Creator's table option `GodfatherAppearsInnocent`, default off. |
+| 4 | AFK removal and leaving | Removed after 2 missed turns in a row; leaving or removal counts as a loss. |
+| 5 | Joker voted out ends the game | Creator's table option `JokerWinEndsGame`. |
+| 6 | Which setups are rated | All games are rated, whatever the setup. |
+| 7 | Graveyard | Voice and text chat. |
+| 8 | Persian role names | Confirmed as listed under Cross-cutting. |
+
+### New table options from these decisions
+All of these sit in `GameConfig` (M0) and appear on Create a table:
+
+| Option | Default | Milestone |
+|--------|---------|-----------|
+| `LastWordsForNightKills` | off | M1 |
+| `GodfatherAppearsInnocent` | off (on in the Iranian preset) | M4 |
+| `JokerWinEndsGame` | on | M4 |
+| `RevealRolesOnDeath` | on | M4 |
+| `AllowSpectators` | on for public tables, off for private | M5 |
