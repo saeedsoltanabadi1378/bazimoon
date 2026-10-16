@@ -43,7 +43,8 @@ public sealed class AdminDashboardService
 
     // ------------------------------------------------------------------ live games
 
-    /// <summary>Live games, found through the chats seen in the last two days (each chat has at most one).</summary>
+    /// <summary>Live games: the ones in chats seen in the last two days (each chat has at most one),
+    /// plus tables opened in the app, which belong to no chat.</summary>
     public async Task<List<AdminLiveGameDto>> GetLiveGamesAsync()
     {
         var since = Now.UtcDateTime.AddDays(-2);
@@ -54,6 +55,13 @@ public sealed class AdminDashboardService
             if (await _chatGames.GetActiveGameAsync(chat.TelegramChatId) is not { } gameId) continue;
             if (await _sessions.GetAsync(gameId) is not { } game || game.CurrentPhase == GamePhase.Ended) continue;
             live.Add(ToLive(game, chat.Title));
+        }
+        var appTables = await _db.MafiaTables.AsNoTracking().Where(t => t.TelegramChatId == 0 && t.CreatedAt >= since)
+            .Select(t => new { t.GameId, t.Name }).ToListAsync();
+        foreach (var table in appTables)
+        {
+            if (await _sessions.GetAsync(table.GameId) is not { } game || game.CurrentPhase == GamePhase.Ended) continue;
+            live.Add(ToLive(game, table.Name));
         }
         return live.OrderBy(g => g.StartedAt).ToList();
     }

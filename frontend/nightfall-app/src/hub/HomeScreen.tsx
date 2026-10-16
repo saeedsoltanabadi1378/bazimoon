@@ -206,8 +206,9 @@ function PlayTogether({ data }: { data: Home | null }) {
   const coupleOn = isGameOn("couple");
   const table = data?.table ?? null;
   const open = data?.openTables ?? 0;
-  const mafiaSub = table && table.phase === "Lobby" && table.chatTitle
-    ? t("mafiaTileYourTable", { group: table.chatTitle })
+  const tableName = table?.name ?? table?.chatTitle;
+  const mafiaSub = table && table.phase === "Lobby" && tableName
+    ? t("mafiaTileYourTable", { name: tableName })
     : open === 1 ? t("mafiaTileOneOpen") : open > 1 ? t("mafiaTileOpen", { count: open }) : t("mafiaTileNone");
   const tile = { display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 10, padding: 14, borderRadius: 18, background: "var(--surface)", border: 0, color: "var(--text)", textAlign: "start", font: "inherit", cursor: "pointer", minWidth: 0 } as const;
   const iconBox = (bg: string, fg: string) => ({ width: 44, height: 44, borderRadius: 14, background: bg, color: fg, display: "flex", alignItems: "center", justifyContent: "center" });

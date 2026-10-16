@@ -7,7 +7,7 @@ import { haptic } from "../lib/haptics";
 import type { TableInfo } from "../api/hub";
 
 /** The host's "Invite players" box in the lobby: the t_CODE link, copy and share, and the
- * open / group-only switch. Anyone with the link or code can join, whichever way it is set. */
+ * public / private switch. Anyone with the link or code can join, whichever way it is set. */
 export function InviteBox({ info, onChange }: { info: TableInfo; onChange(info: TableInfo): void }) {
   const { t } = useLanguage();
   const { api } = useHub();
@@ -15,7 +15,6 @@ export function InviteBox({ info, onChange }: { info: TableInfo; onChange(info: 
   const [saving, setSaving] = useState(false);
   const code = info.inviteCode ?? "";
   const link = botLink(`t_${code}`);
-  const group = info.chatTitle ?? t("thisGroup");
 
   async function copy() {
     try {
@@ -58,8 +57,8 @@ export function InviteBox({ info, onChange }: { info: TableInfo; onChange(info: 
       </div>
       <div className="row" style={{ gap: 12, paddingTop: 10, borderTop: "1px solid #1E2138" }}>
         <div className="grow stack" style={{ gap: 2 }}>
-          <span id="open-label" style={{ fontSize: 14, fontWeight: 600 }}>{t("openToEveryone")}</span>
-          <span className="tiny muted" style={{ lineHeight: 1.4 }}>{info.isOpen ? t("openHintOn") : t("openHintOff", { group })}</span>
+          <span id="open-label" style={{ fontSize: 14, fontWeight: 600 }}>{t("publicTableSwitch")}</span>
+          <span className="tiny muted" style={{ lineHeight: 1.4 }}>{info.isOpen ? t("openHintOn") : t("openHintOff")}</span>
         </div>
         <button
           type="button"

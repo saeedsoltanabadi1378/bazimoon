@@ -11,11 +11,8 @@ public static class TableEndpoints
         tables.MapGet("", async (string? scope, TableService service, HttpContext http) =>
         {
             long userId = http.User.GetTelegramUserId();
-            return scope == "groups" ? await service.GetGroupTablesAsync(userId) : await service.GetOpenTablesAsync(userId);
+            return scope == "mine" ? await service.GetYourTablesAsync(userId) : await service.GetOpenTablesAsync(userId);
         }).WithName("ListTables");
-
-        tables.MapGet("/groups", (TableService service, HttpContext http) =>
-            service.GetGroupsAsync(http.User.GetTelegramUserId())).WithName("ListTableGroups");
 
         tables.MapPost("", (CreateTableRequest request, TableService service, HttpContext http) =>
             service.CreateAsync(http.User.GetTelegramUserId(), http.User.GetTelegramUsername(), request)).WithName("CreateTable");

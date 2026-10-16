@@ -43,7 +43,7 @@ export function LobbyScreen() {
             {info && (
               <span className="row" style={{ gap: 4, padding: "1px 8px", borderRadius: 999, background: info.isOpen ? "#13302C" : "#1E2138", color: info.isOpen ? "#5FD0BE" : "#B79CF2", fontWeight: 600 }}>
                 <Icon name={info.isOpen ? "globe" : "lock"} size={11} strokeWidth={2.6} />
-                {info.isOpen ? t("tableOpen") : t("tableGroupOnly")}
+                {info.isOpen ? t("tablePublic") : t("tablePrivate")}
               </span>
             )}
           </div>

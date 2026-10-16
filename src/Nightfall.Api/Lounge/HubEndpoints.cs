@@ -28,13 +28,13 @@ public static class HubEndpoints
             hub.GetHomeAsync(http.User.GetTelegramUserId(), http.User.GetTelegramUsername())).WithName("GetHome");
 
         hubGroup.MapGet("/tables", (TableService tables, HttpContext http) =>
-            tables.GetGroupTablesAsync(http.User.GetTelegramUserId())).WithName("GetTables");
+            tables.GetYourTablesAsync(http.User.GetTelegramUserId())).WithName("GetTables");
 
         hubGroup.MapPost("/quick-match", async (TableService tables, Games.GameService games, HttpContext http) =>
         {
             long userId = http.User.GetTelegramUserId();
             var gameId = await tables.FindQuickMatchAsync(userId);
-            if (gameId is null) return Results.NotFound(new { detail = "No open table in your groups right now." });
+            if (gameId is null) return Results.NotFound(new { detail = "No public table has a free seat right now." });
             await games.JoinGameAsync(gameId.Value, userId, http.User.GetTelegramUsername());
             return Results.Ok(new Games.CreateGameResponse(gameId.Value));
         }).WithName("QuickMatch");

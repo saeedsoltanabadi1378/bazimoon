@@ -60,13 +60,16 @@ public class GameHistoryRepositoryTests : IDisposable
     }
 
     [Fact]
-    public async Task SaveCompletedGameAsync_NoTelegramChatId_Throws()
+    public async Task SaveCompletedGameAsync_AppTableWithoutChat_IsSavedWithChatZero()
     {
         var game = EndedGame(out _, telegramChatId: 0);
-        // EndedGame always sets a chat id via TestGameFactory; simulate the "none" case directly.
+        // Tables opened in the app belong to no Telegram group.
         var gameWithoutChat = GameState.FromSnapshot(game.ToSnapshot() with { TelegramChatId = null });
 
-        await Assert.ThrowsAsync<InvalidOperationException>(() => _repository.SaveCompletedGameAsync(gameWithoutChat));
+        await _repository.SaveCompletedGameAsync(gameWithoutChat);
+
+        var record = await _repository.GetAsync(gameWithoutChat.GameId);
+        Assert.Equal(0, record!.TelegramChatId);
     }
 
     [Fact]

@@ -130,7 +130,7 @@ public sealed class HubService
 
         int? mergeBest = await _db.PuzzleResults.Where(r => r.TelegramUserId == userId && r.Game == "merge").MaxAsync(r => r.Score);
         var league = await GetLeagueAsync(userId, username, "mafia");
-        var tables = await _tables.GetGroupTablesAsync(userId);
+        var tables = await _tables.GetYourTablesAsync(userId);
         return new HomeDto(
             Progression.CurrentStreak(stats.PuzzleStreak, stats.LastPuzzleDay, stats.StreakFreezes, today),
             Progression.DateOfDay(today).ToString("yyyy-MM-dd"),

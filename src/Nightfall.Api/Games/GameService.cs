@@ -35,7 +35,9 @@ public sealed class GameService
         _mutationLock = mutationLock;
     }
 
-    public async Task<Guid> CreateGameAsync(long telegramChatId, long creatorTelegramUserId, string creatorUsername, string? chatTitle = null, TableOptions? table = null)
+    /// <summary>Creates a lobby. <paramref name="telegramChatId"/> is the group a bot <c>/newgame</c> came from;
+    /// tables opened in the app have none and are shared by their invite link instead.</summary>
+    public async Task<Guid> CreateGameAsync(long? telegramChatId, long creatorTelegramUserId, string creatorUsername, string? chatTitle = null, TableOptions? table = null)
     {
         var settings = await _settings.GetAsync();
         if (!settings.IsGameOn("mafia")) throw new GameException(BotSettingsDefaults.MafiaOff);
@@ -45,13 +47,13 @@ public sealed class GameService
         game.AddPlayer(new Player(creatorId, creatorUsername));
 
         await _sessionStore.SaveAsync(game);
-        await _chatGameIndex.SetActiveGameAsync(telegramChatId, game.GameId);
+        if (telegramChatId is { } chat) await _chatGameIndex.SetActiveGameAsync(chat, game.GameId);
         await _rosterStore.AddAsync(game.GameId, creatorTelegramUserId, creatorUsername);
         await TrackActivityAsync(telegramChatId, creatorTelegramUserId, creatorUsername, chatTitle);
         _db.MafiaTables.Add(new()
         {
             GameId = game.GameId,
-            TelegramChatId = telegramChatId,
+            TelegramChatId = telegramChatId ?? 0,
             CreatorTelegramUserId = creatorTelegramUserId,
             Name = string.IsNullOrWhiteSpace(table?.Name) ? null : table.Name.Trim()[..Math.Min(40, table.Name.Trim().Length)],
             IsOpen = table?.IsOpen ?? false,
@@ -79,11 +81,12 @@ public sealed class GameService
             game.AddPlayer(new Player(playerId, username));
             await SaveAndNotifyAsync(game);
             await _rosterStore.AddAsync(gameId, telegramUserId, username);
-            if (game.TelegramChatId is { } chatId) { await TrackActivityAsync(chatId, telegramUserId, username); await _db.SaveChangesAsync(); }
+            await TrackActivityAsync(game.TelegramChatId, telegramUserId, username);
+            await _db.SaveChangesAsync();
         }
     }
 
-    /// <summary>Starts (or joins) a follow-up game in the same chat from a finished game.</summary>
+    /// <summary>Starts (or joins) a follow-up game at the same table (and chat, if any) from a finished game.</summary>
     public async Task<Guid> RematchAsync(Guid gameId, long telegramUserId, string username)
     {
         using var held = await _mutationLock.EnterAsync(gameId);
@@ -99,9 +102,8 @@ public sealed class GameService
             return existing;
         }
 
-        var chatId = game.TelegramChatId ?? throw new GameException("This game has no chat to start a rematch in.");
         var previous = await _db.MafiaTables.FindAsync(gameId);
-        var rematchId = await CreateGameAsync(chatId, telegramUserId, username, null,
+        var rematchId = await CreateGameAsync(game.TelegramChatId, telegramUserId, username, null,
             previous is null ? null : new TableOptions(previous.Name, previous.IsOpen, game.Config.MaxPlayers));
         game.SetRematch(rematchId);
         // The finished game is already in history; only refresh the live copy so players see the rematch.
@@ -272,15 +274,17 @@ public sealed class GameService
         }
     }
 
-    private async Task TrackActivityAsync(long chatId, long userId, string username, string? chatTitle = null)
+    private async Task TrackActivityAsync(long? chatId, long userId, string username, string? chatTitle = null)
     {
         var now=DateTime.UtcNow; var user=await _db.UserProfiles.FindAsync(userId); if(user is null)_db.UserProfiles.Add(new(){TelegramUserId=userId,Username=username,FirstSeenAt=now,LastSeenAt=now}); else {user.Username=username;user.LastSeenAt=now;}
-        var chat=await _db.ChatProfiles.FindAsync(chatId); if(chat is null)_db.ChatProfiles.Add(new(){TelegramChatId=chatId,Title=chatTitle,FirstSeenAt=now,LastSeenAt=now}); else { chat.LastSeenAt=now; if(!string.IsNullOrWhiteSpace(chatTitle)) chat.Title=chatTitle; }
-        var member = await _db.ChatMembers.FindAsync(chatId, userId);
-        if (member is null) _db.ChatMembers.Add(new() { TelegramChatId = chatId, TelegramUserId = userId, LastSeenAt = now });
+        if (chatId is not { } id) return;
+        var chat=await _db.ChatProfiles.FindAsync(id); if(chat is null)_db.ChatProfiles.Add(new(){TelegramChatId=id,Title=chatTitle,FirstSeenAt=now,LastSeenAt=now}); else { chat.LastSeenAt=now; if(!string.IsNullOrWhiteSpace(chatTitle)) chat.Title=chatTitle; }
+        var member = await _db.ChatMembers.FindAsync(id, userId);
+        if (member is null) _db.ChatMembers.Add(new() { TelegramChatId = id, TelegramUserId = userId, LastSeenAt = now });
         else member.LastSeenAt = now;
     }
 }
 
-/// <summary>How a table is set up when it is created from the app (or copied into a rematch).</summary>
+/// <summary>How a table is set up when it is created from the app (or copied into a rematch).
+/// <paramref name="IsOpen"/>: public (listed in Open tables) or private (invite link or code only).</summary>
 public sealed record TableOptions(string? Name, bool IsOpen, int? Seats);

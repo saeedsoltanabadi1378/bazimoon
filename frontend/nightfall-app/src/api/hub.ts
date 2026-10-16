@@ -57,15 +57,6 @@ export interface Table {
   youAreSeated: boolean;
 }
 
-/** A group you can start a table in. */
-export interface TableGroup {
-  telegramChatId: number;
-  title: string | null;
-  players: number;
-  since: string | null;
-  activeGameId: string | null;
-}
-
 export interface TableInfo {
   gameId: string;
   name: string | null;
@@ -83,7 +74,7 @@ export interface Home {
   mergeBest: number | null;
   league: { season: number; daysLeft: number; division: string; tier: number; rank: number | null; playerCount: number; zone: string | null };
   table: Table | null;
-  /** Open lobbies with a free seat, across all groups. */
+  /** Public lobbies with a free seat. */
   openTables: number;
 }
 
@@ -210,9 +201,10 @@ export const hubApi = (api: NightfallApiClient) => ({
   /** Games an admin switched off; the app hides them. */
   config: () => api.request<{ disabledGames: string[] }>("GET", "/api/hub/config"),
   home: () => api.request<Home>("GET", "/api/hub/home"),
-  tables: (scope: "open" | "groups") => api.request<Table[]>("GET", `/api/tables?scope=${scope}`),
-  tableGroups: () => api.request<TableGroup[]>("GET", "/api/tables/groups"),
-  createTable: (body: { telegramChatId: number; name: string | null; isOpen: boolean; seats: number }) =>
+  /** "open": public tables; "mine": tables you host or have a seat at. */
+  tables: (scope: "open" | "mine") => api.request<Table[]>("GET", `/api/tables?scope=${scope}`),
+  /** isOpen: public (listed) or private (invite link or code only). */
+  createTable: (body: { name: string | null; isOpen: boolean; seats: number }) =>
     api.request<{ gameId: string }>("POST", "/api/tables", body),
   resolveTable: (code: string) => api.request<{ gameId: string }>("GET", `/api/tables/code/${encodeURIComponent(code)}`),
   tableInfo: (gameId: string) => api.request<TableInfo>("GET", `/api/tables/${gameId}`),

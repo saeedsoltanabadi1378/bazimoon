@@ -20,15 +20,14 @@ public sealed class GameHistoryRepository : IGameHistoryRepository
     {
         if (game.CurrentPhase != GamePhase.Ended)
             throw new InvalidOperationException("Only a game that has reached the Ended phase can be saved to history.");
-        if (game.TelegramChatId is null)
-            throw new InvalidOperationException("Game has no TelegramChatId and cannot be saved to history.");
 
         var roster = _rosterStore is null ? [] : await _rosterStore.GetAsync(game.GameId);
         var result = game.CheckWinCondition();
         var record = new GameRecord
         {
             Id = game.GameId,
-            TelegramChatId = game.TelegramChatId.Value,
+            // 0 = a table opened in the app, not in a Telegram group.
+            TelegramChatId = game.TelegramChatId ?? 0,
             CreatedAt = game.CreatedAt.UtcDateTime,
             EndedAt = DateTime.UtcNow,
             Result = result,

@@ -8,52 +8,51 @@ using Nightfall.Infrastructure.Sessions;
 
 namespace Nightfall.Api.Lounge;
 
-/// <summary>Mafia tables in the app: the open list everyone sees, the tables in your own groups,
-/// creating a table for a group, invite codes and the host's open/group-only switch.</summary>
+/// <summary>Mafia tables in the app: the public list everyone sees, the tables you host or sit at,
+/// creating a table, invite codes and the host's public/private switch. A table needs no Telegram
+/// group: the host shares its invite link. Tables a bot <c>/newgame</c> started in a group work the same way.</summary>
 public sealed class TableService
 {
-    /// <summary>Open tables older than this are no longer listed even if their game never ended.</summary>
-    private static readonly TimeSpan OpenListWindow = TimeSpan.FromDays(1);
+    /// <summary>Tables older than this are no longer listed even if their game never ended.</summary>
+    private static readonly TimeSpan ListWindow = TimeSpan.FromDays(1);
 
     private readonly NightfallDbContext _db;
-    private readonly IChatGameIndex _chatGameIndex;
     private readonly IGameSessionStore _sessions;
     private readonly GameService _games;
-    private readonly ITelegramNotifier _notifier;
     private readonly TimeProvider _clock;
 
-    public TableService(NightfallDbContext db, IChatGameIndex chatGameIndex, IGameSessionStore sessions, GameService games, ITelegramNotifier notifier, TimeProvider clock)
+    public TableService(NightfallDbContext db, IGameSessionStore sessions, GameService games, TimeProvider clock)
     {
         _db = db;
-        _chatGameIndex = chatGameIndex;
         _sessions = sessions;
         _games = games;
-        _notifier = notifier;
         _clock = clock;
     }
 
     // ------------------------------------------------------------------ lists
 
-    /// <summary>Tables in the groups you have played in, group-only ones included.</summary>
-    public async Task<IReadOnlyList<TableDto>> GetGroupTablesAsync(long userId)
+    /// <summary>Tables you host or have a seat at, private ones included.</summary>
+    public async Task<IReadOnlyList<TableDto>> GetYourTablesAsync(long userId)
     {
-        var chats = await _db.ChatMembers.Where(m => m.TelegramUserId == userId)
-            .OrderByDescending(m => m.LastSeenAt).Select(m => m.TelegramChatId).Take(20).ToListAsync();
+        var since = _clock.GetUtcNow().UtcDateTime - ListWindow;
+        var hosted = await _db.MafiaTables.Where(t => t.CreatorTelegramUserId == userId && t.CreatedAt >= since)
+            .Select(t => t.GameId).ToListAsync();
+        var recent = await _db.MafiaTables.Where(t => t.CreatedAt >= since)
+            .OrderByDescending(t => t.CreatedAt).Select(t => t.GameId).Take(100).ToListAsync();
         var games = new List<GameState>();
-        foreach (var chat in chats)
+        foreach (var id in hosted.Concat(recent).Distinct())
         {
-            var gameId = await _chatGameIndex.GetActiveGameAsync(chat);
-            if (gameId is null) continue;
-            var game = await _sessions.GetAsync(gameId.Value);
-            if (game is not null && game.CurrentPhase != GamePhase.Ended) games.Add(game);
+            var game = await _sessions.GetAsync(id);
+            if (game is null || game.CurrentPhase == GamePhase.Ended) continue;
+            if (hosted.Contains(id) || game.GetPlayer(PlayerIdentity.DeriveId(id, userId)) is not null) games.Add(game);
         }
         return Sort(await BuildAsync(games, userId));
     }
 
-    /// <summary>Open tables from every group, for anyone in the app.</summary>
+    /// <summary>Public tables, for anyone in the app.</summary>
     public async Task<IReadOnlyList<TableDto>> GetOpenTablesAsync(long userId)
     {
-        var since = _clock.GetUtcNow().UtcDateTime - OpenListWindow;
+        var since = _clock.GetUtcNow().UtcDateTime - ListWindow;
         var ids = await _db.MafiaTables.Where(t => t.IsOpen && t.CreatedAt >= since)
             .OrderByDescending(t => t.CreatedAt).Select(t => t.GameId).Take(40).ToListAsync();
         var games = new List<GameState>();
@@ -65,11 +64,11 @@ public sealed class TableService
         return Sort(await BuildAsync(games, userId));
     }
 
-    /// <summary>Picks the fullest open lobby in any of your groups that still has a seat.</summary>
+    /// <summary>Picks the fullest public lobby that still has a seat for you.</summary>
     public async Task<Guid?> FindQuickMatchAsync(long userId)
     {
-        var tables = await GetGroupTablesAsync(userId);
-        return tables.FirstOrDefault(t => t.Phase == GamePhase.Lobby && t.Seated < t.MaxPlayers)?.GameId;
+        var tables = await GetOpenTablesAsync(userId);
+        return tables.FirstOrDefault(t => t.Phase == GamePhase.Lobby && t.Seated < t.MaxPlayers && !t.YouAreSeated)?.GameId;
     }
 
     // Lobbies with a free seat first (fullest first), then full lobbies, then games under way.
@@ -101,48 +100,11 @@ public sealed class TableService
 
     // ------------------------------------------------------------------ create
 
-    /// <summary>Groups you can start a table in: ones where you have played with the bot.</summary>
-    public async Task<IReadOnlyList<TableGroupDto>> GetGroupsAsync(long userId)
-    {
-        var chats = await _db.ChatMembers.Where(m => m.TelegramUserId == userId)
-            .OrderByDescending(m => m.LastSeenAt).Select(m => m.TelegramChatId).Take(20).ToListAsync();
-        var profiles = await _db.ChatProfiles.AsNoTracking().Where(c => chats.Contains(c.TelegramChatId)).ToDictionaryAsync(c => c.TelegramChatId);
-        var counts = await _db.ChatMembers.Where(m => chats.Contains(m.TelegramChatId))
-            .GroupBy(m => m.TelegramChatId).Select(g => new { g.Key, Count = g.Count() }).ToDictionaryAsync(x => x.Key, x => x.Count);
-
-        var groups = new List<TableGroupDto>();
-        foreach (var chat in chats)
-        {
-            var active = await _chatGameIndex.GetActiveGameAsync(chat);
-            var game = active is null ? null : await _sessions.GetAsync(active.Value);
-            profiles.TryGetValue(chat, out var profile);
-            groups.Add(new TableGroupDto(chat, profile?.Title, counts.GetValueOrDefault(chat), profile?.FirstSeenAt,
-                game is not null && game.CurrentPhase != GamePhase.Ended ? game.GameId : null));
-        }
-        return groups;
-    }
-
+    /// <summary>Opens a table in the app. The host lands in its lobby and shares the invite link from there.</summary>
     public async Task<IResult> CreateAsync(long userId, string username, CreateTableRequest request)
     {
-        bool member = await _db.ChatMembers.AnyAsync(m => m.TelegramChatId == request.TelegramChatId && m.TelegramUserId == userId);
-        if (!member)
-            return Results.Problem(statusCode: 403, title: "Forbidden", detail: "You can only start a table in a group where you have played with the bot.");
-
-        if (await _chatGameIndex.GetActiveGameAsync(request.TelegramChatId) is { } existing
-            && await _sessions.GetAsync(existing) is { CurrentPhase: not GamePhase.Ended })
-            return Results.Problem(statusCode: 409, title: "Conflict", detail: "That group already has a table.", extensions: new Dictionary<string, object?> { ["gameId"] = existing });
-
-        var gameId = await _games.CreateGameAsync(request.TelegramChatId, userId, username, null,
+        var gameId = await _games.CreateGameAsync(null, userId, username, null,
             new TableOptions(request.Name, request.IsOpen, request.Seats));
-
-        // The bot posts the table in the group with a button that opens it.
-        var record = await _db.MafiaTables.AsNoTracking().FirstAsync(t => t.GameId == gameId);
-        var game = await _games.LoadOrThrowAsync(gameId);
-        string name = record.Name ?? "Mafia";
-        string text =
-            $"{username} opened a Mafia table: {name} · {game.Config.MaxPlayers} seats. Tap below to join.\n" +
-            $"{username} یک میز مافیا باز کرد: {name} · {game.Config.MaxPlayers} صندلی. برای پیوستن دکمه زیر را بزنید.";
-        await _notifier.NotifyAsync(request.TelegramChatId, text, gameId.ToString());
         return Results.Ok(new CreateGameResponse(gameId));
     }
 
@@ -195,7 +157,7 @@ public sealed record TableDto(
     GamePhase Phase, int Round, int Seated, int MaxPlayers, int MinPlayers, DateTimeOffset CreatedAt,
     IReadOnlyList<string> Players, bool YouAreSeated);
 
-public sealed record TableGroupDto(long TelegramChatId, string? Title, int Players, DateTime? Since, Guid? ActiveGameId);
-public sealed record CreateTableRequest(long TelegramChatId, string? Name, bool IsOpen, int? Seats);
+/// <summary><paramref name="IsOpen"/>: public (listed in Open tables) or private (invite link or code only).</summary>
+public sealed record CreateTableRequest(string? Name, bool IsOpen, int? Seats);
 public sealed record TableInfoDto(Guid GameId, string? Name, string? ChatTitle, bool IsOpen, bool IsHost, string? InviteCode);
 public sealed record SetTableOpenRequest(bool IsOpen);

@@ -10,14 +10,14 @@ import type { Table } from "../api/hub";
 
 const faceColors = ["#F0A83A", "#5FD0BE", "#B79CF2", "#8FA8FF", "#E9D8A6", "#F08A7A"];
 
-/** Together tab: Couple Quiz, then Mafia tables (open to everyone, or in your groups), a code box
+/** Together tab: Couple Quiz, then Mafia tables (public ones, or the ones you host or sit at), a code box
  * and "Create a table". Opening an invite link (t_CODE) lands here with the code filled in. */
 export function MafiaTablesScreen({ code }: { code?: string }) {
   const { t } = useLanguage();
   const { push, replace } = useNavigation();
   const { api, isGameOn } = useHub();
   const mafiaOn = isGameOn("mafia");
-  const [tab, setTab] = useState<"open" | "groups">("open");
+  const [tab, setTab] = useState<"open" | "mine">("open");
   const { data, loading, error, reload } = useLoad(() => (mafiaOn ? api.tables(tab) : Promise.resolve([])), [api, tab, mafiaOn]);
   const [input, setInput] = useState(code ?? "");
   const [codeError, setCodeError] = useState(false);
@@ -65,7 +65,7 @@ export function MafiaTablesScreen({ code }: { code?: string }) {
         </div>
 
         <div role="tablist" aria-label={t("whichTables")} style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 4, padding: 4, borderRadius: 14, background: "var(--surface)" }}>
-          {(["open", "groups"] as const).map((key) => (
+          {(["open", "mine"] as const).map((key) => (
             <button
               key={key}
               type="button"
@@ -74,11 +74,11 @@ export function MafiaTablesScreen({ code }: { code?: string }) {
               onClick={() => setTab(key)}
               style={{ minHeight: 44, borderRadius: 11, border: 0, background: tab === key ? "#EDEBF5" : "transparent", color: tab === key ? "#0B0D1A" : "var(--text-2)", font: "600 14px inherit", fontFamily: "inherit", cursor: "pointer" }}
             >
-              {key === "open" ? t("openTables") : t("yourGroups")}
+              {key === "open" ? t("openTables") : t("yourTables")}
             </button>
           ))}
         </div>
-        <p className="small muted" style={{ lineHeight: 1.45 }}>{tab === "open" ? t("openTablesNote") : t("yourGroupsNote")}</p>
+        <p className="small muted" style={{ lineHeight: 1.45 }}>{tab === "open" ? t("openTablesNote") : t("yourTablesNote")}</p>
 
         {loading && !data && <div className="skeleton" style={{ height: 120, borderRadius: 18 }} />}
         {error && (
@@ -89,7 +89,7 @@ export function MafiaTablesScreen({ code }: { code?: string }) {
         )}
         {data && data.length === 0 && (
           <div style={{ padding: "18px 16px", borderRadius: 18, background: "var(--surface-3)", fontSize: 14, lineHeight: 1.5, color: "var(--text-2)", textAlign: "center" }}>
-            {tab === "open" ? t("noOpenTables") : t("noGroupTables")}
+            {tab === "open" ? t("noOpenTables") : t("noYourTables")}
           </div>
         )}
         <div className="stack" style={{ gap: 10 }}>
@@ -150,7 +150,7 @@ function TableCard({ table, onOpen }: { table: Table; onOpen(): void }) {
         </div>
         <span className="row" style={{ gap: 5, padding: "3px 10px", borderRadius: 999, background: table.isOpen ? "#13302C" : "#1E2138", color: table.isOpen ? "#5FD0BE" : "#B79CF2", fontSize: 12, fontWeight: 600, whiteSpace: "nowrap" }}>
           <Icon name={table.isOpen ? "globe" : "lock"} size={12} strokeWidth={2.4} />
-          {table.isOpen ? t("tableOpen") : t("tableGroupOnly")}
+          {table.isOpen ? t("tablePublic") : t("tablePrivate")}
         </span>
       </div>
       <div className="row" style={{ gap: 10 }}>
