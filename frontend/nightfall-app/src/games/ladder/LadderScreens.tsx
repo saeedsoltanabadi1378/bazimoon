@@ -8,6 +8,7 @@ import { dailyNumber } from "../../lib/rng";
 import { readLocal, writeLocal } from "../../lib/storage";
 import { haptic } from "../../lib/haptics";
 import { IntroScreen } from "../shared/IntroScreen";
+import { InGameHelp } from "../shared/InGameHelp";
 import { ResultScreen } from "../shared/ResultScreen";
 import { PlayHeader, parseXp, useFinish, useSavedState, useStopwatch, type ResultParams } from "../shared/play";
 import { dailyLadder, endlessLadder, endlessShape, letterDiff, loadLadderDictionary, shortestPath, type Ladder } from "./logic";
@@ -186,12 +187,11 @@ export function LadderPlay({ mode }: { mode: LadderMode }) {
           params,
         );
       }}
-      t={t}
     />
   );
 }
 
-function LadderBoard({ saved, setSaved, dict, mode, number, onBack, onFinish, t }: {
+function LadderBoard({ saved, setSaved, dict, mode, number, onBack, onFinish }: {
   saved: Saved;
   setSaved: (s: Saved) => void;
   dict: Set<string>;
@@ -199,8 +199,8 @@ function LadderBoard({ saved, setSaved, dict, mode, number, onBack, onFinish, t 
   number: number;
   onBack: () => void;
   onFinish: (won: boolean, chain: string[], elapsedMs: number, hints: number) => void;
-  t: ReturnType<typeof useLanguage>["t"];
 }) {
+  const { t, n, language } = useLanguage();
   const { ladder, chain, hints } = saved;
   const last = chain[chain.length - 1];
   const won = last === ladder.end;
@@ -295,20 +295,34 @@ function LadderBoard({ saved, setSaved, dict, mode, number, onBack, onFinish, t 
     <Screen theme="night">
       <div style={{ padding: "14px 16px 8px" }}>
         <PlayHeader
-          title={title}
+          title={<span dir="ltr">{title}</span>}
           sub={sub}
           onBack={onBack}
           backLabel={t("backToGame", { game: t("gameLadder") })}
-          right={<div className="num" style={{ minWidth: 44, padding: "8px 10px", borderRadius: 12, background: "var(--surface)", fontWeight: 600, textAlign: "center", fontSize: 14 }}>{steps} / {ladder.par}</div>}
+          right={(
+            <div className="row" style={{ gap: 6 }}>
+              <InGameHelp
+                game="ladder"
+                accent={ACCENT}
+                steps={[
+                  { title: t("ladderStep1"), text: t("ladderStep1Text") },
+                  { title: t("ladderStep2"), text: t("ladderStep2Text") },
+                  { title: t("ladderStep3"), text: t("ladderStep3Text") },
+                ]}
+                example={<div className="card center strong" dir="ltr" style={{ color: ACCENT, fontSize: 13 }}>{t("ladderHelpPath")}</div>}
+              />
+              <div className="num" style={{ minWidth: 44, padding: "8px 10px", borderRadius: 12, background: "var(--surface)", fontWeight: 600, textAlign: "center", fontSize: 14 }}><bdi>{n(steps)} / {n(ladder.par)}</bdi></div>
+            </div>
+          )}
         />
       </div>
 
-      <div style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: "6px 16px 10px", display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }} dir="ltr">
+      <div style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: "6px 16px 10px", display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
         {chain.map((w, i) => {
           const prev = chain[i - 1];
           return (
-            <div key={`${w}-${i}`} className="row" style={{ gap: 10 }}>
-              <span style={{ width: 30, fontSize: 12, color: "var(--muted)", textAlign: "right" }}>{i === 0 ? t("ladderStart") : i}</span>
+            <div key={`${w}-${i}`} className="row" style={{ gap: 10 }} dir="ltr">
+              <span dir={language === "fa" ? "rtl" : "ltr"} style={{ width: 30, fontSize: 12, color: "var(--muted)", textAlign: "right" }}>{i === 0 ? t("ladderStart") : n(i)}</span>
               <div style={{ display: "flex", gap: 6 }}>
                 {w.split("").map((ch, j) => {
                   const edge = i === 0 || w === ladder.end;
@@ -324,8 +338,8 @@ function LadderBoard({ saved, setSaved, dict, mode, number, onBack, onFinish, t 
         })}
 
         {!over && (
-          <div className="row" style={{ gap: 10 }}>
-            <span style={{ width: 30, fontSize: 12, color: ACCENT, textAlign: "right" }}>{steps + 1}</span>
+          <div className="row" style={{ gap: 10 }} dir="ltr">
+            <span style={{ width: 30, fontSize: 12, color: ACCENT, textAlign: "right" }}>{n(steps + 1)}</span>
             <div style={{ display: "flex", gap: 6 }}>
               {draft.map((ch, i) => {
                 const selected = i === sel;
@@ -353,8 +367,8 @@ function LadderBoard({ saved, setSaved, dict, mode, number, onBack, onFinish, t 
             <div className="stack center" style={{ gap: 4, margin: "2px 0" }} aria-hidden="true">
               {Array.from({ length: gapDots }, (_, i) => <span key={i} style={{ width: 4, height: 8, borderRadius: 999, background: "#2E3252" }} />)}
             </div>
-            <div className="row" style={{ gap: 10 }}>
-              <span style={{ width: 30, fontSize: 11, color: "var(--muted)", textAlign: "right" }}>{t("ladderGoal")}</span>
+            <div className="row" style={{ gap: 10 }} dir="ltr">
+              <span dir={language === "fa" ? "rtl" : "ltr"} style={{ width: 30, fontSize: 11, color: "var(--muted)", textAlign: "right" }}>{t("ladderGoal")}</span>
               <div style={{ display: "flex", gap: 6 }}>
                 {ladder.end.split("").map((ch, j) => (
                   <span key={j} style={{ width: cell, height: cell, boxSizing: "border-box", borderRadius: 10, border: `2px dashed ${CHANGED}`, color: ACCENT, font: `800 ${cell * 0.46}px var(--font-display)`, display: "flex", alignItems: "center", justifyContent: "center" }}>{ch}</span>
@@ -383,14 +397,14 @@ function LadderBoard({ saved, setSaved, dict, mode, number, onBack, onFinish, t 
         )}
       </div>
 
-      <div style={{ display: "flex", flexDirection: "column", gap: 7, padding: "8px 6px calc(22px + env(safe-area-inset-bottom))", background: "#10122A", borderTop: "1px solid #1E2138" }} dir="ltr">
+      <div style={{ display: "flex", flexDirection: "column", gap: 7, padding: "8px 6px calc(22px + env(safe-area-inset-bottom))", background: "#10122A", borderTop: "1px solid #1E2138" }}>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 6, padding: "0 4px 4px" }}>
           <button type="button" onClick={undo} disabled={over || chain.length <= 1} style={actionStyle(false)}>{t("ladderUndo")}</button>
           <button type="button" onClick={hint} disabled={over} style={actionStyle(false)}>{t("hint")}</button>
           <button type="button" onClick={submit} disabled={over} style={actionStyle(true)}>{t("ladderSubmit")}</button>
         </div>
         {["QWERTYUIOP", "ASDFGHJKL", "ZXCVBNM"].map((row) => (
-          <div key={row} style={{ display: "flex", gap: 5, justifyContent: "center" }}>
+          <div key={row} style={{ display: "flex", gap: 5, justifyContent: "center" }} dir="ltr">
             {row.split("").map((ch) => (
               <button key={ch} type="button" onClick={() => setLetter(ch)} aria-label={ch} style={{ flex: 1, maxWidth: 34, height: 48, padding: 0, borderRadius: 8, border: 0, background: "#2E3252", color: "#EDEBF5", font: "700 16px var(--font-body)", cursor: "pointer" }}>
                 {ch}

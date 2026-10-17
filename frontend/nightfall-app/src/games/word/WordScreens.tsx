@@ -8,6 +8,7 @@ import { dailyNumber } from "../../lib/rng";
 import { readLocal } from "../../lib/storage";
 import { haptic } from "../../lib/haptics";
 import { IntroScreen, PreviewGrid } from "../shared/IntroScreen";
+import { InGameHelp } from "../shared/InGameHelp";
 import { XpCard } from "../shared/ResultScreen";
 import { parseXp, useFinish, useSavedState, type ResultParams } from "../shared/play";
 import { answerFor, keyboards, loadDictionary, score, type Score, type WordLang } from "./logic";
@@ -69,7 +70,7 @@ export function WordIntro() {
         },
         {
           key: "fa", label: <span style={{ fontFamily: FA_FONT }}>فارسی</span>, desc: t("wordFaDesc"),
-          play: savedOutcome("fa", number) === "won" || savedOutcome("fa", number) === "lost" ? t("seeTodaysBoard") : "بازی فارسی",
+          play: savedOutcome("fa", number) === "won" || savedOutcome("fa", number) === "lost" ? t("seeTodaysBoard") : t("playPersian"),
           onPlay: () => push({ name: "game", game: "word", screen: "play", params: { lang: "fa" } }),
         },
       ]}
@@ -96,7 +97,7 @@ export function WordIntro() {
 }
 
 export function WordPlay({ lang }: { lang: WordLang }) {
-  const { t, language } = useLanguage();
+  const { t, n, language } = useLanguage();
   const { back } = useNavigation();
   const { highContrast } = useHub();
   const finish = useFinish("word");
@@ -146,7 +147,8 @@ export function WordPlay({ lang }: { lang: WordLang }) {
         return;
       }
       const correct = saved.cur.join("") === answer.join("");
-      correct ? haptic.success() : haptic.tap();
+      if (correct) haptic.success();
+      else haptic.tap();
       setSaved((s) => ({ ...s, guesses: [...s.guesses, s.cur], cur: [] }));
       return;
     }
@@ -195,11 +197,29 @@ export function WordPlay({ lang }: { lang: WordLang }) {
     <Screen theme="night">
       <div className="row row--between" style={{ padding: "14px 16px 8px" }}>
         <IconButton icon="back" label={t("backToGame", { game: t("gameWord") })} onClick={back} />
-        <div style={{ textAlign: "center" }}>
-          <div style={{ fontFamily: fa ? FA_FONT : "var(--font-display)", fontSize: 21, fontWeight: 700 }}>{fa ? "کلمه روز" : "Daily Word"}</div>
-          <div className="tiny muted">#{number} · {formatShortDate(today, language)}</div>
+        <div style={{ textAlign: "center", minWidth: 0 }}>
+          <div style={{ fontSize: 20, fontWeight: 700 }}>{t(fa ? "wordBoardPersian" : "wordBoardEnglish")}</div>
+          <div className="tiny muted"><bdi>#{n(number)}</bdi> · {formatShortDate(today, language)}</div>
         </div>
-        <div style={{ minWidth: 44, padding: "8px 10px", borderRadius: 12, background: "var(--surface)", fontWeight: 600, textAlign: "center", fontSize: 14 }}>{tries}/6</div>
+        <div className="row" style={{ gap: 6 }}>
+          <InGameHelp
+            game={`word-${lang}`}
+            accent={ACCENT}
+            steps={[
+              { title: t("wordStep1"), text: t("wordStep1Text") },
+              { title: t("wordStep2"), text: t("wordStep2Text") },
+              { title: t("wordStep3"), text: t("wordStep3Text") },
+            ]}
+            example={(
+              <div className="word-help-legend">
+                <div style={{ background: C[2][0], color: C[2][1] }}>✓ {t("wordColorRight")}</div>
+                <div style={{ background: C[1][0], color: C[1][1] }}>↔ {t("wordColorElsewhere")}</div>
+                <div style={{ background: C[0][0], color: C[0][1] }}>× {t("wordColorMissing")}</div>
+              </div>
+            )}
+          />
+          <div className="num" style={{ minWidth: 44, padding: "8px 10px", borderRadius: 12, background: "var(--surface)", fontWeight: 600, textAlign: "center", fontSize: 14 }}><bdi>{n(tries)} / {n(6)}</bdi></div>
+        </div>
       </div>
 
       <div style={{ minHeight: 34, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 16px" }} role="status">
@@ -263,7 +283,7 @@ export function WordPlay({ lang }: { lang: WordLang }) {
                     fontFamily: fa ? FA_FONT : "var(--font-body)", fontWeight: 700, fontSize: special ? 13 : fa ? 17 : 16, cursor: "pointer",
                   }}
                 >
-                  {key === "DEL" ? "⌫" : key === "ENTER" ? (fa ? "ثبت" : "Enter") : key}
+                  {key === "DEL" ? "⌫" : key === "ENTER" ? t("ladderSubmit") : key}
                 </button>
               );
             })}
@@ -301,7 +321,7 @@ export function WordResult({ params }: { params?: ResultParams }) {
   const counts = [1, 2, 3, 4, 5, 6].map((k) => stats?.solvedByMoves?.[String(k)] ?? 0);
   const max = Math.max(1, ...counts);
   const emoji = (sc: Score) => (sc === 2 ? "🟩" : sc === 1 ? "🟨" : "⬛");
-  const shareText = `${t("gameWord")} #${number} · ${won ? tries : "X"}/6\n${pattern.map((row) => row.map(emoji).join("")).join("\n")}`;
+  const shareText = `${t("gameWord")} #${n(number)} · ${won ? n(tries) : "X"}/${n(6)}\n${pattern.map((row) => row.map(emoji).join("")).join("\n")}`;
 
   return (
     <Screen theme="night">
