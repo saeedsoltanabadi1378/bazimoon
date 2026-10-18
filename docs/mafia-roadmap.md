@@ -15,7 +15,8 @@ are reflected in each section.
 |-----------|--------|
 | M0 | Table rules in `GameConfig` and the single deadline service (`PhaseDeadlineService`) are built. The game event log is **not built yet**; it moves to the start of M3, the first milestone that needs it. Rules are not stored on `MafiaTableRecord`: the live game keeps them in its snapshot, and a rematch copies them from the finished game. |
 | M1 | Built: tie-break defence and re-vote, last words (with the night-kill option), adjustable timers, the lobby rules line, and night and vote countdowns. |
-| M2–M5 | Not started. |
+| M2 | Built: ready check and auto-start, strikes and removal for missed timed turns, the Godfather fallback to the Mafia's suggestion, leaving mid-game as a loss, and the creator hand-off. Day speaking turns never give strikes. |
+| M3–M5 | Not started. |
 
 ## Where Mafia stands today
 
