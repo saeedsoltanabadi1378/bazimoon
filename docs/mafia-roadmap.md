@@ -4,7 +4,7 @@ A plan for the next twelve Mafia features. For each one it says how it plays, wh
 in the code, which artboards it needs, and what to test.
 
 Per `AGENTS.md`, each milestone starts with its artboards in the
-[Nightfall Games Hub design](https://claude.ai/artifact/BPUhpaNYmSw9yky56fCdbW) and the
+[Bazimoon Games Hub design](https://claude.ai/artifact/BPUhpaNYmSw9yky56fCdbW) and the
 owner's approval. Every string ships in English and Persian. Nothing here is built yet.
 The owner's answers to the open questions are recorded under **Decisions** at the end and
 are reflected in each section.
@@ -479,7 +479,7 @@ All of them in EN and FA.
   Players page shows Mafia stats and achievements.
 - **Deploys:** enum values are only ever appended, and snapshot fields always have defaults,
   so games in progress survive each release.
-- **Checks:** `npx tsc -b && npm run lint` and `dotnet test src/Nightfall.Tests` must pass on
+- **Checks:** `npx tsc -b && npm run lint` and `dotnet test src/Bazimoon.Tests` must pass on
   every milestone.
 
 ## Decisions

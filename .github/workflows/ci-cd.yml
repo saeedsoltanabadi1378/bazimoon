@@ -20,19 +20,19 @@ jobs:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
       - name: Restore
-        run: dotnet restore Nightfall.slnx
+        run: dotnet restore Bazimoon.slnx
 
       - name: Build
-        run: dotnet build Nightfall.slnx --no-restore -c Release
+        run: dotnet build Bazimoon.slnx --no-restore -c Release
 
       - name: Test
-        run: dotnet test Nightfall.slnx --no-build -c Release --logger "console;verbosity=normal"
+        run: dotnet test Bazimoon.slnx --no-build -c Release --logger "console;verbosity=normal"
 
   frontend:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: frontend/nightfall-app
+        working-directory: frontend/bazimoon-app
     steps:
       - uses: actions/checkout@v4
 
@@ -40,7 +40,7 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
-          cache-dependency-path: frontend/nightfall-app/package-lock.json
+          cache-dependency-path: frontend/bazimoon-app/package-lock.json
 
       - name: Install dependencies
         run: npm ci
@@ -53,7 +53,7 @@ jobs:
         # inlines VITE_* at build time, so a real deploy rebuilds the frontend image with the
         # actual public Api URL / Agora App ID (see the docker job below and docker-compose.yml).
         env:
-          VITE_API_BASE_URL: https://api.nightfall.example.com
+          VITE_API_BASE_URL: https://api.bazimoon.com
           VITE_AGORA_APP_ID: 0123456789abcdef0123456789abcdef
         run: npm run build
 
@@ -67,11 +67,11 @@ jobs:
       matrix:
         include:
           - service: api
-            dockerfile: src/Nightfall.Api/Dockerfile
+            dockerfile: src/Bazimoon.Api/Dockerfile
           - service: bot
-            dockerfile: src/Nightfall.Bot/Dockerfile
+            dockerfile: src/Bazimoon.Bot/Dockerfile
           - service: frontend
-            dockerfile: frontend/nightfall-app/Dockerfile
+            dockerfile: frontend/bazimoon-app/Dockerfile
     steps:
       - uses: actions/checkout@v4
 
@@ -94,7 +94,7 @@ jobs:
           # Placeholder build args for the frontend image, same caveat as the frontend job above —
           # a real deploy rebuilds with the actual public Api URL / Agora App ID.
           build-args: |
-            VITE_API_BASE_URL=https://api.nightfall.example.com
+            VITE_API_BASE_URL=https://api.bazimoon.com
             VITE_AGORA_APP_ID=0123456789abcdef0123456789abcdef
           cache-from: type=gha
           cache-to: type=gha,mode=max
