@@ -7,7 +7,7 @@ using Bazimoon.Infrastructure.Sessions;
 
 namespace Bazimoon.Api.Lounge;
 
-/// <summary>Read models and writes behind the Mini App hub: profile, home, league, puzzles and tables.</summary>
+/// <summary>Read models and writes behind the app hub: profile, home, league, puzzles and tables.</summary>
 public sealed class HubService
 {
     private readonly BazimoonDbContext _db;

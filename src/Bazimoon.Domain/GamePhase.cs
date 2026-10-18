@@ -3,7 +3,7 @@ using System.Text.Json.Serialization;
 namespace Bazimoon.Domain;
 
 /// <summary>String-converted in JSON (via attribute, so it applies uniformly to any serializer
-/// options on any client) rather than left as raw ordinals — the Api's frontend and Bot clients
+/// options on any client) rather than left as raw ordinals — the Api's frontend clients
 /// shouldn't have to hardcode magic numbers that would silently break if this enum is reordered.</summary>
 [JsonConverter(typeof(JsonStringEnumConverter))]
 public enum GamePhase

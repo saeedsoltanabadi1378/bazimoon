@@ -1,8 +1,8 @@
-using System.Text.Json;
-
 namespace Bazimoon.Infrastructure.Admin;
 
-public sealed class BotSettingsRecord
+/// <summary>App-wide settings an admin edits in the console (one row): Mafia table limits,
+/// maintenance mode, game switches and the notification texts.</summary>
+public sealed class AppSettingsRecord
 {
     public int Id { get; set; } = 1;
     public int Version { get; set; } = 1;
@@ -10,39 +10,28 @@ public sealed class BotSettingsRecord
     public int MaxPlayers { get; set; } = 12;
     public bool MaintenanceMode { get; set; }
     public string MaintenanceMessage { get; set; } = "Bazimoon is temporarily unavailable for maintenance.";
-    public string EnabledCommandsJson { get; set; } = JsonSerializer.Serialize(BotSettingsDefaults.Commands);
-    public bool SoloTestEnabled { get; set; }
-    public string MiniAppBaseUrl { get; set; } = string.Empty;
-    public string HelpMessage { get; set; } = BotSettingsDefaults.HelpMessage;
-    public string WelcomeMessage { get; set; } = "🌙 New Bazimoon game created by {creator}! Open the lobby to join, or use /join. Once everyone's in, /startgame.";
-    // Persian versions, sent to players whose Telegram language is Persian (empty = use English).
-    public string MaintenanceMessageFa { get; set; } = BotSettingsDefaults.MaintenanceMessageFa;
-    public string HelpMessageFa { get; set; } = BotSettingsDefaults.HelpMessageFa;
-    public string WelcomeMessageFa { get; set; } = BotSettingsDefaults.WelcomeMessageFa;
+    // Persian versions, shown to players whose language is Persian (empty = use English).
+    public string MaintenanceMessageFa { get; set; } = AppSettingsDefaults.MaintenanceMessageFa;
     /// <summary>Daily puzzle reminder; {streak} is replaced with the player's current streak.</summary>
-    public string ReminderMessage { get; set; } = BotSettingsDefaults.ReminderMessage;
-    public string ReminderMessageFa { get; set; } = BotSettingsDefaults.ReminderMessageFa;
-    /// <summary>Games an admin switched off (keys from BotSettingsDefaults.Games). Hidden from the app; new Mafia tables and couple invites are refused.</summary>
+    public string ReminderMessage { get; set; } = AppSettingsDefaults.ReminderMessage;
+    public string ReminderMessageFa { get; set; } = AppSettingsDefaults.ReminderMessageFa;
+    /// <summary>Games an admin switched off (keys from AppSettingsDefaults.Games). Hidden from the app; new Mafia tables and couple invites are refused.</summary>
     public string DisabledGamesJson { get; set; } = "[]";
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 }
 
-public static class BotSettingsDefaults
+public static class AppSettingsDefaults
 {
     /// <summary>Every game an admin can switch on or off.</summary>
     public static readonly string[] Games = ["mafia", "couple", "zip", "queens", "sudoku", "word", "ladder", "mines", "merge", "blocks", "stack", "memory", "nard", "snake", "dooz", "spy", "esmfamil"];
     public const string MafiaOff = "Mafia is switched off for now. Try again later.";
     public const string MafiaOffFa = "مافیا فعلاً خاموش است. بعداً دوباره امتحان کنید.";
-    public static readonly string[] Commands = ["newgame", "join", "startgame", "resolvenight", "startvoting", "resolvevoting", "startnight", "myrole", "solotest", "solonext", "help", "start"];
     public const string MaintenanceMessageFa = "نایت‌فال موقتاً برای به‌روزرسانی در دسترس نیست.";
-    public const string HelpMessageFa = "دستورهای نایت‌فال:\n/newgame — باز کردن لابی در این گروه\n/join — پیوستن به لابی\n/startgame — پخش نقش‌ها و شروع\n/resolvenight — پایان شب\n/startvoting — شروع رأی‌گیری\n/resolvevoting — شمارش آرا\n/startnight — شروع شب بعد\n/myrole — دریافت نقش به‌صورت خصوصی";
-    public const string WelcomeMessageFa = "🌙 بازی تازه نایت‌فال توسط {creator}! لابی را باز کنید یا /join بفرستید. وقتی همه آمدند، /startgame.";
     public const string ReminderMessage = "Today's puzzles are ready. Keep your {streak}-day streak going!";
     public const string ReminderMessageFa = "پازل‌های امروز آماده‌اند. رکورد {streak} روزه‌ات را حفظ کن!";
-    public const string HelpMessage = "Bazimoon commands:\n/newgame — start a new lobby in this chat\n/join — join the current lobby\n/startgame — assign roles and begin\n/resolvenight — resolve the current night\n/startvoting — open voting\n/resolvevoting — tally votes\n/startnight — begin the next night\n/myrole — DM yourself your current role";
 }
 
-public static class BotMessages
+public static class PlayerMessages
 {
     /// <summary>Picks the Persian text for Persian speakers when one is set, otherwise the English one.</summary>
     public static string Pick(string english, string persian, string? languageCode) =>

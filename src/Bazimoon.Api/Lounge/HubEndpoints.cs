@@ -25,7 +25,7 @@ public static class HubEndpoints
 
         var hubGroup = app.MapGroup("/api/hub").RequireAuthorization();
 
-        hubGroup.MapGet("/config", async (Bazimoon.Infrastructure.Admin.IBotSettingsService settings) =>
+        hubGroup.MapGet("/config", async (Bazimoon.Infrastructure.Admin.IAppSettingsService settings) =>
             new AppConfigDto((await settings.GetAsync()).DisabledGames?.ToList() ?? [])).WithName("GetAppConfig");
 
         hubGroup.MapGet("/games/{gameId:guid}/recap", async (Guid gameId, HubService hub) =>
@@ -88,7 +88,7 @@ public sealed record GameRecapDto(Guid GameId, string? TableName, DateTime Ended
 
 public sealed record DailyStatusDto(string Game, int Number, bool Played, bool Solved, int? TimeMs, int? Moves);
 public sealed record LeagueSummaryDto(int Season, int DaysLeft, string Division, int Tier, int? Rank, int PlayerCount, string? Zone);
-/// <summary>App-wide switches the Mini App reads once at start.</summary>
+/// <summary>App-wide switches the app reads once at start.</summary>
 public sealed record AppConfigDto(IReadOnlyList<string> DisabledGames);
 public sealed record HomeDto(int Streak, string Date, IReadOnlyList<DailyStatusDto> Daily, int? MergeBest, LeagueSummaryDto League, TableDto? Table, int OpenTables);
 

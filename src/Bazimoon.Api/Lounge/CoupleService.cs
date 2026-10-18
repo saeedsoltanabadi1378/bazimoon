@@ -15,11 +15,11 @@ public sealed class CoupleService
 
     private readonly BazimoonDbContext _db;
     private readonly TimeProvider _clock;
-    private readonly ITelegramNotifier _notifier;
+    private readonly IPushNotifier _notifier;
 
-    private readonly IBotSettingsService _settings;
+    private readonly IAppSettingsService _settings;
 
-    public CoupleService(BazimoonDbContext db, TimeProvider clock, ITelegramNotifier notifier, IBotSettingsService settings)
+    public CoupleService(BazimoonDbContext db, TimeProvider clock, IPushNotifier notifier, IAppSettingsService settings)
     {
         _settings = settings;
         _db = db;

@@ -13,7 +13,7 @@ namespace Bazimoon.Infrastructure.History.Migrations
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.CreateTable(
-                name: "bot_settings",
+                name: "app_settings",
                 columns: table => new
                 {
                     Id = table.Column<int>(type: "integer", nullable: false)
@@ -23,14 +23,7 @@ namespace Bazimoon.Infrastructure.History.Migrations
                     MaxPlayers = table.Column<int>(type: "integer", nullable: false),
                     MaintenanceMode = table.Column<bool>(type: "boolean", nullable: false),
                     MaintenanceMessage = table.Column<string>(type: "text", nullable: false),
-                    EnabledCommandsJson = table.Column<string>(type: "text", nullable: false),
-                    SoloTestEnabled = table.Column<bool>(type: "boolean", nullable: false),
-                    MiniAppBaseUrl = table.Column<string>(type: "text", nullable: false),
-                    HelpMessage = table.Column<string>(type: "text", nullable: false),
-                    WelcomeMessage = table.Column<string>(type: "text", nullable: false),
                     MaintenanceMessageFa = table.Column<string>(type: "text", nullable: false),
-                    HelpMessageFa = table.Column<string>(type: "text", nullable: false),
-                    WelcomeMessageFa = table.Column<string>(type: "text", nullable: false),
                     ReminderMessage = table.Column<string>(type: "text", nullable: false),
                     ReminderMessageFa = table.Column<string>(type: "text", nullable: false),
                     DisabledGamesJson = table.Column<string>(type: "text", nullable: false, defaultValue: "[]"),
@@ -38,7 +31,7 @@ namespace Bazimoon.Infrastructure.History.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_bot_settings", x => x.Id);
+                    table.PrimaryKey("PK_app_settings", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
@@ -396,7 +389,7 @@ namespace Bazimoon.Infrastructure.History.Migrations
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropTable(
-                name: "bot_settings");
+                name: "app_settings");
 
             migrationBuilder.DropTable(
                 name: "couple_answers");

@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Bazimoon.Infrastructure.History.Migrations
 {
     [DbContext(typeof(BazimoonDbContext))]
-    [Migration("20261018131703_InitialCreate")]
+    [Migration("20261018133559_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -25,7 +25,7 @@ namespace Bazimoon.Infrastructure.History.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
-            modelBuilder.Entity("Bazimoon.Infrastructure.Admin.BotSettingsRecord", b =>
+            modelBuilder.Entity("Bazimoon.Infrastructure.Admin.AppSettingsRecord", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -38,18 +38,6 @@ namespace Bazimoon.Infrastructure.History.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("text")
                         .HasDefaultValue("[]");
-
-                    b.Property<string>("EnabledCommandsJson")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("HelpMessage")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("HelpMessageFa")
-                        .IsRequired()
-                        .HasColumnType("text");
 
                     b.Property<string>("MaintenanceMessage")
                         .IsRequired()
@@ -68,10 +56,6 @@ namespace Bazimoon.Infrastructure.History.Migrations
                     b.Property<int>("MinPlayers")
                         .HasColumnType("integer");
 
-                    b.Property<string>("MiniAppBaseUrl")
-                        .IsRequired()
-                        .HasColumnType("text");
-
                     b.Property<string>("ReminderMessage")
                         .IsRequired()
                         .HasColumnType("text");
@@ -80,26 +64,15 @@ namespace Bazimoon.Infrastructure.History.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<bool>("SoloTestEnabled")
-                        .HasColumnType("boolean");
-
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<int>("Version")
                         .HasColumnType("integer");
 
-                    b.Property<string>("WelcomeMessage")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("WelcomeMessageFa")
-                        .IsRequired()
-                        .HasColumnType("text");
-
                     b.HasKey("Id");
 
-                    b.ToTable("bot_settings", (string)null);
+                    b.ToTable("app_settings", (string)null);
                 });
 
             modelBuilder.Entity("Bazimoon.Infrastructure.Admin.OperationalEventRecord", b =>

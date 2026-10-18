@@ -47,7 +47,7 @@ public class GameSwitchTests : IClassFixture<BazimoonApiFactory>, IAsyncLifetime
         var config = await player.GetFromJsonAsync<AppConfigDto>("/api/hub/config");
         Assert.Equal(["mafia", "nard"], config!.DisabledGames.Order().ToArray());
 
-        // No new tables while Mafia is off, from the bot or the app.
+        // No new tables while Mafia is off.
         var refused = await player.PostAsync("/api/games", null);
         Assert.Equal(HttpStatusCode.BadRequest, refused.StatusCode);
         Assert.Contains("switched off", await refused.Content.ReadAsStringAsync());
@@ -108,18 +108,16 @@ public class GameSwitchTests : IClassFixture<BazimoonApiFactory>, IAsyncLifetime
     }
 }
 
-public class BotSettingsParsingTests
+public class AppSettingsParsingTests
 {
     [Theory]
     [InlineData("")]
     [InlineData("not json")]
     public void DamagedJsonColumns_FallBackInsteadOfThrowing(string value)
     {
-        var row = new Bazimoon.Infrastructure.Admin.BotSettingsRecord { DisabledGamesJson = value, EnabledCommandsJson = value };
-        var snapshot = Bazimoon.Infrastructure.Admin.BotSettingsService.ToSnapshot(row);
+        var row = new Bazimoon.Infrastructure.Admin.AppSettingsRecord { DisabledGamesJson = value };
+        var snapshot = Bazimoon.Infrastructure.Admin.AppSettingsService.ToSnapshot(row);
         Assert.Empty(snapshot.DisabledGames!);
         Assert.True(snapshot.IsGameOn("mafia"));
-        // Unreadable commands fall back to the defaults rather than switching every command off.
-        Assert.Contains("newgame", snapshot.EnabledCommands);
     }
 }

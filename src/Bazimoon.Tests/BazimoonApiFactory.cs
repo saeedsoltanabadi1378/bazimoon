@@ -26,15 +26,14 @@ namespace Bazimoon.Tests;
 /// </summary>
 public sealed class BazimoonApiFactory : WebApplicationFactory<ApiProgram>
 {
-    public const string TestBotToken = "123456789:AAFakeTestTokenForGoldenFixtureOnly1234";
     public const string AdminUsername = "admin";
     public const string AdminPassword = "admin-test-password";
     public const string TestJwtSigningKey = "test-signing-key-at-least-32-characters-long-for-hs256!!";
 
     private readonly string _databaseName = $"bazimoon-tests-{Guid.NewGuid()}";
 
-    /// <summary>Bot messages the API would have sent (couple nudges, invites, leaving).</summary>
-    public FakeTelegramNotifier Notifier { get; } = new();
+    /// <summary>Notifications the API would have sent (couple nudges, invites, leaving).</summary>
+    public FakePushNotifier Notifier { get; } = new();
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
@@ -47,7 +46,6 @@ public sealed class BazimoonApiFactory : WebApplicationFactory<ApiProgram>
                 ["Jwt:SigningKey"] = TestJwtSigningKey,
                 ["Jwt:Issuer"] = "bazimoon",
                 ["Jwt:Audience"] = "bazimoon-clients",
-                ["Telegram:BotToken"] = TestBotToken,
                 ["Google:ClientId"] = "test-client.apps.googleusercontent.com",
                 ["GuestSignUp:PerIpPerHour"] = "1000",
                 ["ConnectionStrings:Postgres"] = "Host=localhost;Database=unused;Username=unused;Password=unused",
@@ -85,8 +83,8 @@ public sealed class BazimoonApiFactory : WebApplicationFactory<ApiProgram>
             services.AddSingleton<IKeyValueCache, InMemoryKeyValueCache>();
             services.AddSingleton<IGameSessionStore, GameSessionStore>();
 
-            services.RemoveAll<ApiAssembly::Bazimoon.Api.Lounge.ITelegramNotifier>();
-            services.AddSingleton<ApiAssembly::Bazimoon.Api.Lounge.ITelegramNotifier>(Notifier);
+            services.RemoveAll<ApiAssembly::Bazimoon.Api.Lounge.IPushNotifier>();
+            services.AddSingleton<ApiAssembly::Bazimoon.Api.Lounge.IPushNotifier>(Notifier);
 
             services.RemoveAll<ApiAssembly::Bazimoon.Api.Auth.IGoogleTokenValidator>();
             services.AddSingleton<ApiAssembly::Bazimoon.Api.Auth.IGoogleTokenValidator, FakeGoogleTokenValidator>();

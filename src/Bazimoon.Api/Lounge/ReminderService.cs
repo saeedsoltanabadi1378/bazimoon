@@ -52,9 +52,9 @@ public sealed class ReminderService : BackgroundService
             try
             {
                 using var scope = _scopes.CreateScope();
-                var settings = await scope.ServiceProvider.GetRequiredService<IBotSettingsService>().GetAsync(stoppingToken);
+                var settings = await scope.ServiceProvider.GetRequiredService<IAppSettingsService>().GetAsync(stoppingToken);
                 await SendDueAsync(scope.ServiceProvider.GetRequiredService<BazimoonDbContext>(),
-                    scope.ServiceProvider.GetRequiredService<ITelegramNotifier>(), _clock.GetUtcNow(), settings, _status, stoppingToken);
+                    scope.ServiceProvider.GetRequiredService<IPushNotifier>(), _clock.GetUtcNow(), settings, _status, stoppingToken);
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
@@ -64,13 +64,13 @@ public sealed class ReminderService : BackgroundService
     }
 
     /// <summary>Sends every reminder whose time has come today and has not gone out yet.</summary>
-    public static async Task SendDueAsync(BazimoonDbContext db, ITelegramNotifier notifier, DateTimeOffset now,
-        BotSettingsSnapshot? settings = null, ReminderStatus? status = null, CancellationToken ct = default)
+    public static async Task SendDueAsync(BazimoonDbContext db, IPushNotifier notifier, DateTimeOffset now,
+        AppSettingsSnapshot? settings = null, ReminderStatus? status = null, CancellationToken ct = default)
     {
         int today = Progression.PuzzleDay(now);
         string clock = TehranClock(now);
-        string english = settings?.ReminderMessage is { Length: > 0 } en ? en : BotSettingsDefaults.ReminderMessage;
-        string persian = settings?.ReminderMessageFa is { Length: > 0 } fa ? fa : BotSettingsDefaults.ReminderMessageFa;
+        string english = settings?.ReminderMessage is { Length: > 0 } en ? en : AppSettingsDefaults.ReminderMessage;
+        string persian = settings?.ReminderMessageFa is { Length: > 0 } fa ? fa : AppSettingsDefaults.ReminderMessageFa;
         int sent = 0, failed = 0;
 
         // ReminderTime is "HH:mm", so an ordinal string comparison is a time comparison.

@@ -108,7 +108,7 @@ public sealed class TableService
 
     // ------------------------------------------------------------------ invites
 
-    /// <summary>Finds the live table behind a code or an invite link (<c>…?startapp=t_CODE</c>).</summary>
+    /// <summary>Finds the live table behind a code or an invite link (<c>https://bazimoon.com/t/CODE</c>).</summary>
     public async Task<Guid?> ResolveAsync(string input)
     {
         string code = NormalizeCode(input);
@@ -121,10 +121,10 @@ public sealed class TableService
 
     public static string NormalizeCode(string input)
     {
-        string s = (input ?? string.Empty).Trim();
-        int at = s.IndexOf("startapp=", StringComparison.OrdinalIgnoreCase);
-        if (at >= 0) s = s[(at + "startapp=".Length)..].Split('&', '#')[0];
-        if (s.StartsWith("t_", StringComparison.OrdinalIgnoreCase)) s = s[2..];
+        // Route values keep %2F encoded, so a pasted link arrives as bazimoon.com%2Ft%2FCODE.
+        string s = Uri.UnescapeDataString(input ?? string.Empty).Trim();
+        int at = s.IndexOf("/t/", StringComparison.OrdinalIgnoreCase);
+        if (at >= 0) s = s[(at + "/t/".Length)..].Split('/', '?', '#')[0];
         s = s.ToUpperInvariant();
         return s.Length is >= 4 and <= 8 && s.All(char.IsLetterOrDigit) ? s : string.Empty;
     }

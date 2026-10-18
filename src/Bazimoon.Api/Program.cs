@@ -21,11 +21,6 @@ var builder = WebApplication.CreateBuilder(args);
 // own doc comment for why Jwt is bundled in there rather than registered separately here.
 builder.Services.AddBazimoonInfrastructure(builder.Configuration);
 
-builder.Services.AddOptions<TelegramAuthOptions>()
-    .Bind(builder.Configuration.GetSection(TelegramAuthOptions.SectionName))
-    .Validate(o => !string.IsNullOrWhiteSpace(o.BotToken), $"Missing required configuration: {TelegramAuthOptions.SectionName}:BotToken")
-    .ValidateOnStart();
-builder.Services.AddSingleton<TelegramInitDataValidator>();
 builder.Services.AddScoped<UserAccountService>();
 builder.Services.AddScoped<RefreshTokenService>();
 builder.Services.AddScoped<AuthSessionFactory>();
@@ -44,7 +39,7 @@ builder.Services.AddScoped<CoupleService>();
 builder.Services.AddSingleton<Bazimoon.Api.EsmFamil.EsmFamilRoomService>();
 builder.Services.AddSingleton<ReminderStatus>();
 builder.Services.AddScoped<Bazimoon.Api.Admin.AdminDashboardService>();
-builder.Services.AddHttpClient<ITelegramNotifier, TelegramNotifier>(c => c.Timeout = TimeSpan.FromSeconds(10));
+builder.Services.AddSingleton<IPushNotifier, NoPushNotifier>();
 // Tests drive ReminderService.SendDueAsync directly instead of waiting on the timer.
 if (!builder.Environment.IsEnvironment("Testing"))
 {

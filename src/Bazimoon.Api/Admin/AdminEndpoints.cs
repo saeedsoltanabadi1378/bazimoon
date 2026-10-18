@@ -66,41 +66,37 @@ public static class AdminEndpoints
         group.MapGet("/events", async (string? level, long? before, int? pageSize, AdminDashboardService dash) =>
             Results.Ok(await dash.GetEventsAsync(level, before, Math.Clamp(pageSize ?? 25, 1, 100))));
         group.MapGet("/health", async (AdminDashboardService dash) => Results.Ok(await dash.GetHealthAsync()));
-        group.MapGet("/settings", async (IBotSettingsService settings) => Results.Ok(await settings.GetAsync()));
+        group.MapGet("/settings", async (IAppSettingsService settings) => Results.Ok(await settings.GetAsync()));
         group.MapPut("/settings", UpdateSettingsAsync);
     }
 
-    private static async Task<IResult> UpdateSettingsAsync(SettingsRequest request, HttpContext http, BazimoonDbContext db, IHostEnvironment env, IBotSettingsService settings)
+    private static async Task<IResult> UpdateSettingsAsync(SettingsRequest request, HttpContext http, BazimoonDbContext db, IAppSettingsService settings)
     {
         if (!ValidCsrf(http)) return Results.BadRequest(new { detail = "Invalid CSRF token." });
         if (request.MinPlayers < 3 || request.MaxPlayers > 12 || request.MinPlayers > request.MaxPlayers) return Results.BadRequest(new { detail = "Player limits must be between 3 and 12 (the voice room limit) and minimum cannot exceed maximum." });
-        if (new[] { request.MaintenanceMessage, request.HelpMessage, request.WelcomeMessage, request.MaintenanceMessageFa, request.HelpMessageFa, request.WelcomeMessageFa, request.ReminderMessage, request.ReminderMessageFa }.Any(m => m is { Length: > 4096 })) return Results.BadRequest(new { detail = "Messages cannot exceed 4096 characters." });
-        if (request.EnabledCommands.Except(BotSettingsDefaults.Commands).Any()) return Results.BadRequest(new { detail = "Unknown command." });
-        if (request.DisabledGames is { } disabled && disabled.Except(BotSettingsDefaults.Games).Any()) return Results.BadRequest(new { detail = "Unknown game." });
-        if (!string.IsNullOrWhiteSpace(request.MiniAppBaseUrl) && (!Uri.TryCreate(request.MiniAppBaseUrl, UriKind.Absolute, out var uri) || (!env.IsDevelopment() && uri.Scheme != "https"))) return Results.BadRequest(new { detail = "Mini-app URL must be an absolute HTTPS URL." });
-        var row=await db.BotSettings.SingleOrDefaultAsync(x=>x.Id==1) ?? new BotSettingsRecord();
+        if (new[] { request.MaintenanceMessage, request.MaintenanceMessageFa, request.ReminderMessage, request.ReminderMessageFa }.Any(m => m is { Length: > 4096 })) return Results.BadRequest(new { detail = "Messages cannot exceed 4096 characters." });
+        if (request.DisabledGames is { } disabled && disabled.Except(AppSettingsDefaults.Games).Any()) return Results.BadRequest(new { detail = "Unknown game." });
+        var row=await db.AppSettings.SingleOrDefaultAsync(x=>x.Id==1) ?? new AppSettingsRecord();
         if (row.Version != request.Version) return Results.Conflict(new { detail="Settings were changed by another session. Reload and try again." });
-        var before=JsonSerializer.Serialize(BotSettingsService.ToSnapshot(row));
-        row.MinPlayers=request.MinPlayers; row.MaxPlayers=request.MaxPlayers; row.MaintenanceMode=request.MaintenanceMode; row.MaintenanceMessage=request.MaintenanceMessage; row.EnabledCommandsJson=JsonSerializer.Serialize(request.EnabledCommands.Distinct()); row.SoloTestEnabled=request.SoloTestEnabled; row.MiniAppBaseUrl=request.MiniAppBaseUrl.Trim(); row.HelpMessage=request.HelpMessage; row.WelcomeMessage=request.WelcomeMessage;
+        var before=JsonSerializer.Serialize(AppSettingsService.ToSnapshot(row));
+        row.MinPlayers=request.MinPlayers; row.MaxPlayers=request.MaxPlayers; row.MaintenanceMode=request.MaintenanceMode; row.MaintenanceMessage=request.MaintenanceMessage;
         if (request.MaintenanceMessageFa is not null) row.MaintenanceMessageFa=request.MaintenanceMessageFa;
-        if (request.HelpMessageFa is not null) row.HelpMessageFa=request.HelpMessageFa;
-        if (request.WelcomeMessageFa is not null) row.WelcomeMessageFa=request.WelcomeMessageFa;
         if (request.ReminderMessage is { Length: > 0 }) row.ReminderMessage=request.ReminderMessage;
         if (request.ReminderMessageFa is { Length: > 0 }) row.ReminderMessageFa=request.ReminderMessageFa;
         if (request.DisabledGames is not null) row.DisabledGamesJson=JsonSerializer.Serialize(request.DisabledGames.Distinct());
         row.Version++; row.UpdatedAt=DateTime.UtcNow;
-        if (db.Entry(row).State == EntityState.Detached) db.BotSettings.Add(row);
-        db.OperationalEvents.Add(new() { Category="AdminAudit", Message="Bot settings updated", IsAdminAudit=true, TargetType="Settings", TargetId="1", MetadataJson=JsonSerializer.Serialize(new { before, after=BotSettingsService.ToSnapshot(row), actor=http.User.Identity?.Name }) });
+        if (db.Entry(row).State == EntityState.Detached) db.AppSettings.Add(row);
+        db.OperationalEvents.Add(new() { Category="AdminAudit", Message="App settings updated", IsAdminAudit=true, TargetType="Settings", TargetId="1", MetadataJson=JsonSerializer.Serialize(new { before, after=AppSettingsService.ToSnapshot(row), actor=http.User.Identity?.Name }) });
         await db.SaveChangesAsync();
-        (settings as BotSettingsService)?.Invalidate();
-        return Results.Ok(BotSettingsService.ToSnapshot(row));
+        (settings as AppSettingsService)?.Invalidate();
+        return Results.Ok(AppSettingsService.ToSnapshot(row));
     }
 
 }
 
 public sealed record LoginRequest(string Username, string Password);
 public sealed record CancelRequest(string Reason);
-public sealed record SettingsRequest(int Version,int MinPlayers,int MaxPlayers,bool MaintenanceMode,string MaintenanceMessage,string[] EnabledCommands,bool SoloTestEnabled,string MiniAppBaseUrl,string HelpMessage,string WelcomeMessage,
-    string? MaintenanceMessageFa = null, string? HelpMessageFa = null, string? WelcomeMessageFa = null, string? ReminderMessage = null, string? ReminderMessageFa = null, string[]? DisabledGames = null);
+public sealed record SettingsRequest(int Version, int MinPlayers, int MaxPlayers, bool MaintenanceMode, string MaintenanceMessage,
+    string? MaintenanceMessageFa = null, string? ReminderMessage = null, string? ReminderMessageFa = null, string[]? DisabledGames = null);
 public sealed record AdminGameView(Guid Id, DateTime CreatedAt, DateTime EndedAt, Bazimoon.Domain.WinCondition Result, string Status, string? CancellationReason, IReadOnlyList<AdminGamePlayerView> Players);
 public sealed record AdminGamePlayerView(Guid PlayerId, Guid? UserId, string DisplayName, Bazimoon.Domain.Role? Role, bool SurvivedToEnd, int? GodfatherRank);

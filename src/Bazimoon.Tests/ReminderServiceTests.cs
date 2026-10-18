@@ -33,7 +33,7 @@ public class ReminderServiceTests : IClassFixture<BazimoonApiFactory>, IAsyncLif
         db.CoupleAnswers.Add(new CoupleAnswerRecord { CoupleId = couple.Id, Day = today, UserId = U(990011), Answers = "0,0,0,0,0,0" });
         await db.SaveChangesAsync();
 
-        var notifier = new FakeTelegramNotifier();
+        var notifier = new FakePushNotifier();
         await ReminderService.SendDueAsync(db, notifier, now);
         var sent = notifier.Sent.Select(m => m.UserId).ToList();
         Assert.Contains(U(990001), sent);
@@ -43,7 +43,7 @@ public class ReminderServiceTests : IClassFixture<BazimoonApiFactory>, IAsyncLif
         Assert.DoesNotContain(U(990003), sent);
         Assert.DoesNotContain(U(990004), sent);
 
-        var again = new FakeTelegramNotifier();
+        var again = new FakePushNotifier();
         await ReminderService.SendDueAsync(db, again, now.AddMinutes(5));
         Assert.DoesNotContain(again.Sent, m => m.UserId == U(990001) || m.UserId == U(990012));
     }

@@ -13,7 +13,7 @@ public sealed class GameService
     private readonly IGameHistoryRepository _historyRepository;
     private readonly IGameNotifier _notifier;
     private readonly IGameRosterStore _rosterStore;
-    private readonly IBotSettingsService _settings;
+    private readonly IAppSettingsService _settings;
     private readonly BazimoonDbContext _db;
     private readonly GameMutationLock _mutationLock;
 
@@ -21,7 +21,7 @@ public sealed class GameService
         IGameSessionStore sessionStore,
         IGameHistoryRepository historyRepository,
         IGameNotifier notifier,
-        IGameRosterStore rosterStore, IBotSettingsService settings, BazimoonDbContext db, GameMutationLock mutationLock)
+        IGameRosterStore rosterStore, IAppSettingsService settings, BazimoonDbContext db, GameMutationLock mutationLock)
     {
         _sessionStore = sessionStore;
         _historyRepository = historyRepository;
@@ -36,7 +36,7 @@ public sealed class GameService
     public async Task<Guid> CreateGameAsync(Guid creatorUserId, string creatorUsername, TableOptions? table = null)
     {
         var settings = await _settings.GetAsync();
-        if (!settings.IsGameOn("mafia")) throw new GameException(BotSettingsDefaults.MafiaOff);
+        if (!settings.IsGameOn("mafia")) throw new GameException(AppSettingsDefaults.MafiaOff);
         int seats = Math.Clamp(table?.Seats ?? settings.MaxPlayers, settings.MinPlayers, settings.MaxPlayers);
         var game = new GameState(BuildConfig(settings.MinPlayers, seats, table?.Rules));
         var creatorId = PlayerIdentity.DeriveId(game.GameId, creatorUserId);

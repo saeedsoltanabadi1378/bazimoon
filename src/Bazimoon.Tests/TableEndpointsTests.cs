@@ -24,7 +24,7 @@ public class TableEndpointsTests : IClassFixture<BazimoonApiFactory>, IAsyncLife
         var response = await host.PostAsJsonAsync("/api/tables", new CreateTableRequest("Friday night table", true, 6));
         response.EnsureSuccessStatusCode();
         var gameId = (await response.Content.ReadFromJsonAsync<CreateGameResponse>())!.GameId;
-        Assert.DoesNotContain(_factory.Notifier.Sent, m => m.StartParam == gameId.ToString());
+        Assert.DoesNotContain(_factory.Notifier.Sent, m => m.Target == gameId.ToString());
 
         var open = await outsider.GetFromJsonAsync<List<TableDto>>("/api/tables?scope=open");
         var row = Assert.Single(open!, t => t.GameId == gameId);
@@ -41,7 +41,7 @@ public class TableEndpointsTests : IClassFixture<BazimoonApiFactory>, IAsyncLife
         Assert.False(outsiderInfo!.IsHost);
         Assert.Null(outsiderInfo.InviteCode);
 
-        foreach (var input in new[] { hostInfo.InviteCode, $"t_{hostInfo.InviteCode.ToLowerInvariant()}", $"https://t.me/BazimoonBot/app?startapp=t_{hostInfo.InviteCode}" })
+        foreach (var input in new[] { hostInfo.InviteCode, hostInfo.InviteCode.ToLowerInvariant(), $"https://bazimoon.com/t/{hostInfo.InviteCode}", $"bazimoon.com/t/{hostInfo.InviteCode.ToLowerInvariant()}?ref=share" })
         {
             var resolved = await outsider.GetFromJsonAsync<CreateGameResponse>($"/api/tables/code/{Uri.EscapeDataString(input)}");
             Assert.Equal(gameId, resolved!.GameId);

@@ -17,9 +17,9 @@ public sealed class EsmFamilRoomService
     private readonly Dictionary<string, Room> _rooms = new(StringComparer.Ordinal);
     private readonly TimeProvider _clock;
     private readonly IServiceScopeFactory _scopes;
-    private readonly IBotSettingsService _settings;
+    private readonly IAppSettingsService _settings;
 
-    public EsmFamilRoomService(TimeProvider clock, IServiceScopeFactory scopes, IBotSettingsService settings)
+    public EsmFamilRoomService(TimeProvider clock, IServiceScopeFactory scopes, IAppSettingsService settings)
     {
         _clock = clock;
         _scopes = scopes;

@@ -39,6 +39,4 @@ public sealed class RefreshTokenRecord
 public static class IdentityProviders
 {
     public const string Google = "google";
-    /// <summary>Telegram Mini App sign-in, kept only until the web app replaces it.</summary>
-    public const string Telegram = "telegram";
 }

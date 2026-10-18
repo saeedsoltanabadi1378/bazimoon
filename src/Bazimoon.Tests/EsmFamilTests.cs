@@ -74,7 +74,7 @@ public class EsmFamilRoomTests : IClassFixture<BazimoonApiFactory>, IAsyncLifeti
     private (EsmFamilRoomService Service, FakeClock Clock) NewService()
     {
         var clock = new FakeClock();
-        var service = new EsmFamilRoomService(clock, _factory.Services.GetRequiredService<IServiceScopeFactory>(), _factory.Services.GetRequiredService<IBotSettingsService>());
+        var service = new EsmFamilRoomService(clock, _factory.Services.GetRequiredService<IServiceScopeFactory>(), _factory.Services.GetRequiredService<IAppSettingsService>());
         return (service, clock);
     }
 

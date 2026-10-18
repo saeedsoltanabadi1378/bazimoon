@@ -1,6 +1,6 @@
 namespace Bazimoon.Infrastructure.Hub;
 
-/// <summary>Per-player progression and settings for the Mini App hub (XP, Mafia rating, puzzle
+/// <summary>Per-player progression and settings for the app hub (XP, Mafia rating, puzzle
 /// streak). One row per user, created lazily the first time they appear.</summary>
 public sealed class PlayerStatsRecord
 {
@@ -20,7 +20,7 @@ public sealed class PlayerStatsRecord
     public string ReminderTime { get; set; } = "09:00";
     public bool HighContrast { get; set; }
     public bool Haptics { get; set; } = true;
-    /// <summary>Last puzzle day a daily reminder was sent, so the bot nudges at most once a day.</summary>
+    /// <summary>Last puzzle day a daily reminder was sent, so a player is nudged at most once a day.</summary>
     public int? LastReminderDay { get; set; }
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

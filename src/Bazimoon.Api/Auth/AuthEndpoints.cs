@@ -70,22 +70,6 @@ public static class AuthEndpoints
         .WithName("SignOut")
         .AllowAnonymous();
 
-        // Telegram Mini App sign-in, kept until the web app replaces the Mini App.
-        group.MapPost("/telegram", async (
-            TelegramAuthRequest request,
-            TelegramInitDataValidator validator,
-            UserAccountService accounts,
-            JwtTokenService tokenService) =>
-        {
-            if (!validator.TryValidate(request.InitData, out var telegram) || telegram is null)
-                return Results.Unauthorized();
-
-            var user = await accounts.FindOrCreateAsync(IdentityProviders.Telegram, telegram.Id.ToString(),
-                telegram.Username ?? telegram.FirstName, telegram.LanguageCode);
-            return Results.Ok(new AuthUserResponse(tokenService.IssueToken(user), user.Id, user.DisplayName, user.IsGuest));
-        })
-        .WithName("AuthenticateTelegram")
-        .AllowAnonymous();
     }
 }
 
@@ -116,7 +100,3 @@ public sealed record RefreshRequest(string? RefreshToken);
 public sealed record AuthUserDto(Guid Id, string DisplayName, bool IsGuest, string Language);
 
 public sealed record AuthSessionResponse(string AccessToken, string RefreshToken, AuthUserDto User);
-
-public sealed record TelegramAuthRequest(string InitData);
-
-public sealed record AuthUserResponse(string Token, Guid UserId, string DisplayName, bool IsGuest);

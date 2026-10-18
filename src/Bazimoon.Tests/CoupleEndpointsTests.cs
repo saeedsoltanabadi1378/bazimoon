@@ -67,7 +67,7 @@ public class CoupleEndpointsTests : IClassFixture<BazimoonApiFactory>, IAsyncLif
     {
         var (alice, bob, state) = await PairAsync(890011, 890012);
         (await alice.PostAsync("/api/couple/nudge", null)).EnsureSuccessStatusCode();
-        Assert.Contains(_factory.Notifier.Sent, m => m.UserId == AuthTestHelper.UserIdOf(_factory, 890012) && m.StartParam == "couple");
+        Assert.Contains(_factory.Notifier.Sent, m => m.UserId == AuthTestHelper.UserIdOf(_factory, 890012) && m.Target == "couple");
         Assert.Equal(HttpStatusCode.BadRequest, (await alice.PostAsync("/api/couple/nudge", null)).StatusCode);
 
         (await alice.PostAsJsonAsync("/api/couple/answers", new CoupleAnswersRequest(state.Couple!.Today.Number, new[] { 0, 0, 0, 0, 0, 0 }))).EnsureSuccessStatusCode();

@@ -13,7 +13,7 @@ public sealed class BazimoonDbContext : DbContext
 
     public DbSet<GameRecord> Games => Set<GameRecord>();
     public DbSet<GamePlayerRecord> GamePlayers => Set<GamePlayerRecord>();
-    public DbSet<BotSettingsRecord> BotSettings => Set<BotSettingsRecord>();
+    public DbSet<AppSettingsRecord> AppSettings => Set<AppSettingsRecord>();
     public DbSet<UserRecord> Users => Set<UserRecord>();
     public DbSet<UserIdentityRecord> UserIdentities => Set<UserIdentityRecord>();
     public DbSet<RefreshTokenRecord> RefreshTokens => Set<RefreshTokenRecord>();
@@ -130,7 +130,7 @@ public sealed class BazimoonDbContext : DbContext
             b.HasIndex(x => new { x.IsOpen, x.CreatedAt });
         });
 
-        modelBuilder.Entity<BotSettingsRecord>(b => { b.ToTable("bot_settings"); b.HasKey(x => x.Id); b.Property(x => x.DisabledGamesJson).HasDefaultValue("[]"); });
+        modelBuilder.Entity<AppSettingsRecord>(b => { b.ToTable("app_settings"); b.HasKey(x => x.Id); b.Property(x => x.DisabledGamesJson).HasDefaultValue("[]"); });
         modelBuilder.Entity<OperationalEventRecord>(b => { b.ToTable("operational_events"); b.HasKey(x => x.Id); b.HasIndex(x => x.CreatedAt); });
     }
 }

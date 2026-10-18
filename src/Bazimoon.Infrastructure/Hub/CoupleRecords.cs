@@ -49,7 +49,7 @@ public static class CoupleRules
 {
     public const int QuestionsPerDay = 3;
     public const int OptionsPerQuestion = 4;
-    /// <summary>Number of themed question sets; the Mini App holds the text for each set id.</summary>
+    /// <summary>Number of themed question sets; the app holds the text for each set id.</summary>
     public const int QuestionSetCount = 15;
     public const int XpEach = 30;
     public static readonly TimeSpan InviteLifetime = TimeSpan.FromHours(24);

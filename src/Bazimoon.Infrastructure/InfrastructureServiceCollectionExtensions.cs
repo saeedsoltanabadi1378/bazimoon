@@ -34,7 +34,7 @@ public static class InfrastructureServiceCollectionExtensions
 
         services.AddDbContext<BazimoonDbContext>((sp, options) =>
             options.UseNpgsql(sp.GetRequiredService<IOptions<ConnectionStringsOptions>>().Value.Postgres));
-        services.AddSingleton<IBotSettingsService, BotSettingsService>();
+        services.AddSingleton<IAppSettingsService, AppSettingsService>();
         services.AddScoped<IGameHistoryRepository, GameHistoryRepository>();
 
         services.AddSingleton<IConnectionMultiplexer>(sp =>

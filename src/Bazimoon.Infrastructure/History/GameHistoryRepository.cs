@@ -28,7 +28,6 @@ public sealed class GameHistoryRepository : IGameHistoryRepository
         var record = new GameRecord
         {
             Id = game.GameId,
-            // 0 = a table opened in the app, not in a Telegram group.
             CreatedAt = game.CreatedAt.UtcDateTime,
             EndedAt = DateTime.UtcNow,
             Result = result,
@@ -68,7 +67,7 @@ public sealed class GameHistoryRepository : IGameHistoryRepository
         await _db.SaveChangesAsync(ct);
     }
 
-    /// <summary>Team Elo across the two sides; also awards Mafia XP. Players without a known Telegram id stay unrated.</summary>
+    /// <summary>Team Elo across the two sides; also awards Mafia XP. Players without a known user id stay unrated.</summary>
     private async Task ApplyRatingsAsync(GameRecord record, CancellationToken ct)
     {
         var rated = record.Players.Where(p => p.UserId.HasValue && p.Won.HasValue).ToList();

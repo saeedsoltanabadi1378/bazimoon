@@ -3,7 +3,7 @@ using Bazimoon.Domain;
 
 namespace Bazimoon.Tests;
 
-/// <summary>Covers the per-viewer data the Mini App screens rely on (team, suggestions, history, fates).</summary>
+/// <summary>Covers the per-viewer data the app screens rely on (team, suggestions, history, fates).</summary>
 public class GameViewDesignDataTests
 {
     [Fact]

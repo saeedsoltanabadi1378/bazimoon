@@ -288,7 +288,6 @@ public sealed class AdminDashboardService
         list.Add(new("database", db ? "healthy" : "down", db ? (int)sw.ElapsedMilliseconds : null, null, null, null, null));
 
         int? redisMs = null;
-        string? heartbeat = null;
         try
         {
             var redis = _services.GetService<IConnectionMultiplexer>();
@@ -296,15 +295,11 @@ public sealed class AdminDashboardService
             {
                 var rdb = redis.GetDatabase();
                 redisMs = (int)(await rdb.PingAsync()).TotalMilliseconds;
-                heartbeat = await rdb.StringGetAsync("bazimoon:bot-heartbeat");
             }
         }
         catch (RedisException) { redisMs = null; }
         list.Add(new("redis", redisMs is null ? "down" : redisMs > 50 ? "degraded" : "healthy", redisMs, null, null, null, null));
 
-        int? beatAgo = DateTime.TryParse(heartbeat, null, System.Globalization.DateTimeStyles.AdjustToUniversal | System.Globalization.DateTimeStyles.AssumeUniversal, out var beat)
-            ? (int)(Now.UtcDateTime - beat).TotalSeconds : null;
-        list.Add(new("bot", beatAgo is null ? "down" : beatAgo > 120 ? "degraded" : "healthy", null, beatAgo, null, null, null));
 
         bool voice = !string.IsNullOrWhiteSpace(_agora.Value.AppId) && !string.IsNullOrWhiteSpace(_agora.Value.AppCertificate);
         list.Add(new("voice", voice ? "healthy" : "down", null, null, null, null, null));

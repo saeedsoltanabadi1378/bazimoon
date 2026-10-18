@@ -24,7 +24,7 @@ public class GameSessionStoreTests
         var villager = players.Villagers()[0];
 
         // Pending, unresolved action -> proves the session store captures in-flight state, not
-        // just what's visible from GameState's public API (needed to survive an API/bot restart
+        // just what's visible from GameState's public API (needed to survive an API restart
         // mid-night without losing a player's submitted-but-unresolved action).
         game.SubmitNightAction(godfather.Id, villager.Id, NightActionType.Kill);
 
