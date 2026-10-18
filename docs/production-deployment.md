@@ -10,7 +10,7 @@
 
 ## Cloudflare DNS
 
-The proxied `A` records for `@` and `api` point to the Coolify server. The proxied `www` and `www.api` CNAME records follow the corresponding primary hostnames. Keep SSL/TLS mode at **Full (strict)** after Coolify has issued valid certificates.
+The proxied `A` records for `@` and `api` point to the Coolify server. The proxied `www` CNAME follows the primary hostname. Keep SSL/TLS mode at **Full (strict)** after Coolify has issued valid certificates.
 
 ## Coolify resource
 
@@ -22,6 +22,7 @@ Production environment values:
 PUBLIC_API_BASE_URL=https://api.bazimoon.com
 PUBLIC_FRONTEND_ORIGIN=https://bazimoon.com
 MINI_APP_BASE_URL=https://bazimoon.com
+TELEGRAM_MINI_APP_URL=https://t.me/BazimoonGamesBot
 ASPNETCORE_ENVIRONMENT=Production
 SOLO_TEST_ENABLED=false
 ```

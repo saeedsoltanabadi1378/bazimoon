@@ -84,7 +84,7 @@ services:
       args:
         VITE_API_BASE_URL: ${PUBLIC_API_BASE_URL:-https://api.bazimoon.com}
         VITE_AGORA_APP_ID: ${AGORA_APP_ID:?AGORA_APP_ID is required}
-        VITE_MINI_APP_URL: ${MINI_APP_BASE_URL:-https://bazimoon.com}
+        VITE_MINI_APP_URL: ${TELEGRAM_MINI_APP_URL:-https://t.me/BazimoonGamesBot}
     restart: unless-stopped
     depends_on:
       - api
