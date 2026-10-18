@@ -4,13 +4,13 @@ services:
     restart: unless-stopped
     # Postgres allows 100 connections by default; the API and bot pools below stay under that together.
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-nightfall}
-      POSTGRES_USER: ${POSTGRES_USER:-nightfall}
+      POSTGRES_DB: ${POSTGRES_DB:-bazimoon}
+      POSTGRES_USER: ${POSTGRES_USER:-bazimoon}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
     volumes:
       - postgres-data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-nightfall} -d ${POSTGRES_DB:-nightfall}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-bazimoon} -d ${POSTGRES_DB:-bazimoon}"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -27,7 +27,7 @@ services:
   api:
     build:
       context: .
-      dockerfile: src/Nightfall.Api/Dockerfile
+      dockerfile: src/Bazimoon.Api/Dockerfile
     restart: unless-stopped
     depends_on:
       postgres:
@@ -36,14 +36,14 @@ services:
         condition: service_healthy
     environment:
       ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Production}
-      ConnectionStrings__Postgres: "Host=postgres;Database=${POSTGRES_DB:-nightfall};Username=${POSTGRES_USER:-nightfall};Password=${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required};Maximum Pool Size=${API_DB_POOL:-60}"
+      ConnectionStrings__Postgres: "Host=postgres;Database=${POSTGRES_DB:-bazimoon};Username=${POSTGRES_USER:-bazimoon};Password=${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required};Maximum Pool Size=${API_DB_POOL:-60}"
       ConnectionStrings__Redis: "redis:6379,abortConnect=false"
       Jwt__SigningKey: ${JWT_SIGNING_KEY:?JWT_SIGNING_KEY is required}
       Telegram__BotToken: ${TELEGRAM_BOT_TOKEN:?TELEGRAM_BOT_TOKEN is required}
-      Telegram__MiniAppUrl: ${MINI_APP_BASE_URL:-}
+      Telegram__MiniAppUrl: ${MINI_APP_BASE_URL:-https://bazimoon.com}
       Agora__AppId: ${AGORA_APP_ID:?AGORA_APP_ID is required}
       Agora__AppCertificate: ${AGORA_APP_CERTIFICATE:?AGORA_APP_CERTIFICATE is required}
-      Cors__AllowedOrigins__0: ${PUBLIC_FRONTEND_ORIGIN:-http://localhost:8080}
+      Cors__AllowedOrigins__0: ${PUBLIC_FRONTEND_ORIGIN:-https://bazimoon.com}
       Admin__Username: ${ADMIN_USERNAME:?ADMIN_USERNAME is required}
       Admin__Password: ${ADMIN_PASSWORD:?ADMIN_PASSWORD is required}
     # No host port binding here on purpose — see docker-compose.override.yml for why local `docker
@@ -56,7 +56,7 @@ services:
   bot:
     build:
       context: .
-      dockerfile: src/Nightfall.Bot/Dockerfile
+      dockerfile: src/Bazimoon.Bot/Dockerfile
     restart: unless-stopped
     depends_on:
       postgres:
@@ -67,24 +67,24 @@ services:
         condition: service_started
     environment:
       DOTNET_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Production}
-      ConnectionStrings__Postgres: "Host=postgres;Database=${POSTGRES_DB:-nightfall};Username=${POSTGRES_USER:-nightfall};Password=${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required};Maximum Pool Size=${BOT_DB_POOL:-10}"
+      ConnectionStrings__Postgres: "Host=postgres;Database=${POSTGRES_DB:-bazimoon};Username=${POSTGRES_USER:-bazimoon};Password=${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required};Maximum Pool Size=${BOT_DB_POOL:-10}"
       ConnectionStrings__Redis: "redis:6379,abortConnect=false"
       Jwt__SigningKey: ${JWT_SIGNING_KEY:?JWT_SIGNING_KEY is required}
       Telegram__BotToken: ${TELEGRAM_BOT_TOKEN:?TELEGRAM_BOT_TOKEN is required}
       Agora__AppId: ${AGORA_APP_ID:?AGORA_APP_ID is required}
       Agora__AppCertificate: ${AGORA_APP_CERTIFICATE:?AGORA_APP_CERTIFICATE is required}
-      Bot__NightfallApiBaseUrl: "http://api:8080"
-      Bot__MiniAppBaseUrl: ${MINI_APP_BASE_URL:-}
+      Bot__BazimoonApiBaseUrl: "http://api:8080"
+      Bot__MiniAppBaseUrl: ${MINI_APP_BASE_URL:-https://bazimoon.com}
       Bot__SoloTestEnabled: ${SOLO_TEST_ENABLED:-false}
 
   frontend:
     build:
       context: .
-      dockerfile: frontend/nightfall-app/Dockerfile
+      dockerfile: frontend/bazimoon-app/Dockerfile
       args:
-        VITE_API_BASE_URL: ${PUBLIC_API_BASE_URL:-http://localhost:5299}
+        VITE_API_BASE_URL: ${PUBLIC_API_BASE_URL:-https://api.bazimoon.com}
         VITE_AGORA_APP_ID: ${AGORA_APP_ID:?AGORA_APP_ID is required}
-        VITE_MINI_APP_URL: ${MINI_APP_BASE_URL:-}
+        VITE_MINI_APP_URL: ${MINI_APP_BASE_URL:-https://bazimoon.com}
     restart: unless-stopped
     depends_on:
       - api

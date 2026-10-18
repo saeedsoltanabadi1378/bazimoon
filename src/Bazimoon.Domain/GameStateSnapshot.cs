@@ -1,0 +1,54 @@
+namespace Bazimoon.Domain;
+
+/// <summary>
+/// Full-fidelity snapshot of a GameState, including in-flight state (pending night actions/votes,
+/// detective's investigation history, doctor cooldown) that isn't otherwise observable from the
+/// public API. Exists so Infrastructure can persist/rehydrate a live game (e.g. to Redis) without
+/// Domain taking on a framework or serialization dependency itself — GameStateSnapshot and its
+/// nested records use only BCL types and are plain data, System.Text.Json-serializable as-is.
+/// </summary>
+public sealed record GameStateSnapshot(
+    Guid GameId,
+    DateTimeOffset CreatedAt,
+    long? TelegramChatId,
+    GamePhase CurrentPhase,
+    int NightNumber,
+    GameConfig Config,
+    IReadOnlyList<PlayerSnapshot> Players,
+    IReadOnlyList<NightActionSnapshot> PendingNightActions,
+    IReadOnlyDictionary<Guid, Guid?> PendingVotes,
+    IReadOnlyCollection<Guid> InvestigatedTargets,
+    int? LastDoctorSelfHealNight,
+    NightResult? LastNightResult,
+    VotingResult? LastVotingResult,
+    DiscussionStateSnapshot? Discussion = null,
+    Guid? RematchGameId = null,
+    int VotingRound = 1,
+    IReadOnlyList<Guid>? RunoffCandidates = null,
+    DateTimeOffset? PhaseDeadline = null,
+    Guid? LastWordsPlayerId = null,
+    GamePhase AfterLastWords = GamePhase.Results,
+    IReadOnlyCollection<Guid>? ReadyPlayers = null,
+    DateTimeOffset? AutoStartAt = null,
+    IReadOnlyDictionary<Guid, int>? Strikes = null,
+    IReadOnlyList<Guid>? LastRemovedForInactivity = null,
+    IReadOnlyList<GameEvent>? Events = null,
+    Guid? SilencedPlayerId = null,
+    Guid? LastSilencedTarget = null,
+    Guid? JokerWinnerId = null,
+    IReadOnlyCollection<Guid>? InquiryRevealed = null);
+
+public sealed record PlayerSnapshot(
+    Guid Id,
+    string TelegramUsername,
+    Role? Role,
+    bool IsAlive,
+    int? GodfatherRank,
+    EliminationCause? EliminatedBy = null,
+    int? EliminatedRound = null,
+    bool WasPromoted = false,
+    bool Revealed = false,
+    bool AbilityUsed = false,
+    bool InquiryUsed = false);
+
+public sealed record NightActionSnapshot(Guid ActorId, Guid TargetId, NightActionType ActionType);
