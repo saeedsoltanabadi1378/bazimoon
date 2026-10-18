@@ -27,6 +27,14 @@ builder.Services.AddOptions<TelegramAuthOptions>()
     .ValidateOnStart();
 builder.Services.AddSingleton<TelegramInitDataValidator>();
 builder.Services.AddScoped<UserAccountService>();
+builder.Services.AddScoped<RefreshTokenService>();
+builder.Services.AddScoped<AuthSessionFactory>();
+builder.Services.AddOptions<GoogleAuthOptions>()
+    .Bind(builder.Configuration.GetSection(GoogleAuthOptions.SectionName))
+    .Validate(o => !string.IsNullOrWhiteSpace(o.ClientId), $"Missing required configuration: {GoogleAuthOptions.SectionName}:ClientId")
+    .ValidateOnStart();
+builder.Services.AddSingleton<IGoogleTokenValidator, GoogleTokenValidator>();
+builder.Services.AddOptions<GuestSignUpOptions>().Bind(builder.Configuration.GetSection(GuestSignUpOptions.SectionName));
 builder.Services.AddOptions<AdminOptions>().Bind(builder.Configuration.GetSection(AdminOptions.SectionName));
 
 builder.Services.AddScoped<GameService>();
@@ -39,7 +47,10 @@ builder.Services.AddScoped<Bazimoon.Api.Admin.AdminDashboardService>();
 builder.Services.AddHttpClient<ITelegramNotifier, TelegramNotifier>(c => c.Timeout = TimeSpan.FromSeconds(10));
 // Tests drive ReminderService.SendDueAsync directly instead of waiting on the timer.
 if (!builder.Environment.IsEnvironment("Testing"))
+{
     builder.Services.AddHostedService<ReminderService>();
+    builder.Services.AddHostedService<GuestCleanupService>();
+}
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton<GameMutationLock>();
 builder.Services.AddHostedService<PhaseDeadlineService>();
@@ -94,7 +105,27 @@ builder.Services.AddOptions<JwtBearerOptions>(JwtBearerDefaults.AuthenticationSc
         };
     });
 builder.Services.AddAuthorization(options => options.AddPolicy("AdminOnly", p => p.AddAuthenticationSchemes(CookieAuthenticationDefaults.AuthenticationScheme).RequireRole("Admin")));
-builder.Services.AddRateLimiter(options => options.AddFixedWindowLimiter("admin-login", o => { o.PermitLimit = 5; o.Window = TimeSpan.FromMinutes(1); o.QueueLimit = 0; }));
+// The API is only reachable through the reverse proxy (Traefik under Coolify), so trust its
+// X-Forwarded-For to get each player's real IP for rate limiting.
+builder.Services.Configure<Microsoft.AspNetCore.Builder.ForwardedHeadersOptions>(o =>
+{
+    o.ForwardedHeaders = Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedFor | Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedProto;
+    o.KnownIPNetworks.Clear();
+    o.KnownProxies.Clear();
+});
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.AddFixedWindowLimiter("admin-login", o => { o.PermitLimit = 5; o.Window = TimeSpan.FromMinutes(1); o.QueueLimit = 0; });
+    // New guests per client IP; keeps scripts from filling the users table.
+    options.AddPolicy(AuthEndpoints.GuestSignUpPolicy, http =>
+    {
+        var limits = http.RequestServices.GetRequiredService<IOptions<GuestSignUpOptions>>().Value;
+        return System.Threading.RateLimiting.RateLimitPartition.GetFixedWindowLimiter(
+            http.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            _ => new System.Threading.RateLimiting.FixedWindowRateLimiterOptions { PermitLimit = limits.PerIpPerHour, Window = TimeSpan.FromHours(1), QueueLimit = 0 });
+    });
+});
 
 var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? Array.Empty<string>();
 builder.Services.AddCors(options =>
@@ -120,6 +151,7 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
+app.UseForwardedHeaders();
 app.UseExceptionHandler();
 app.UseHttpsRedirection();
 app.UseCors();

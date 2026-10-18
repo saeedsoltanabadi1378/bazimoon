@@ -48,6 +48,8 @@ public sealed class BazimoonApiFactory : WebApplicationFactory<ApiProgram>
                 ["Jwt:Issuer"] = "bazimoon",
                 ["Jwt:Audience"] = "bazimoon-clients",
                 ["Telegram:BotToken"] = TestBotToken,
+                ["Google:ClientId"] = "test-client.apps.googleusercontent.com",
+                ["GuestSignUp:PerIpPerHour"] = "1000",
                 ["ConnectionStrings:Postgres"] = "Host=localhost;Database=unused;Username=unused;Password=unused",
                 ["ConnectionStrings:Redis"] = "localhost:0,abortConnect=false",
                 ["Agora:AppId"] = "0123456789abcdef0123456789abcdef",
@@ -85,6 +87,9 @@ public sealed class BazimoonApiFactory : WebApplicationFactory<ApiProgram>
 
             services.RemoveAll<ApiAssembly::Bazimoon.Api.Lounge.ITelegramNotifier>();
             services.AddSingleton<ApiAssembly::Bazimoon.Api.Lounge.ITelegramNotifier>(Notifier);
+
+            services.RemoveAll<ApiAssembly::Bazimoon.Api.Auth.IGoogleTokenValidator>();
+            services.AddSingleton<ApiAssembly::Bazimoon.Api.Auth.IGoogleTokenValidator, FakeGoogleTokenValidator>();
         });
     }
 

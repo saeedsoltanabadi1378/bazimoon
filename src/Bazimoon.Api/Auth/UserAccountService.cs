@@ -49,6 +49,44 @@ public sealed class UserAccountService
         return user;
     }
 
+    /// <summary>Creates a guest who can play straight away. Without a name they get "Player 1234".</summary>
+    public async Task<UserRecord> CreateGuestAsync(string? displayName, string? language)
+    {
+        var now = _clock.GetUtcNow().UtcDateTime;
+        var user = new UserRecord
+        {
+            IsGuest = true,
+            DisplayName = string.IsNullOrWhiteSpace(displayName)
+                ? $"Player {System.Security.Cryptography.RandomNumberGenerator.GetInt32(1000, 10000)}"
+                : CleanName(displayName),
+            Language = language is { } code && code.StartsWith("fa", StringComparison.OrdinalIgnoreCase) ? "fa" : "en",
+            CreatedAt = now,
+            LastSeenAt = now,
+        };
+        _db.Users.Add(user);
+        await _db.SaveChangesAsync();
+        return user;
+    }
+
+    /// <summary>Attaches a sign-in identity to a guest, who keeps all their progress and stops being
+    /// a guest. Fails when that identity already belongs to another user, or the user is no guest.</summary>
+    public async Task<LinkResult> LinkAsync(Guid guestId, string provider, string providerUserId, string? displayName, string? email)
+    {
+        var user = await _db.Users.FindAsync(guestId);
+        if (user is null) return new LinkResult(LinkOutcome.UserNotFound, null);
+        if (!user.IsGuest) return new LinkResult(LinkOutcome.NotAGuest, user);
+        if (await _db.UserIdentities.AnyAsync(i => i.Provider == provider && i.ProviderUserId == providerUserId))
+            return new LinkResult(LinkOutcome.AlreadyLinkedElsewhere, user);
+
+        var now = _clock.GetUtcNow().UtcDateTime;
+        _db.UserIdentities.Add(new UserIdentityRecord { UserId = user.Id, Provider = provider, ProviderUserId = providerUserId, Email = email, CreatedAt = now });
+        user.IsGuest = false;
+        user.LastSeenAt = now;
+        if (!string.IsNullOrWhiteSpace(displayName)) user.DisplayName = CleanName(displayName);
+        await _db.SaveChangesAsync();
+        return new LinkResult(LinkOutcome.Linked, user);
+    }
+
     public static string CleanName(string? name)
     {
         var trimmed = (name ?? string.Empty).Trim();
@@ -56,3 +94,7 @@ public sealed class UserAccountService
         return trimmed.Length <= MaxDisplayNameLength ? trimmed : trimmed[..MaxDisplayNameLength];
     }
 }
+
+public enum LinkOutcome { Linked, AlreadyLinkedElsewhere, NotAGuest, UserNotFound }
+
+public sealed record LinkResult(LinkOutcome Outcome, UserRecord? User);
