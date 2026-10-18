@@ -21,6 +21,7 @@ import { readLocal } from "./lib/storage";
 import { readDeepLink } from "./lib/links";
 import { GoogleButton } from "./ui/GoogleButton";
 import { UpdatePrompt } from "./app/UpdatePrompt";
+import { GoogleResultSheet } from "./hub/SaveProgress";
 
 /** Where the app opens: an invite or game link (/t/CODE, /g/ID, /couple/TOKEN, /ef/CODE), first-launch welcome, or home. */
 function initialRoutes(): Route[] {
@@ -85,7 +86,7 @@ function SessionGate() {
       return (
         <StateScreen state="expired" secondaryLabel={t("continueAsGuest")} onSecondary={() => void session.continueAsGuest()}>
           <div style={{ width: "100%", maxWidth: 358, paddingTop: 8 }}>
-            <GoogleButton onCredential={(token) => void session.signInWithGoogle(token)} />
+            <GoogleButton />
           </div>
         </StateScreen>
       );
@@ -97,6 +98,7 @@ function SessionGate() {
           <NavigationProvider initial={routes}>
             <CurrentScreen />
           </NavigationProvider>
+          <GoogleResultSheet />
         </HubDataProvider>
       );
   }

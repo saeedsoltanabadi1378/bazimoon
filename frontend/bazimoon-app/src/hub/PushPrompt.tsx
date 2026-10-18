@@ -36,7 +36,7 @@ export function PushPrompt({ active }: { active: boolean }) {
   if (!open) return null;
   const reasons = [t("pushReasonTables"), t("pushReasonCouple"), t("pushReasonDaily")];
   return (
-    <div style={{ position: "fixed", inset: 0, zIndex: 30, background: "rgba(5,6,14,0.72)", display: "flex", alignItems: "flex-end" }}>
+    <div data-theme="night" style={{ position: "fixed", inset: 0, zIndex: 30, background: "rgba(5,6,14,0.72)", display: "flex", alignItems: "flex-end", color: "var(--text)", fontFamily: "var(--font-body)" }}>
       <div role="dialog" aria-modal="true" aria-labelledby="push-title" className="stack" style={{ width: "100%", boxSizing: "border-box", gap: 14, padding: "22px 20px calc(26px + var(--safe-bottom))", borderRadius: "28px 28px 0 0", background: "var(--surface)" }}>
         <span style={{ width: 64, height: 64, borderRadius: 20, background: "#1E2138", color: "#9C8CFF", display: "flex", alignItems: "center", justifyContent: "center" }}>
           <Icon name="bell" size={32} />

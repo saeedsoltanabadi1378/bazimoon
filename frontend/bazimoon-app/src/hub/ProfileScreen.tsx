@@ -12,9 +12,7 @@ import { formatClock } from "../lib/format";
 import { shareLink } from "../lib/platform";
 import { appLink } from "../lib/links";
 import { haptic } from "../lib/haptics";
-import { forgetGoogleChoice } from "../lib/google";
 import { GoogleButton } from "../ui/GoogleButton";
-import { SaveProgressSheet, useGoogleLink } from "./SaveProgress";
 import { InstallSheet } from "./InstallSheet";
 import { useInstallMode } from "../lib/install";
 
@@ -25,7 +23,6 @@ export function ProfileScreen() {
   const { profile, saveSettings } = useHub();
   const { push } = useNavigation();
   const [editingTime, setEditingTime] = useState(false);
-  const google = useGoogleLink();
   const installMode = useInstallMode();
   const [showInstall, setShowInstall] = useState(false);
 
@@ -75,7 +72,7 @@ export function ProfileScreen() {
               <h2 style={{ fontSize: 15, fontWeight: 600 }}>{t("guestCardTitle")}</h2>
             </div>
             <p style={{ margin: 0, fontSize: 13, lineHeight: 1.45, color: "#E3D3B8" }}>{t("guestCardBody")}</p>
-            <GoogleButton onCredential={(token) => void google.onCredential(token)} />
+            <GoogleButton compact />
           </section>
         ) : (
           <section className="row" style={{ gap: 12, padding: "14px 16px", borderRadius: 18, background: "var(--surface)" }}>
@@ -172,13 +169,12 @@ export function ProfileScreen() {
           )}
           <SettingRow label={t("inviteFriends")} value={t("share")} onClick={() => void shareLink(appLink(), t("inviteText"))} />
           {!session.isGuest && (
-            <button type="button" onClick={() => { forgetGoogleChoice(); void session.logout(); }} style={{ width: "100%", minHeight: 52, padding: "0 16px", border: 0, borderTop: "1px solid #232734", background: "transparent", color: "#F08A7A", fontSize: 15, fontWeight: 600, textAlign: "start", cursor: "pointer" }}>
+            <button type="button" onClick={() => void session.logout()} style={{ width: "100%", minHeight: 52, padding: "0 16px", border: 0, borderTop: "1px solid #232734", background: "transparent", color: "#F08A7A", fontSize: 15, fontWeight: 600, textAlign: "start", cursor: "pointer" }}>
               {t("logOut")}
             </button>
           )}
         </section>
       </Body>
-      {google.stage && google.stage !== "prompt" && <SaveProgressSheet link={google} onClose={() => google.setStage(null)} />}
       {showInstall && <InstallSheet mode={installMode} onClose={() => setShowInstall(false)} />}
       <TabBar />
     </Screen>

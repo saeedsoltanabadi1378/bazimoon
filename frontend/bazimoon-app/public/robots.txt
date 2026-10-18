@@ -1,0 +1,11 @@
+User-agent: *
+Allow: /
+# Sign-in returns, invite links and the admin console are private or one-off pages.
+Disallow: /admin
+Disallow: /auth/
+Disallow: /t/
+Disallow: /g/
+Disallow: /couple/
+Disallow: /ef/
+
+Sitemap: https://bazimoon.com/sitemap.xml

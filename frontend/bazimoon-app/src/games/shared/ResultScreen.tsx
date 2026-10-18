@@ -7,7 +7,7 @@ import type { IconName } from "../../ui/Icon";
 import { shareLink } from "../../lib/platform";
 import { appLink } from "../../lib/links";
 import { useSession } from "../../app/session";
-import { SaveProgressSheet, shouldPromptSave, useGoogleLink } from "../../hub/SaveProgress";
+import { SaveProgressSheet, shouldPromptSave } from "../../hub/SaveProgress";
 
 export interface Metric {
   value: ReactNode;
@@ -44,7 +44,6 @@ export function ResultScreen({
   const { t } = useLanguage();
   const { reset } = useNavigation();
   const session = useSession();
-  const google = useGoogleLink();
   const [askSave, setAskSave] = useState(false);
   // A guest who just won something that counts is asked once a day to keep their progress.
   useEffect(() => {
@@ -105,7 +104,7 @@ export function ResultScreen({
           <button type="button" className="btn btn--ghost" onClick={secondary.onClick}>{secondary.label}</button>
         )}
       </div>
-      {askSave && <SaveProgressSheet link={google} onClose={() => setAskSave(false)} />}
+      {askSave && <SaveProgressSheet stage="prompt" onClose={() => setAskSave(false)} />}
     </Screen>
   );
 }

@@ -8,6 +8,8 @@ import AdminApp from "./admin/AdminApp.tsx";
 
 const isAdmin = window.location.pathname.startsWith("/admin");
 document.documentElement.classList.toggle("admin-page", isAdmin);
+// The admin console stays out of search results.
+if (isAdmin) document.querySelector("meta[name=robots]")?.setAttribute("content", "noindex, nofollow");
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

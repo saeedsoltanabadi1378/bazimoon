@@ -1,14 +1,17 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { ApiError, BazimoonApiClient } from "../api/client";
 import type { AuthSession, AuthUser } from "../api/types";
 import { useLanguage } from "../i18n/LanguageContext";
 import { readLocal, removeLocal, writeLocal } from "../lib/storage";
 import { disablePush, refreshPushSubscription } from "../lib/push";
+import { readGoogleReturn, startGoogleSignIn, type GoogleReturn } from "../lib/google";
 
 export type SessionStatus = "loading" | "ready" | "signed-out" | "offline" | "error";
 
-/** What happened when the player signed in with Google. */
-export type GoogleOutcome = "linked" | "signed-in" | "exists";
+/** Where a Google sign-in stands after the player comes back from Google's page:
+ * "linking" while the API checks it, "linked" (a guest kept their progress), "signed-in",
+ * "exists" (that Google account already has a profile; the player chooses) or "error". */
+export type GoogleStage = "linking" | "linked" | "signed-in" | "exists" | "error";
 
 interface Session {
   api: BazimoonApiClient;
@@ -16,11 +19,13 @@ interface Session {
   userId: string | null;
   displayName: string;
   isGuest: boolean;
-  /** As a guest, links Google and keeps progress ("linked"), or reports that the Google account
-   * already has a profile ("exists"). Signed out, it signs in with Google ("signed-in"). */
-  signInWithGoogle(idToken: string): Promise<GoogleOutcome>;
-  /** Leaves this guest for the Google account's existing profile; the guest's progress is dropped. */
-  switchToGoogle(idToken: string): Promise<void>;
+  /** Goes to Google's sign-in page; the app reopens at /auth/google and finishes there. A guest
+   * links Google and keeps their progress; a signed-out player signs in. */
+  startGoogle(): void;
+  googleStage: GoogleStage | null;
+  dismissGoogle(): void;
+  /** After "exists": leaves this guest for the Google account's profile; the guest's progress is dropped. */
+  switchToGoogleProfile(): Promise<void>;
   continueAsGuest(): Promise<void>;
   logout(): Promise<void>;
   retry(): void;
@@ -37,6 +42,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<SessionStatus>("loading");
   const [user, setUser] = useState<AuthUser | null>(null);
   const [attempt, setAttempt] = useState(0);
+  const [googleStage, setGoogleStage] = useState<GoogleStage | null>(null);
+  // The answer Google sent back, kept for "switch to that profile" after a 409.
+  const googleReturn = useRef<GoogleReturn | null>(null);
 
   // Every new token pair is saved; a session the server ended sends the player to "signed out".
   useEffect(() => {
@@ -65,12 +73,39 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     }
   }, [api, language]);
 
+  // Finishes a Google sign-in the player started before leaving for Google's page.
+  const finishGoogle = useCallback(async (ret: GoogleReturn, guest: boolean) => {
+    googleReturn.current = ret;
+    setGoogleStage("linking");
+    try {
+      if (guest) {
+        api.useSession(await api.linkGoogle(ret.idToken, ret.nonce));
+        setGoogleStage("linked");
+      } else {
+        api.useSession(await api.signInWithGoogle(ret.idToken, ret.nonce, language));
+        setGoogleStage("signed-in");
+      }
+      setStatus("ready");
+    } catch (err) {
+      setGoogleStage(err instanceof ApiError && err.status === 409 ? "exists" : "error");
+      // A signed-out player whose sign-in failed has no session to fall back on.
+      if (!guest && !api.isAuthenticated) setStatus("signed-out");
+    }
+  }, [api, language]);
+
   useEffect(() => {
+    const google = attempt === 0 ? readGoogleReturn() : null;
     const saved = readLocal<AuthSession | null>(STORAGE_KEY, null);
     if (saved?.refreshToken) {
       // Open straight away with the saved session; an expired access token refreshes on first use.
       api.useSession(saved);
       setStatus("ready");
+      if (google && google !== "cancelled") void finishGoogle(google, saved.user.isGuest);
+      return;
+    }
+    if (google && google !== "cancelled") {
+      setStatus("ready");
+      void finishGoogle(google, false);
       return;
     }
     void startGuest();
@@ -86,27 +121,23 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener("online", onOnline);
   }, [status]);
 
-  const signInWithGoogle = useCallback(async (idToken: string): Promise<GoogleOutcome> => {
-    if (user?.isGuest) {
-      try {
-        api.useSession(await api.linkGoogle(idToken));
-        return "linked";
-      } catch (err) {
-        if (err instanceof ApiError && err.status === 409) return "exists";
-        throw err;
-      }
-    }
-    api.useSession(await api.signInWithGoogle(idToken, language));
-    setStatus("ready");
-    return "signed-in";
-  }, [api, user, language]);
+  const startGoogle = useCallback(() => startGoogleSignIn(language), [language]);
+  const dismissGoogle = useCallback(() => setGoogleStage(null), []);
 
-  const switchToGoogle = useCallback(async (idToken: string) => {
-    const next = await api.signInWithGoogle(idToken, language);
+  const switchToGoogleProfile = useCallback(async () => {
+    const ret = googleReturn.current;
+    if (!ret) return;
+    setGoogleStage("linking");
+    const next = await api.signInWithGoogle(ret.idToken, ret.nonce, language).catch(() => null);
+    if (!next) {
+      setGoogleStage("error");
+      return;
+    }
     await disablePush(api);
     await api.logout().catch(() => undefined);
     api.useSession(next);
     setStatus("ready");
+    setGoogleStage("signed-in");
     void refreshPushSubscription(api);
   }, [api, language]);
 
@@ -126,12 +157,14 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     userId: user?.id ?? null,
     displayName: user?.displayName ?? "",
     isGuest: user?.isGuest ?? true,
-    signInWithGoogle,
-    switchToGoogle,
+    startGoogle,
+    googleStage,
+    dismissGoogle,
+    switchToGoogleProfile,
     continueAsGuest: startGuest,
     logout,
     retry,
-  }), [api, status, user, signInWithGoogle, switchToGoogle, startGuest, logout, retry]);
+  }), [api, status, user, startGoogle, googleStage, dismissGoogle, switchToGoogleProfile, startGuest, logout, retry]);
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
 }

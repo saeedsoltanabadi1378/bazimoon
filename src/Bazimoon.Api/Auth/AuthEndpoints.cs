@@ -22,7 +22,7 @@ public static class AuthEndpoints
 
         group.MapPost("/google", async (GoogleAuthRequest request, IGoogleTokenValidator google, UserAccountService accounts, AuthSessionFactory sessions) =>
         {
-            if (await google.ValidateAsync(request.IdToken) is not { } identity)
+            if (await google.ValidateAsync(request.IdToken, request.Nonce) is not { } identity)
                 return Results.Unauthorized();
             var user = await accounts.FindOrCreateAsync(IdentityProviders.Google, identity.Subject, identity.Name ?? "Player", request.Language, identity.Email);
             return Results.Ok(await sessions.CreateAsync(user));
@@ -35,7 +35,7 @@ public static class AuthEndpoints
         group.MapPost("/link/google", async (GoogleAuthRequest request, HttpContext http, IGoogleTokenValidator google,
             UserAccountService accounts, AuthSessionFactory sessions, RefreshTokenService refresh) =>
         {
-            if (await google.ValidateAsync(request.IdToken) is not { } identity)
+            if (await google.ValidateAsync(request.IdToken, request.Nonce) is not { } identity)
                 return Results.Unauthorized();
             var result = await accounts.LinkAsync(http.User.GetUserId(), IdentityProviders.Google, identity.Subject, identity.Name, identity.Email);
             switch (result.Outcome)
@@ -93,7 +93,7 @@ public sealed class AuthSessionFactory
 
 public sealed record GuestAuthRequest(string? DisplayName = null, string? Language = null);
 
-public sealed record GoogleAuthRequest(string IdToken, string? Language = null);
+public sealed record GoogleAuthRequest(string IdToken, string? Language = null, string? Nonce = null);
 
 public sealed record RefreshRequest(string? RefreshToken);
 

@@ -121,12 +121,12 @@ export class BazimoonApiClient {
     return this.request<AuthSession>("POST", "/api/auth/guest", { language });
   }
 
-  signInWithGoogle(idToken: string, language: string) {
-    return this.request<AuthSession>("POST", "/api/auth/google", { idToken, language });
+  signInWithGoogle(idToken: string, nonce: string, language: string) {
+    return this.request<AuthSession>("POST", "/api/auth/google", { idToken, nonce, language });
   }
 
-  linkGoogle(idToken: string) {
-    return this.request<AuthSession>("POST", "/api/auth/link/google", { idToken });
+  linkGoogle(idToken: string, nonce: string) {
+    return this.request<AuthSession>("POST", "/api/auth/link/google", { idToken, nonce });
   }
 
   pushKey() {

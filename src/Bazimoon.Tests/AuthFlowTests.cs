@@ -71,6 +71,15 @@ public class AuthFlowTests : IClassFixture<BazimoonApiFactory>, IAsyncLifetime
     }
 
     [Fact]
+    public async Task Google_TokenWithTheWrongNonce_IsRejected()
+    {
+        var ok = await SendAsync("/api/auth/google", new GoogleAuthRequest(FakeGoogleTokenValidator.Token("g-500", "Nonce", "n-1"), Nonce: "n-1"));
+        var wrong = await SendAsync("/api/auth/google", new GoogleAuthRequest(FakeGoogleTokenValidator.Token("g-500", "Nonce", "n-1"), Nonce: "n-2"));
+        Assert.Equal(HttpStatusCode.OK, ok.StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, wrong.StatusCode);
+    }
+
+    [Fact]
     public async Task LinkingGoogle_KeepsTheGuestsProgress()
     {
         var guest = await PostAsync("/api/auth/guest", new GuestAuthRequest());

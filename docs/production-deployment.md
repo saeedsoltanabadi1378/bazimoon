@@ -33,7 +33,7 @@ Keep `GOOGLE_CLIENT_ID`, `PUSH_PUBLIC_KEY`, `PUSH_PRIVATE_KEY`, `AGORA_APP_ID`, 
 In Google Cloud Console › APIs & Services › Credentials, create an **OAuth client ID** of type **Web application**:
 
 - **Authorized JavaScript origins:** `https://bazimoon.com`, plus `http://localhost` and `http://localhost:5173` for local development.
-- **Authorized redirect URIs:** none. The app uses Google's popup sign-in.
+- **Authorized redirect URIs:** `https://bazimoon.com/auth/google`, plus `http://localhost:5173/auth/google` for local development. The app sends players to Google's sign-in page and Google brings them back to this address (no popup), which also works inside the installed app.
 
 Put the client ID in `GOOGLE_CLIENT_ID`. Fill in the OAuth consent screen (app name, support email, privacy policy URL) and publish it, or only test users can sign in.
 

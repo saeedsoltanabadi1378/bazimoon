@@ -16,8 +16,9 @@ public sealed record GoogleIdentity(string Subject, string? Email, string? Name)
 
 public interface IGoogleTokenValidator
 {
-    /// <summary>Returns the identity in a valid Google ID token issued to our client, or null.</summary>
-    Task<GoogleIdentity?> ValidateAsync(string idToken);
+    /// <summary>Returns the identity in a valid Google ID token issued to our client, or null.
+    /// <paramref name="nonce"/>, when given, must match the token's nonce (the app's redirect sign-in sets one).</summary>
+    Task<GoogleIdentity?> ValidateAsync(string idToken, string? nonce = null);
 }
 
 /// <summary>Checks the token's signature against Google's published keys, its expiry, issuer and audience.</summary>
@@ -32,7 +33,7 @@ public sealed class GoogleTokenValidator : IGoogleTokenValidator
         _logger = logger;
     }
 
-    public async Task<GoogleIdentity?> ValidateAsync(string idToken)
+    public async Task<GoogleIdentity?> ValidateAsync(string idToken, string? nonce = null)
     {
         if (string.IsNullOrWhiteSpace(idToken)) return null;
         try
@@ -41,6 +42,11 @@ public sealed class GoogleTokenValidator : IGoogleTokenValidator
             {
                 Audience = [_options.Value.ClientId],
             });
+            if (nonce is not null && payload.Nonce != nonce)
+            {
+                _logger.LogInformation("Rejected a Google ID token with the wrong nonce");
+                return null;
+            }
             return new GoogleIdentity(payload.Subject, payload.EmailVerified ? payload.Email : null, payload.Name ?? payload.GivenName);
         }
         catch (InvalidJwtException ex)

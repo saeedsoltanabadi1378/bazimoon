@@ -5,7 +5,10 @@
 :root {
   --font-body: "IBM Plex Sans", system-ui, sans-serif;
   --font-display: "Bricolage Grotesque", "IBM Plex Sans", system-ui, sans-serif;
+  --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
 
   --mafia: #f08a7a;
   --mafia-bg: #3a1c1a;
@@ -119,6 +122,24 @@ body {
   min-height: 100dvh;
 }
 
+/* The player app is one fixed frame: the page itself never scrolls, bounces or slides under
+   the browser bars; each screen scrolls its own body. (The admin console is a normal page.) */
+html:not(.admin-page),
+html:not(.admin-page) body {
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+html:not(.admin-page) body {
+  position: fixed;
+  inset: 0;
+}
+
+html:not(.admin-page) #root {
+  height: 100%;
+  min-height: 0;
+}
+
 .admin-page #root {
   width: 100%;
   max-width: none;
@@ -151,7 +172,12 @@ a {
 .screen {
   display: flex;
   flex-direction: column;
-  height: 100dvh;
+  height: 100%;
+  box-sizing: border-box;
+  /* Installed on a phone, the app runs edge to edge: keep content clear of the notch and status bar. */
+  padding-top: var(--safe-top);
+  padding-left: var(--safe-left);
+  padding-right: var(--safe-right);
   background: var(--bg);
   color: var(--text);
   font-family: var(--font-body);
