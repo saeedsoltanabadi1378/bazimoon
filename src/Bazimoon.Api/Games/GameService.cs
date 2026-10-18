@@ -12,7 +12,6 @@ public sealed class GameService
     private readonly IGameSessionStore _sessionStore;
     private readonly IGameHistoryRepository _historyRepository;
     private readonly IGameNotifier _notifier;
-    private readonly IChatGameIndex _chatGameIndex;
     private readonly IGameRosterStore _rosterStore;
     private readonly IBotSettingsService _settings;
     private readonly BazimoonDbContext _db;
@@ -22,39 +21,34 @@ public sealed class GameService
         IGameSessionStore sessionStore,
         IGameHistoryRepository historyRepository,
         IGameNotifier notifier,
-        IChatGameIndex chatGameIndex,
         IGameRosterStore rosterStore, IBotSettingsService settings, BazimoonDbContext db, GameMutationLock mutationLock)
     {
         _sessionStore = sessionStore;
         _historyRepository = historyRepository;
         _notifier = notifier;
-        _chatGameIndex = chatGameIndex;
         _rosterStore = rosterStore;
         _settings = settings;
         _db = db;
         _mutationLock = mutationLock;
     }
 
-    /// <summary>Creates a lobby. <paramref name="telegramChatId"/> is the group a bot <c>/newgame</c> came from;
-    /// tables opened in the app have none and are shared by their invite link instead.</summary>
-    public async Task<Guid> CreateGameAsync(long? telegramChatId, long creatorTelegramUserId, string creatorUsername, string? chatTitle = null, TableOptions? table = null)
+    /// <summary>Creates a lobby, shared by its table's invite link.</summary>
+    public async Task<Guid> CreateGameAsync(Guid creatorUserId, string creatorUsername, TableOptions? table = null)
     {
         var settings = await _settings.GetAsync();
         if (!settings.IsGameOn("mafia")) throw new GameException(BotSettingsDefaults.MafiaOff);
         int seats = Math.Clamp(table?.Seats ?? settings.MaxPlayers, settings.MinPlayers, settings.MaxPlayers);
-        var game = new GameState(BuildConfig(settings.MinPlayers, seats, table?.Rules), telegramChatId: telegramChatId);
-        var creatorId = PlayerIdentity.DeriveId(game.GameId, creatorTelegramUserId);
+        var game = new GameState(BuildConfig(settings.MinPlayers, seats, table?.Rules));
+        var creatorId = PlayerIdentity.DeriveId(game.GameId, creatorUserId);
         game.AddPlayer(new Player(creatorId, creatorUsername));
 
         await _sessionStore.SaveAsync(game);
-        if (telegramChatId is { } chat) await _chatGameIndex.SetActiveGameAsync(chat, game.GameId);
-        await _rosterStore.AddAsync(game.GameId, creatorTelegramUserId, creatorUsername);
-        await TrackActivityAsync(telegramChatId, creatorTelegramUserId, creatorUsername, chatTitle);
+        await _rosterStore.AddAsync(game.GameId, creatorUserId, creatorUsername);
+        await TrackActivityAsync(creatorUserId);
         _db.MafiaTables.Add(new()
         {
             GameId = game.GameId,
-            TelegramChatId = telegramChatId ?? 0,
-            CreatorTelegramUserId = creatorTelegramUserId,
+            CreatorUserId = creatorUserId,
             Name = string.IsNullOrWhiteSpace(table?.Name) ? null : table.Name.Trim()[..Math.Min(40, table.Name.Trim().Length)],
             IsOpen = table?.IsOpen ?? false,
             InviteCode = await NewInviteCodeAsync(),
@@ -67,43 +61,39 @@ public sealed class GameService
     public async Task<GameState> LoadOrThrowAsync(Guid gameId) =>
         await _sessionStore.GetAsync(gameId) ?? throw new GameNotFoundException(gameId);
 
-    public async Task<Guid> GetActiveGameForChatOrThrowAsync(long telegramChatId) =>
-        await _chatGameIndex.GetActiveGameAsync(telegramChatId)
-            ?? throw GameNotFoundException.ForChat(telegramChatId);
-
-    public async Task JoinGameAsync(Guid gameId, long telegramUserId, string username)
+    public async Task JoinGameAsync(Guid gameId, Guid userId, string username)
     {
         var game = await LoadOrThrowAsync(gameId);
-        var playerId = PlayerIdentity.DeriveId(gameId, telegramUserId);
+        var playerId = PlayerIdentity.DeriveId(gameId, userId);
 
         if (game.GetPlayer(playerId) is null)
         {
             game.AddPlayer(new Player(playerId, username));
             await SaveAndNotifyAsync(game);
-            await _rosterStore.AddAsync(gameId, telegramUserId, username);
-            await TrackActivityAsync(game.TelegramChatId, telegramUserId, username);
+            await _rosterStore.AddAsync(gameId, userId, username);
+            await TrackActivityAsync(userId);
             await _db.SaveChangesAsync();
         }
     }
 
-    /// <summary>Starts (or joins) a follow-up game at the same table (and chat, if any) from a finished game.</summary>
-    public async Task<Guid> RematchAsync(Guid gameId, long telegramUserId, string username)
+    /// <summary>Starts (or joins) a follow-up game at the same table from a finished game.</summary>
+    public async Task<Guid> RematchAsync(Guid gameId, Guid userId, string username)
     {
         using var held = await _mutationLock.EnterAsync(gameId);
         var game = await LoadOrThrowAsync(gameId);
         if (game.CurrentPhase != GamePhase.Ended)
             throw new GameException("A rematch can only be started once the game is over.");
-        if (game.GetPlayer(PlayerIdentity.DeriveId(gameId, telegramUserId)) is null)
+        if (game.GetPlayer(PlayerIdentity.DeriveId(gameId, userId)) is null)
             throw new ForbiddenGameActionException("You are not a player in this game.");
 
         if (game.RematchGameId is { } existing && await _sessionStore.GetAsync(existing) is { CurrentPhase: GamePhase.Lobby })
         {
-            await JoinGameAsync(existing, telegramUserId, username);
+            await JoinGameAsync(existing, userId, username);
             return existing;
         }
 
         var previous = await _db.MafiaTables.FindAsync(gameId);
-        var rematchId = await CreateGameAsync(game.TelegramChatId, telegramUserId, username, null,
+        var rematchId = await CreateGameAsync(userId, username,
             previous is null ? null : new TableOptions(previous.Name, previous.IsOpen, game.Config.MaxPlayers, TableRules.From(game.Config)));
         game.SetRematch(rematchId);
         // The finished game is already in history; only refresh the live copy so players see the rematch.
@@ -112,45 +102,45 @@ public sealed class GameService
         return rematchId;
     }
 
-    public async Task LeaveGameAsync(Guid gameId, long telegramUserId)
+    public async Task LeaveGameAsync(Guid gameId, Guid userId)
     {
         using var held = await _mutationLock.EnterAsync(gameId);
         var game = await LoadOrThrowAsync(gameId);
-        var playerId = PlayerIdentity.DeriveId(gameId, telegramUserId);
+        var playerId = PlayerIdentity.DeriveId(gameId, userId);
         if (game.CurrentPhase == GamePhase.Lobby) game.RemovePlayer(playerId);
         else game.LeaveMidGame(playerId, DateTimeOffset.UtcNow);
         await SaveAndNotifyAsync(game);
     }
 
-    public async Task SetReadyAsync(Guid gameId, long telegramUserId, bool ready)
+    public async Task SetReadyAsync(Guid gameId, Guid userId, bool ready)
     {
         using var held = await _mutationLock.EnterAsync(gameId);
         var game = await LoadOrThrowAsync(gameId);
-        game.SetReady(PlayerIdentity.DeriveId(gameId, telegramUserId), ready, DateTimeOffset.UtcNow);
+        game.SetReady(PlayerIdentity.DeriveId(gameId, userId), ready, DateTimeOffset.UtcNow);
         await SaveAndNotifyAsync(game);
     }
 
-    public async Task StartGameAsync(Guid gameId, long telegramUserId)
+    public async Task StartGameAsync(Guid gameId, Guid userId)
     {
         var game = await LoadOrThrowAsync(gameId);
-        EnsureController(game, telegramUserId);
+        EnsureController(game, userId);
         game.AssignRoles();
         await SaveAndNotifyAsync(game);
     }
 
-    public async Task SubmitNightActionAsync(Guid gameId, long telegramUserId, Guid targetPlayerId, NightActionType actionType)
+    public async Task SubmitNightActionAsync(Guid gameId, Guid userId, Guid targetPlayerId, NightActionType actionType)
     {
         var game = await LoadOrThrowAsync(gameId);
-        var actorId = PlayerIdentity.DeriveId(gameId, telegramUserId);
+        var actorId = PlayerIdentity.DeriveId(gameId, userId);
         game.SubmitNightAction(actorId, targetPlayerId, actionType);
         await SaveAndNotifyAsync(game);
     }
 
-    public async Task<NightResult> ResolveNightAsync(Guid gameId, long telegramUserId)
+    public async Task<NightResult> ResolveNightAsync(Guid gameId, Guid userId)
     {
         using var held = await _mutationLock.EnterAsync(gameId);
         var game = await LoadOrThrowAsync(gameId);
-        EnsureController(game, telegramUserId);
+        EnsureController(game, userId);
         if (game.CurrentPhase == GamePhase.Night && !game.AreRequiredNightActionsComplete())
             throw new GameException("All living night roles must submit their actions before night can end.");
         var result = game.ResolveNight(DateTimeOffset.UtcNow);
@@ -158,93 +148,93 @@ public sealed class GameService
         return result;
     }
 
-    public async Task SubmitVoteAsync(Guid gameId, long telegramUserId, Guid? targetPlayerId)
+    public async Task SubmitVoteAsync(Guid gameId, Guid userId, Guid? targetPlayerId)
     {
         var game = await LoadOrThrowAsync(gameId);
-        var voterId = PlayerIdentity.DeriveId(gameId, telegramUserId);
+        var voterId = PlayerIdentity.DeriveId(gameId, userId);
         game.SubmitVote(voterId, targetPlayerId);
         await SaveAndNotifyAsync(game);
     }
 
-    public async Task<VotingResult> ResolveVotingAsync(Guid gameId, long telegramUserId)
+    public async Task<VotingResult> ResolveVotingAsync(Guid gameId, Guid userId)
     {
         var game = await LoadOrThrowAsync(gameId);
-        EnsureController(game, telegramUserId);
+        EnsureController(game, userId);
         var result = game.ResolveVoting(DateTimeOffset.UtcNow);
         await SaveAndNotifyAsync(game);
         return result;
     }
 
-    public async Task StartVotingAsync(Guid gameId, long telegramUserId)
+    public async Task StartVotingAsync(Guid gameId, Guid userId)
     {
         using var held = await _mutationLock.EnterAsync(gameId);
         var game = await LoadOrThrowAsync(gameId);
-        EnsureController(game, telegramUserId);
+        EnsureController(game, userId);
         game.StartVoting(DateTimeOffset.UtcNow);
         await SaveAndNotifyAsync(game);
     }
 
-    public async Task RequestChallengeAsync(Guid gameId, long telegramUserId)
+    public async Task RequestChallengeAsync(Guid gameId, Guid userId)
     {
         using var held = await _mutationLock.EnterAsync(gameId);
         var game = await LoadOrThrowAsync(gameId);
-        game.RequestChallenge(PlayerIdentity.DeriveId(gameId, telegramUserId), DateTimeOffset.UtcNow);
+        game.RequestChallenge(PlayerIdentity.DeriveId(gameId, userId), DateTimeOffset.UtcNow);
         await SaveAndNotifyAsync(game);
     }
 
-    public async Task CancelChallengeAsync(Guid gameId, long telegramUserId)
+    public async Task CancelChallengeAsync(Guid gameId, Guid userId)
     {
         using var held = await _mutationLock.EnterAsync(gameId);
         var game = await LoadOrThrowAsync(gameId);
-        game.CancelChallenge(PlayerIdentity.DeriveId(gameId, telegramUserId), DateTimeOffset.UtcNow);
+        game.CancelChallenge(PlayerIdentity.DeriveId(gameId, userId), DateTimeOffset.UtcNow);
         await SaveAndNotifyAsync(game);
     }
 
-    public async Task AcceptChallengeAsync(Guid gameId, long telegramUserId, Guid challengerId)
+    public async Task AcceptChallengeAsync(Guid gameId, Guid userId, Guid challengerId)
     {
         using var held = await _mutationLock.EnterAsync(gameId);
         var game = await LoadOrThrowAsync(gameId);
-        game.AcceptChallenge(PlayerIdentity.DeriveId(gameId, telegramUserId), challengerId, DateTimeOffset.UtcNow);
+        game.AcceptChallenge(PlayerIdentity.DeriveId(gameId, userId), challengerId, DateTimeOffset.UtcNow);
         await SaveAndNotifyAsync(game);
     }
 
-    public async Task RejectChallengeAsync(Guid gameId, long telegramUserId, Guid challengerId)
+    public async Task RejectChallengeAsync(Guid gameId, Guid userId, Guid challengerId)
     {
         using var held = await _mutationLock.EnterAsync(gameId);
         var game = await LoadOrThrowAsync(gameId);
-        game.RejectChallenge(PlayerIdentity.DeriveId(gameId, telegramUserId), challengerId, DateTimeOffset.UtcNow);
+        game.RejectChallenge(PlayerIdentity.DeriveId(gameId, userId), challengerId, DateTimeOffset.UtcNow);
         await SaveAndNotifyAsync(game);
     }
 
-    public async Task FinishDiscussionAsync(Guid gameId, long telegramUserId)
+    public async Task FinishDiscussionAsync(Guid gameId, Guid userId)
     {
         using var held = await _mutationLock.EnterAsync(gameId);
         var game = await LoadOrThrowAsync(gameId);
-        game.FinishDiscussionSegment(PlayerIdentity.DeriveId(gameId, telegramUserId), DateTimeOffset.UtcNow);
+        game.FinishDiscussionSegment(PlayerIdentity.DeriveId(gameId, userId), DateTimeOffset.UtcNow);
         await SaveAndNotifyAsync(game);
     }
 
-    public async Task FinishLastWordsAsync(Guid gameId, long telegramUserId)
+    public async Task FinishLastWordsAsync(Guid gameId, Guid userId)
     {
         using var held = await _mutationLock.EnterAsync(gameId);
         var game = await LoadOrThrowAsync(gameId);
-        game.FinishLastWords(PlayerIdentity.DeriveId(gameId, telegramUserId), DateTimeOffset.UtcNow);
+        game.FinishLastWords(PlayerIdentity.DeriveId(gameId, userId), DateTimeOffset.UtcNow);
         await SaveAndNotifyAsync(game);
     }
 
-    public async Task RevealMayorAsync(Guid gameId, long telegramUserId)
+    public async Task RevealMayorAsync(Guid gameId, Guid userId)
     {
         using var held = await _mutationLock.EnterAsync(gameId);
         var game = await LoadOrThrowAsync(gameId);
-        game.RevealMayor(PlayerIdentity.DeriveId(gameId, telegramUserId));
+        game.RevealMayor(PlayerIdentity.DeriveId(gameId, userId));
         await SaveAndNotifyAsync(game);
     }
 
-    public async Task CallInquiryAsync(Guid gameId, long telegramUserId)
+    public async Task CallInquiryAsync(Guid gameId, Guid userId)
     {
         using var held = await _mutationLock.EnterAsync(gameId);
         var game = await LoadOrThrowAsync(gameId);
-        game.CallInquiry(PlayerIdentity.DeriveId(gameId, telegramUserId));
+        game.CallInquiry(PlayerIdentity.DeriveId(gameId, userId));
         await SaveAndNotifyAsync(game);
     }
 
@@ -258,10 +248,10 @@ public sealed class GameService
         await SaveAndNotifyAsync(game);
     }
 
-    public async Task StartNightAsync(Guid gameId, long telegramUserId)
+    public async Task StartNightAsync(Guid gameId, Guid userId)
     {
         var game = await LoadOrThrowAsync(gameId);
-        EnsureController(game, telegramUserId);
+        EnsureController(game, userId);
         game.StartNight(DateTimeOffset.UtcNow);
         await SaveAndNotifyAsync(game);
     }
@@ -273,21 +263,17 @@ public sealed class GameService
         if (game.CurrentPhase == GamePhase.Ended)
         {
             await _historyRepository.SaveCompletedGameAsync(game);
-            if (game.TelegramChatId is { } chatId)
-            {
-                await _chatGameIndex.ClearActiveGameAsync(chatId);
-            }
             await _rosterStore.RemoveAsync(game.GameId);
         }
 
         await _notifier.NotifyGameUpdatedAsync(game);
     }
 
-    private static void EnsureController(GameState game, long telegramUserId)
+    private static void EnsureController(GameState game, Guid userId)
     {
         var controller = game.Controller
             ?? throw new ForbiddenGameActionException("This game has no controller.");
-        var callerId = PlayerIdentity.DeriveId(game.GameId, telegramUserId);
+        var callerId = PlayerIdentity.DeriveId(game.GameId, userId);
         if (controller.Id != callerId)
             throw new ForbiddenGameActionException("Only the game creator can manage game phases.");
     }
@@ -297,10 +283,10 @@ public sealed class GameService
         var game = await _sessionStore.GetAsync(gameId);
         if (game is null) return await _db.Games.AnyAsync(x => x.Id == gameId && x.Status == "Cancelled");
         var roster = await _rosterStore.GetAsync(gameId);
-        _db.Games.Add(new GameRecord { Id=game.GameId, TelegramChatId=game.TelegramChatId ?? 0, CreatedAt=game.CreatedAt.UtcDateTime, EndedAt=DateTime.UtcNow, Result=WinCondition.None, Status="Cancelled", CancellationReason=reason, Players=game.Players.Select(p => new GamePlayerRecord { Id=Guid.NewGuid(), PlayerId=p.Id, TelegramUserId=roster.FirstOrDefault(r=>r.Username==p.TelegramUsername)?.TelegramUserId, TelegramUsername=p.TelegramUsername, Role=p.Role, SurvivedToEnd=p.IsAlive, GodfatherRank=p.GodfatherRank }).ToList() });
+        _db.Games.Add(new GameRecord { Id=game.GameId, CreatedAt=game.CreatedAt.UtcDateTime, EndedAt=DateTime.UtcNow, Result=WinCondition.None, Status="Cancelled", CancellationReason=reason, Players=game.Players.Select(p => new GamePlayerRecord { Id=Guid.NewGuid(), PlayerId=p.Id, UserId=roster.FirstOrDefault(r=>r.Username==p.DisplayName)?.UserId, DisplayName=p.DisplayName, Role=p.Role, SurvivedToEnd=p.IsAlive, GodfatherRank=p.GodfatherRank }).ToList() });
         _db.OperationalEvents.Add(new() { Category="AdminAudit", Message="Game cancelled", IsAdminAudit=true, TargetType="Game", TargetId=gameId.ToString(), MetadataJson=System.Text.Json.JsonSerializer.Serialize(new { reason, actor }) });
         await _db.SaveChangesAsync();
-        await _sessionStore.RemoveAsync(gameId); if(game.TelegramChatId is { } chat) await _chatGameIndex.ClearActiveGameAsync(chat); await _rosterStore.RemoveAsync(gameId); await _notifier.NotifyGameUpdatedAsync(game); return true;
+        await _sessionStore.RemoveAsync(gameId); await _rosterStore.RemoveAsync(gameId); await _notifier.NotifyGameUpdatedAsync(game); return true;
     }
 
     private const string CodeAlphabet = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
@@ -318,14 +304,9 @@ public sealed class GameService
         }
     }
 
-    private async Task TrackActivityAsync(long? chatId, long userId, string username, string? chatTitle = null)
+    private async Task TrackActivityAsync(Guid userId)
     {
-        var now=DateTime.UtcNow; var user=await _db.UserProfiles.FindAsync(userId); if(user is null)_db.UserProfiles.Add(new(){TelegramUserId=userId,Username=username,FirstSeenAt=now,LastSeenAt=now}); else {user.Username=username;user.LastSeenAt=now;}
-        if (chatId is not { } id) return;
-        var chat=await _db.ChatProfiles.FindAsync(id); if(chat is null)_db.ChatProfiles.Add(new(){TelegramChatId=id,Title=chatTitle,FirstSeenAt=now,LastSeenAt=now}); else { chat.LastSeenAt=now; if(!string.IsNullOrWhiteSpace(chatTitle)) chat.Title=chatTitle; }
-        var member = await _db.ChatMembers.FindAsync(id, userId);
-        if (member is null) _db.ChatMembers.Add(new() { TelegramChatId = id, TelegramUserId = userId, LastSeenAt = now });
-        else member.LastSeenAt = now;
+        if (await _db.Users.FindAsync(userId) is { } user) user.LastSeenAt = DateTime.UtcNow;
     }
 
     /// <summary>The table's rules, with each timer the creator picked checked against the allowed choices.</summary>

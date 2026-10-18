@@ -5,8 +5,8 @@ namespace Bazimoon.Infrastructure.Hub;
 public sealed class CoupleRecord
 {
     public Guid Id { get; set; } = Guid.NewGuid();
-    public long InviterId { get; set; }
-    public long? PartnerId { get; set; }
+    public Guid InviterId { get; set; }
+    public Guid? PartnerId { get; set; }
     /// <summary>One-time invite token used in the <c>couple_&lt;token&gt;</c> start link.</summary>
     public string InviteToken { get; set; } = string.Empty;
     public DateTime InviteExpiresAt { get; set; }
@@ -39,7 +39,7 @@ public sealed class CoupleAnswerRecord
     public long Id { get; set; }
     public Guid CoupleId { get; set; }
     public int Day { get; set; }
-    public long TelegramUserId { get; set; }
+    public Guid UserId { get; set; }
     public string Answers { get; set; } = string.Empty;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }

@@ -12,144 +12,138 @@ public static class GameEndpoints
     {
         var group = app.MapGroup("/api/games").RequireAuthorization();
 
-        group.MapPost("/", async (CreateGameRequest request, GameService games, HttpContext http) =>
+        group.MapPost("/", async (GameService games, HttpContext http) =>
         {
-            var gameId = await games.CreateGameAsync(request.TelegramChatId, http.User.GetTelegramUserId(), http.User.GetTelegramUsername(), request.ChatTitle);
+            var gameId = await games.CreateGameAsync(http.User.GetUserId(), http.User.GetDisplayName());
             return Results.Ok(new CreateGameResponse(gameId));
         }).WithName("CreateGame");
 
         group.MapPost("/{gameId:guid}/players", async (Guid gameId, GameService games, HttpContext http) =>
         {
-            await games.JoinGameAsync(gameId, http.User.GetTelegramUserId(), http.User.GetTelegramUsername());
+            await games.JoinGameAsync(gameId, http.User.GetUserId(), http.User.GetDisplayName());
             return Results.Ok();
         }).WithName("JoinGame");
 
         group.MapPost("/{gameId:guid}/rematch", async (Guid gameId, GameService games, HttpContext http) =>
         {
-            var rematchId = await games.RematchAsync(gameId, http.User.GetTelegramUserId(), http.User.GetTelegramUsername());
+            var rematchId = await games.RematchAsync(gameId, http.User.GetUserId(), http.User.GetDisplayName());
             return Results.Ok(new CreateGameResponse(rematchId));
         }).WithName("Rematch");
 
         group.MapDelete("/{gameId:guid}/players", async (Guid gameId, GameService games, HttpContext http) =>
         {
-            await games.LeaveGameAsync(gameId, http.User.GetTelegramUserId());
+            await games.LeaveGameAsync(gameId, http.User.GetUserId());
             return Results.Ok();
         }).WithName("LeaveGame");
 
         group.MapGet("/{gameId:guid}", async (Guid gameId, GameService games, HttpContext http) =>
         {
             var game = await games.LoadOrThrowAsync(gameId);
-            var viewerId = PlayerIdentity.DeriveId(gameId, http.User.GetTelegramUserId());
+            var viewerId = PlayerIdentity.DeriveId(gameId, http.User.GetUserId());
             return Results.Ok(GameView.For(game, viewerId));
         }).WithName("GetGame");
 
-        group.MapGet("/by-chat/{telegramChatId:long}", async (long telegramChatId, GameService games) =>
-        {
-            var gameId = await games.GetActiveGameForChatOrThrowAsync(telegramChatId);
-            return Results.Ok(new CreateGameResponse(gameId));
-        }).WithName("GetActiveGameForChat");
-
         group.MapPost("/{gameId:guid}/start", async (Guid gameId, GameService games, HttpContext http) =>
         {
-            await games.StartGameAsync(gameId, http.User.GetTelegramUserId());
+            await games.StartGameAsync(gameId, http.User.GetUserId());
             return Results.Ok();
         }).WithName("StartGame");
 
         group.MapPost("/{gameId:guid}/night-actions", async (Guid gameId, SubmitNightActionRequest request, GameService games, HttpContext http) =>
         {
-            await games.SubmitNightActionAsync(gameId, http.User.GetTelegramUserId(), request.TargetPlayerId, request.ActionType);
+            await games.SubmitNightActionAsync(gameId, http.User.GetUserId(), request.TargetPlayerId, request.ActionType);
             return Results.Ok();
         }).WithName("SubmitNightAction");
 
         group.MapPost("/{gameId:guid}/resolve-night", async (Guid gameId, GameService games, HttpContext http) =>
         {
-            var result = await games.ResolveNightAsync(gameId, http.User.GetTelegramUserId());
+            var result = await games.ResolveNightAsync(gameId, http.User.GetUserId());
             return Results.Ok(result);
         }).WithName("ResolveNight");
 
         group.MapPost("/{gameId:guid}/votes", async (Guid gameId, SubmitVoteRequest request, GameService games, HttpContext http) =>
         {
-            await games.SubmitVoteAsync(gameId, http.User.GetTelegramUserId(), request.TargetPlayerId);
+            await games.SubmitVoteAsync(gameId, http.User.GetUserId(), request.TargetPlayerId);
             return Results.Ok();
         }).WithName("SubmitVote");
 
         group.MapPost("/{gameId:guid}/resolve-voting", async (Guid gameId, GameService games, HttpContext http) =>
         {
-            var result = await games.ResolveVotingAsync(gameId, http.User.GetTelegramUserId());
+            var result = await games.ResolveVotingAsync(gameId, http.User.GetUserId());
             return Results.Ok(result);
         }).WithName("ResolveVoting");
 
         group.MapPost("/{gameId:guid}/start-voting", async (Guid gameId, GameService games, HttpContext http) =>
         {
-            await games.StartVotingAsync(gameId, http.User.GetTelegramUserId());
+            await games.StartVotingAsync(gameId, http.User.GetUserId());
             return Results.Ok();
         }).WithName("StartVoting");
 
         group.MapPost("/{gameId:guid}/start-night", async (Guid gameId, GameService games, HttpContext http) =>
         {
-            await games.StartNightAsync(gameId, http.User.GetTelegramUserId());
+            await games.StartNightAsync(gameId, http.User.GetUserId());
             return Results.Ok();
         }).WithName("StartNight");
 
         group.MapPost("/{gameId:guid}/discussion/challenges", async (Guid gameId, GameService games, HttpContext http) =>
         {
-            await games.RequestChallengeAsync(gameId, http.User.GetTelegramUserId());
+            await games.RequestChallengeAsync(gameId, http.User.GetUserId());
             return Results.Ok();
         }).WithName("RequestDiscussionChallenge");
 
         group.MapDelete("/{gameId:guid}/discussion/challenges", async (Guid gameId, GameService games, HttpContext http) =>
         {
-            await games.CancelChallengeAsync(gameId, http.User.GetTelegramUserId());
+            await games.CancelChallengeAsync(gameId, http.User.GetUserId());
             return Results.Ok();
         }).WithName("CancelDiscussionChallenge");
 
         group.MapPost("/{gameId:guid}/discussion/challenges/{challengerId:guid}/accept", async (Guid gameId, Guid challengerId, GameService games, HttpContext http) =>
         {
-            await games.AcceptChallengeAsync(gameId, http.User.GetTelegramUserId(), challengerId);
+            await games.AcceptChallengeAsync(gameId, http.User.GetUserId(), challengerId);
             return Results.Ok();
         }).WithName("AcceptDiscussionChallenge");
 
         group.MapPost("/{gameId:guid}/discussion/challenges/{challengerId:guid}/reject", async (Guid gameId, Guid challengerId, GameService games, HttpContext http) =>
         {
-            await games.RejectChallengeAsync(gameId, http.User.GetTelegramUserId(), challengerId);
+            await games.RejectChallengeAsync(gameId, http.User.GetUserId(), challengerId);
             return Results.Ok();
         }).WithName("RejectDiscussionChallenge");
 
         group.MapPost("/{gameId:guid}/discussion/finish", async (Guid gameId, GameService games, HttpContext http) =>
         {
-            await games.FinishDiscussionAsync(gameId, http.User.GetTelegramUserId());
+            await games.FinishDiscussionAsync(gameId, http.User.GetUserId());
             return Results.Ok();
         }).WithName("FinishDiscussionSegment");
 
         group.MapPut("/{gameId:guid}/ready", async (Guid gameId, SetReadyRequest request, GameService games, HttpContext http) =>
         {
-            await games.SetReadyAsync(gameId, http.User.GetTelegramUserId(), request.Ready);
+            await games.SetReadyAsync(gameId, http.User.GetUserId(), request.Ready);
             return Results.Ok();
         }).WithName("SetReady");
 
         group.MapPost("/{gameId:guid}/last-words/finish", async (Guid gameId, GameService games, HttpContext http) =>
         {
-            await games.FinishLastWordsAsync(gameId, http.User.GetTelegramUserId());
+            await games.FinishLastWordsAsync(gameId, http.User.GetUserId());
             return Results.Ok();
         }).WithName("FinishLastWords");
 
         group.MapPost("/{gameId:guid}/mayor/reveal", async (Guid gameId, GameService games, HttpContext http) =>
         {
-            await games.RevealMayorAsync(gameId, http.User.GetTelegramUserId());
+            await games.RevealMayorAsync(gameId, http.User.GetUserId());
             return Results.Ok();
         }).WithName("RevealMayor");
 
         group.MapPost("/{gameId:guid}/inquiry", async (Guid gameId, GameService games, HttpContext http) =>
         {
-            await games.CallInquiryAsync(gameId, http.User.GetTelegramUserId());
+            await games.CallInquiryAsync(gameId, http.User.GetUserId());
             return Results.Ok();
         }).WithName("CallInquiry");
 
         group.MapGet("/{gameId:guid}/voice-token", async (Guid gameId, string channel, GameService games, IAgoraTokenService agoraTokens, HttpContext http) =>
         {
             var game = await games.LoadOrThrowAsync(gameId);
-            long telegramUserId = http.User.GetTelegramUserId();
-            var playerId = PlayerIdentity.DeriveId(gameId, telegramUserId);
+            Guid userId = http.User.GetUserId();
+            var playerId = PlayerIdentity.DeriveId(gameId, userId);
             var player = game.GetPlayer(playerId) ?? throw new ForbiddenGameActionException("You are not a player in this game.");
 
             string channelName;
@@ -184,7 +178,8 @@ public static class GameEndpoints
                     return Results.BadRequest(new { detail = "channel must be 'main' or 'mafia'." });
             }
 
-            uint uid = unchecked((uint)telegramUserId);
+            // Agora wants a non-zero 32-bit id; take it from the user id so a player keeps one id per channel.
+            uint uid = Math.Max(1u, BitConverter.ToUInt32(userId.ToByteArray()));
             string token = agoraTokens.BuildRtcToken(channelName, uid, role, TimeSpan.FromHours(6), TimeSpan.FromHours(6));
 
             return Results.Ok(new VoiceTokenResponse(token, channelName, uid, role.ToString()));
@@ -192,7 +187,6 @@ public static class GameEndpoints
     }
 }
 
-public sealed record CreateGameRequest(long TelegramChatId, string? ChatTitle = null);
 
 public sealed record CreateGameResponse(Guid GameId);
 

@@ -1,5 +1,8 @@
 using Microsoft.Extensions.Options;
 using Bazimoon.Api.Auth;
+using Bazimoon.Infrastructure.History;
+using Bazimoon.Infrastructure.Identity;
+using Microsoft.EntityFrameworkCore;
 
 namespace Bazimoon.Api.Lounge;
 
@@ -8,7 +11,7 @@ namespace Bazimoon.Api.Lounge;
 public interface ITelegramNotifier
 {
     /// <summary>Returns whether Telegram accepted the message.</summary>
-    Task<bool> NotifyAsync(long telegramUserId, string text, string? startParam = null);
+    Task<bool> NotifyAsync(Guid userId, string text, string? startParam = null);
 }
 
 /// <summary>Talks to the Telegram Bot API directly with the same bot token the API validates
@@ -17,18 +20,25 @@ public sealed class TelegramNotifier : ITelegramNotifier
 {
     private readonly HttpClient _http;
     private readonly IOptions<TelegramAuthOptions> _options;
+    private readonly BazimoonDbContext _db;
     private readonly ILogger<TelegramNotifier> _logger;
 
-    public TelegramNotifier(HttpClient http, IOptions<TelegramAuthOptions> options, ILogger<TelegramNotifier> logger)
+    public TelegramNotifier(HttpClient http, IOptions<TelegramAuthOptions> options, BazimoonDbContext db, ILogger<TelegramNotifier> logger)
     {
         _http = http;
+        _db = db;
         _options = options;
         _logger = logger;
     }
 
-    public async Task<bool> NotifyAsync(long telegramUserId, string text, string? startParam = null)
+    public async Task<bool> NotifyAsync(Guid userId, string text, string? startParam = null)
     {
         var options = _options.Value;
+        // Only players who signed in through Telegram can be messaged there.
+        var chatId = await _db.UserIdentities.AsNoTracking()
+            .Where(i => i.UserId == userId && i.Provider == IdentityProviders.Telegram)
+            .Select(i => i.ProviderUserId).FirstOrDefaultAsync();
+        if (chatId is null) return false;
         object? markup = null;
         if (options.MiniAppUrl is { Length: > 0 } url)
         {
@@ -39,14 +49,14 @@ public sealed class TelegramNotifier : ITelegramNotifier
         {
             using var response = await _http.PostAsJsonAsync(
                 $"https://api.telegram.org/bot{options.BotToken}/sendMessage",
-                new { chat_id = telegramUserId, text, reply_markup = markup });
+                new { chat_id = long.Parse(chatId), text, reply_markup = markup });
             if (!response.IsSuccessStatusCode)
-                _logger.LogWarning("Telegram sendMessage to {UserId} failed with {Status}", telegramUserId, (int)response.StatusCode);
+                _logger.LogWarning("Telegram sendMessage to {UserId} failed with {Status}", userId, (int)response.StatusCode);
             return response.IsSuccessStatusCode;
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
         {
-            _logger.LogWarning(ex, "Telegram sendMessage to {UserId} failed", telegramUserId);
+            _logger.LogWarning(ex, "Telegram sendMessage to {UserId} failed", userId);
             return false;
         }
     }

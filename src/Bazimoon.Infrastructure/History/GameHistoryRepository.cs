@@ -29,7 +29,6 @@ public sealed class GameHistoryRepository : IGameHistoryRepository
         {
             Id = game.GameId,
             // 0 = a table opened in the app, not in a Telegram group.
-            TelegramChatId = game.TelegramChatId ?? 0,
             CreatedAt = game.CreatedAt.UtcDateTime,
             EndedAt = DateTime.UtcNow,
             Result = result,
@@ -38,8 +37,8 @@ public sealed class GameHistoryRepository : IGameHistoryRepository
             {
                 Id = Guid.NewGuid(),
                 PlayerId = p.Id,
-                TelegramUserId = roster.FirstOrDefault(r => r.Username == p.TelegramUsername)?.TelegramUserId,
-                TelegramUsername = p.TelegramUsername,
+                UserId = roster.FirstOrDefault(r => r.Username == p.DisplayName)?.UserId,
+                DisplayName = p.DisplayName,
                 Role = p.Role,
                 SurvivedToEnd = p.IsAlive,
                 GodfatherRank = p.GodfatherRank,
@@ -72,24 +71,24 @@ public sealed class GameHistoryRepository : IGameHistoryRepository
     /// <summary>Team Elo across the two sides; also awards Mafia XP. Players without a known Telegram id stay unrated.</summary>
     private async Task ApplyRatingsAsync(GameRecord record, CancellationToken ct)
     {
-        var rated = record.Players.Where(p => p.TelegramUserId.HasValue && p.Won.HasValue).ToList();
+        var rated = record.Players.Where(p => p.UserId.HasValue && p.Won.HasValue).ToList();
         if (rated.Count == 0) return;
 
-        var stats = new Dictionary<long, PlayerStatsRecord>();
+        var stats = new Dictionary<Guid, PlayerStatsRecord>();
         foreach (var p in rated)
-            stats[p.TelegramUserId!.Value] = await _db.GetOrCreateStatsAsync(p.TelegramUserId.Value, p.TelegramUsername, ct);
+            stats[p.UserId!.Value] = await _db.GetOrCreateStatsAsync(p.UserId.Value, p.DisplayName, ct);
 
         double Average(Func<GamePlayerRecord, bool> which)
         {
             var side = rated.Where(which).ToList();
-            return side.Count == 0 ? Progression.StartingRating : side.Average(p => stats[p.TelegramUserId!.Value].Rating);
+            return side.Count == 0 ? Progression.StartingRating : side.Average(p => stats[p.UserId!.Value].Rating);
         }
 
         double mafiaAverage = Average(p => p.Role?.TeamOf() == Team.Mafia);
         double townAverage = Average(p => p.Role?.TeamOf() == Team.Town);
         foreach (var p in rated)
         {
-            var s = stats[p.TelegramUserId!.Value];
+            var s = stats[p.UserId!.Value];
             var team = p.Role?.TeamOf() ?? Team.Town;
             // Each team is rated against the other side; the Joker against everyone else at the table.
             double own = team == Team.Independent ? s.Rating : team == Team.Mafia ? mafiaAverage : townAverage;
@@ -105,11 +104,4 @@ public sealed class GameHistoryRepository : IGameHistoryRepository
 
     public Task<GameRecord?> GetAsync(Guid gameId, CancellationToken ct = default) =>
         _db.Games.Include(g => g.Players).FirstOrDefaultAsync(g => g.Id == gameId, ct);
-
-    public async Task<IReadOnlyList<GameRecord>> GetForChatAsync(long telegramChatId, CancellationToken ct = default) =>
-        await _db.Games
-            .Include(g => g.Players)
-            .Where(g => g.TelegramChatId == telegramChatId)
-            .OrderByDescending(g => g.EndedAt)
-            .ToListAsync(ct);
 }

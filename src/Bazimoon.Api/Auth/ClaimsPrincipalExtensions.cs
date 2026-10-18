@@ -5,17 +5,13 @@ namespace Bazimoon.Api.Auth;
 
 public static class ClaimsPrincipalExtensions
 {
-    public static long GetTelegramUserId(this ClaimsPrincipal principal)
-    {
-        var claim = principal.FindFirst(BazimoonClaimTypes.TelegramUserId)
-            ?? throw new InvalidOperationException($"Authenticated principal is missing the '{BazimoonClaimTypes.TelegramUserId}' claim.");
-        return long.Parse(claim.Value);
-    }
+    public static Guid GetUserId(this ClaimsPrincipal principal) => Guid.Parse(Required(principal, BazimoonClaimTypes.UserId));
 
-    public static string GetTelegramUsername(this ClaimsPrincipal principal)
-    {
-        var claim = principal.FindFirst(BazimoonClaimTypes.TelegramUsername)
-            ?? throw new InvalidOperationException($"Authenticated principal is missing the '{BazimoonClaimTypes.TelegramUsername}' claim.");
-        return claim.Value;
-    }
+    public static string GetDisplayName(this ClaimsPrincipal principal) => Required(principal, BazimoonClaimTypes.DisplayName);
+
+    public static bool IsGuest(this ClaimsPrincipal principal) => principal.FindFirst(BazimoonClaimTypes.IsGuest)?.Value == "true";
+
+    private static string Required(ClaimsPrincipal principal, string type) =>
+        principal.FindFirst(type)?.Value
+            ?? throw new InvalidOperationException($"Authenticated principal is missing the '{type}' claim.");
 }

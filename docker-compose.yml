@@ -2,7 +2,7 @@ services:
   postgres:
     image: postgres:16-alpine
     restart: unless-stopped
-    # Postgres allows 100 connections by default; the API and bot pools below stay under that together.
+    # Postgres allows 100 connections by default; the API pool below stays under that.
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-bazimoon}
       POSTGRES_USER: ${POSTGRES_USER:-bazimoon}
@@ -52,30 +52,6 @@ services:
     # fixed host port would collide with any other stack on the same server also using it.
     expose:
       - "8080"
-
-  bot:
-    build:
-      context: .
-      dockerfile: src/Bazimoon.Bot/Dockerfile
-    restart: unless-stopped
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-      api:
-        condition: service_started
-    environment:
-      DOTNET_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Production}
-      ConnectionStrings__Postgres: "Host=postgres;Database=${POSTGRES_DB:-bazimoon};Username=${POSTGRES_USER:-bazimoon};Password=${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required};Maximum Pool Size=${BOT_DB_POOL:-10}"
-      ConnectionStrings__Redis: "redis:6379,abortConnect=false"
-      Jwt__SigningKey: ${JWT_SIGNING_KEY:?JWT_SIGNING_KEY is required}
-      Telegram__BotToken: ${TELEGRAM_BOT_TOKEN:?TELEGRAM_BOT_TOKEN is required}
-      Agora__AppId: ${AGORA_APP_ID:?AGORA_APP_ID is required}
-      Agora__AppCertificate: ${AGORA_APP_CERTIFICATE:?AGORA_APP_CERTIFICATE is required}
-      Bot__BazimoonApiBaseUrl: "http://api:8080"
-      Bot__MiniAppBaseUrl: ${MINI_APP_BASE_URL:-https://bazimoon.com}
-      Bot__SoloTestEnabled: ${SOLO_TEST_ENABLED:-false}
 
   frontend:
     build:

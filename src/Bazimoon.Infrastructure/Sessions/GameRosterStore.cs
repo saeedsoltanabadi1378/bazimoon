@@ -16,13 +16,13 @@ public sealed class GameRosterStore : IGameRosterStore
 
     private static string KeyFor(Guid gameId) => $"bazimoon:roster:{gameId}";
 
-    public async Task AddAsync(Guid gameId, long telegramUserId, string username)
+    public async Task AddAsync(Guid gameId, Guid userId, string username)
     {
         var roster = (await GetAsync(gameId)).ToList();
-        if (roster.Any(r => r.TelegramUserId == telegramUserId))
+        if (roster.Any(r => r.UserId == userId))
             return;
 
-        roster.Add(new GameRosterEntry(telegramUserId, username));
+        roster.Add(new GameRosterEntry(userId, username));
         await _cache.SetStringAsync(KeyFor(gameId), JsonSerializer.Serialize(roster, JsonOptions), Ttl);
     }
 

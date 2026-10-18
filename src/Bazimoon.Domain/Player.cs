@@ -3,7 +3,7 @@ namespace Bazimoon.Domain;
 public sealed class Player
 {
     public Guid Id { get; }
-    public string TelegramUsername { get; }
+    public string DisplayName { get; }
     public Role? Role { get; private set; }
     public bool IsAlive { get; private set; } = true;
 
@@ -19,15 +19,15 @@ public sealed class Player
     /// <summary>True once a Mafia member has been promoted to Godfather after the original fell.</summary>
     public bool WasPromoted { get; private set; }
 
-    public Player(Guid id, string telegramUsername)
+    public Player(Guid id, string displayName)
     {
         if (id == Guid.Empty)
             throw new ArgumentException("Player id must not be empty.", nameof(id));
-        if (string.IsNullOrWhiteSpace(telegramUsername))
-            throw new ArgumentException("Telegram username is required.", nameof(telegramUsername));
+        if (string.IsNullOrWhiteSpace(displayName))
+            throw new ArgumentException("Display name is required.", nameof(displayName));
 
         Id = id;
-        TelegramUsername = telegramUsername;
+        DisplayName = displayName;
     }
 
     public bool IsMafiaAligned => Team == Bazimoon.Domain.Team.Mafia;

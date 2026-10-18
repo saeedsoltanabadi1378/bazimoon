@@ -29,7 +29,6 @@ public class TableEndpointsTests : IClassFixture<BazimoonApiFactory>, IAsyncLife
         var open = await outsider.GetFromJsonAsync<List<TableDto>>("/api/tables?scope=open");
         var row = Assert.Single(open!, t => t.GameId == gameId);
         Assert.Equal("Friday night table", row.Name);
-        Assert.Null(row.ChatTitle);
         Assert.Equal("host1", row.Host);
         Assert.True(row.IsOpen);
         Assert.Equal(6, row.MaxPlayers);

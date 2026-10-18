@@ -26,6 +26,7 @@ builder.Services.AddOptions<TelegramAuthOptions>()
     .Validate(o => !string.IsNullOrWhiteSpace(o.BotToken), $"Missing required configuration: {TelegramAuthOptions.SectionName}:BotToken")
     .ValidateOnStart();
 builder.Services.AddSingleton<TelegramInitDataValidator>();
+builder.Services.AddScoped<UserAccountService>();
 builder.Services.AddOptions<AdminOptions>().Bind(builder.Configuration.GetSection(AdminOptions.SectionName));
 
 builder.Services.AddScoped<GameService>();

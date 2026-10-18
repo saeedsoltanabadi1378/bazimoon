@@ -1,3 +1,4 @@
+using static Bazimoon.Tests.TestIds;
 using Bazimoon.Infrastructure.Sessions;
 
 namespace Bazimoon.Tests;
@@ -20,23 +21,23 @@ public class GameRosterStoreTests
         var store = new GameRosterStore(new InMemoryKeyValueCache());
         var gameId = Guid.NewGuid();
 
-        await store.AddAsync(gameId, 111, "alice");
-        await store.AddAsync(gameId, 222, "bob");
+        await store.AddAsync(gameId, U(111), "alice");
+        await store.AddAsync(gameId, U(222), "bob");
         var result = await store.GetAsync(gameId);
 
         Assert.Equal(2, result.Count);
-        Assert.Contains(result, r => r.TelegramUserId == 111 && r.Username == "alice");
-        Assert.Contains(result, r => r.TelegramUserId == 222 && r.Username == "bob");
+        Assert.Contains(result, r => r.UserId == U(111) && r.Username == "alice");
+        Assert.Contains(result, r => r.UserId == U(222) && r.Username == "bob");
     }
 
     [Fact]
-    public async Task AddAsync_SameTelegramUserIdTwice_DoesNotDuplicate()
+    public async Task AddAsync_SameUserIdTwice_DoesNotDuplicate()
     {
         var store = new GameRosterStore(new InMemoryKeyValueCache());
         var gameId = Guid.NewGuid();
 
-        await store.AddAsync(gameId, 111, "alice");
-        await store.AddAsync(gameId, 111, "alice");
+        await store.AddAsync(gameId, U(111), "alice");
+        await store.AddAsync(gameId, U(111), "alice");
         var result = await store.GetAsync(gameId);
 
         Assert.Single(result);
@@ -47,7 +48,7 @@ public class GameRosterStoreTests
     {
         var store = new GameRosterStore(new InMemoryKeyValueCache());
         var gameId = Guid.NewGuid();
-        await store.AddAsync(gameId, 111, "alice");
+        await store.AddAsync(gameId, U(111), "alice");
 
         await store.RemoveAsync(gameId);
         var result = await store.GetAsync(gameId);

@@ -37,7 +37,7 @@ public class AdminDashboardTests : IClassFixture<BazimoonApiFactory>, IAsyncLife
         // A player solves today's Zip, and a group opens a Mafia lobby.
         var player = await AuthTestHelper.CreateAuthenticatedClientAsync(_factory, 870001, "dashplayer");
         (await player.PostAsJsonAsync("/api/puzzles/results", new PuzzleSubmitRequest("zip", "daily", null, true, 50_000, null, null, null, 0))).EnsureSuccessStatusCode();
-        (await player.PostAsJsonAsync("/api/games", new { telegramChatId = -100870001, chatTitle = "Dashboard crew" })).EnsureSuccessStatusCode();
+        (await player.PostAsJsonAsync("/api/tables", new { name = "Dashboard crew", isOpen = false })).EnsureSuccessStatusCode();
 
         var admin = await AdminAsync();
         var overview = await admin.GetFromJsonAsync<AdminOverviewDto>("/api/admin/overview?days=7");
@@ -45,7 +45,7 @@ public class AdminDashboardTests : IClassFixture<BazimoonApiFactory>, IAsyncLife
         Assert.Equal(7, overview.Activity.Count);
         Assert.True(overview.ActivePlayers >= 1);
         Assert.True(overview.DailySolves >= 1);
-        Assert.Contains(overview.Live, g => g.ChatTitle == "Dashboard crew" && g.Phase == "Lobby");
+        Assert.Contains(overview.Live, g => g.Title == "Dashboard crew" && g.Phase == "Lobby");
         Assert.Contains(overview.Services, s => s.Key == "database" && s.Status == "healthy");
 
         var players = await admin.GetFromJsonAsync<AdminPageDto<AdminPlayerRowDto>>("/api/admin/players?search=dashplayer");
@@ -53,10 +53,6 @@ public class AdminDashboardTests : IClassFixture<BazimoonApiFactory>, IAsyncLife
         var detail = await admin.GetFromJsonAsync<AdminPlayerDetailDto>($"/api/admin/players/{row.Id}");
         Assert.Equal(1, detail!.PuzzlesSolved);
         Assert.Equal("none", detail.Couple.Status);
-
-        var chats = await admin.GetFromJsonAsync<AdminPageDto<AdminChatRowDto>>("/api/admin/chats?search=Dashboard");
-        var chat = Assert.Single(chats!.Items);
-        Assert.Equal("Lobby", chat.LivePhase);
 
         var puzzles = await admin.GetFromJsonAsync<AdminPuzzlesDto>("/api/admin/puzzles");
         var zip = Assert.Single(puzzles!.Dailies, d => d.Game == "zip");

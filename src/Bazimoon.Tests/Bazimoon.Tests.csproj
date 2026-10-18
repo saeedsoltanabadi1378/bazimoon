@@ -26,15 +26,9 @@
     <ProjectReference Include="..\Bazimoon.Domain\Bazimoon.Domain.csproj" />
     <ProjectReference Include="..\Bazimoon.Infrastructure\Bazimoon.Infrastructure.csproj" />
     <ProjectReference Include="..\Bazimoon.Api\Bazimoon.Api.csproj">
-      <!-- Bazimoon.Api and Bazimoon.Bot both generate a top-level-statement `Program` class in
-           the global namespace (Bot's is normally internal, but InternalsVisibleTo for
-           CommandDispatcher's tests makes it visible here too), so an unqualified `Program`
-           becomes ambiguous once both are referenced. Keep the default "global" alias so every
-           other file's plain `using Bazimoon.Api...` keeps working, and add "ApiAssembly" so
-           BazimoonApiFactory.cs alone can disambiguate via extern alias for WebApplicationFactory. -->
+      <!-- "ApiAssembly" lets BazimoonApiFactory.cs name the Api's top-level Program class via extern alias. -->
       <Aliases>global,ApiAssembly</Aliases>
     </ProjectReference>
-    <ProjectReference Include="..\Bazimoon.Bot\Bazimoon.Bot.csproj" />
   </ItemGroup>
 
 </Project>

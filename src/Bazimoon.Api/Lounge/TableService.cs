@@ -9,8 +9,8 @@ using Bazimoon.Infrastructure.Sessions;
 namespace Bazimoon.Api.Lounge;
 
 /// <summary>Mafia tables in the app: the public list everyone sees, the tables you host or sit at,
-/// creating a table, invite codes and the host's public/private switch. A table needs no Telegram
-/// group: the host shares its invite link. Tables a bot <c>/newgame</c> started in a group work the same way.</summary>
+/// creating a table, invite codes and the host's public/private switch. The host shares a
+/// table's invite link.</summary>
 public sealed class TableService
 {
     /// <summary>Tables older than this are no longer listed even if their game never ended.</summary>
@@ -32,10 +32,10 @@ public sealed class TableService
     // ------------------------------------------------------------------ lists
 
     /// <summary>Tables you host or have a seat at, private ones included.</summary>
-    public async Task<IReadOnlyList<TableDto>> GetYourTablesAsync(long userId)
+    public async Task<IReadOnlyList<TableDto>> GetYourTablesAsync(Guid userId)
     {
         var since = _clock.GetUtcNow().UtcDateTime - ListWindow;
-        var hosted = await _db.MafiaTables.Where(t => t.CreatorTelegramUserId == userId && t.CreatedAt >= since)
+        var hosted = await _db.MafiaTables.Where(t => t.CreatorUserId == userId && t.CreatedAt >= since)
             .Select(t => t.GameId).ToListAsync();
         var recent = await _db.MafiaTables.Where(t => t.CreatedAt >= since)
             .OrderByDescending(t => t.CreatedAt).Select(t => t.GameId).Take(100).ToListAsync();
@@ -50,7 +50,7 @@ public sealed class TableService
     }
 
     /// <summary>Public tables, for anyone in the app.</summary>
-    public async Task<IReadOnlyList<TableDto>> GetOpenTablesAsync(long userId)
+    public async Task<IReadOnlyList<TableDto>> GetOpenTablesAsync(Guid userId)
     {
         var since = _clock.GetUtcNow().UtcDateTime - ListWindow;
         var ids = await _db.MafiaTables.Where(t => t.IsOpen && t.CreatedAt >= since)
@@ -65,7 +65,7 @@ public sealed class TableService
     }
 
     /// <summary>Picks the fullest public lobby that still has a seat for you.</summary>
-    public async Task<Guid?> FindQuickMatchAsync(long userId)
+    public async Task<Guid?> FindQuickMatchAsync(Guid userId)
     {
         var tables = await GetOpenTablesAsync(userId);
         return tables.FirstOrDefault(t => t.Phase == GamePhase.Lobby && t.Seated < t.MaxPlayers && !t.YouAreSeated)?.GameId;
@@ -77,33 +77,31 @@ public sealed class TableService
         .ThenByDescending(t => t.Seated)
         .ToList();
 
-    private async Task<List<TableDto>> BuildAsync(IReadOnlyList<GameState> games, long userId)
+    private async Task<List<TableDto>> BuildAsync(IReadOnlyList<GameState> games, Guid userId)
     {
         var ids = games.Select(g => g.GameId).ToList();
         var records = await _db.MafiaTables.AsNoTracking().Where(t => ids.Contains(t.GameId)).ToDictionaryAsync(t => t.GameId);
-        var chatIds = games.Select(g => g.TelegramChatId ?? 0).Distinct().ToList();
-        var titles = await _db.ChatProfiles.AsNoTracking().Where(c => chatIds.Contains(c.TelegramChatId)).ToDictionaryAsync(c => c.TelegramChatId, c => c.Title);
-        var hostIds = records.Values.Select(r => r.CreatorTelegramUserId).Distinct().ToList();
-        var hosts = await _db.UserProfiles.AsNoTracking().Where(u => hostIds.Contains(u.TelegramUserId)).ToDictionaryAsync(u => u.TelegramUserId, u => u.Username);
+        var hostIds = records.Values.Select(r => r.CreatorUserId).Distinct().ToList();
+        var hosts = await _db.Users.AsNoTracking().Where(u => hostIds.Contains(u.Id)).ToDictionaryAsync(u => u.Id, u => u.DisplayName);
 
         return games.Select(game =>
         {
             records.TryGetValue(game.GameId, out var record);
-            string? host = record is not null && hosts.TryGetValue(record.CreatorTelegramUserId, out var h) ? h : game.Players.FirstOrDefault()?.TelegramUsername;
+            string? host = record is not null && hosts.TryGetValue(record.CreatorUserId, out var h) ? h : game.Players.FirstOrDefault()?.DisplayName;
             var you = PlayerIdentity.DeriveId(game.GameId, userId);
             return new TableDto(
-                game.GameId, record?.Name, titles.GetValueOrDefault(game.TelegramChatId ?? 0), host, record?.IsOpen ?? false,
+                game.GameId, record?.Name, host, record?.IsOpen ?? false,
                 game.CurrentPhase, game.NightNumber, game.Players.Count, game.Config.MaxPlayers, game.Config.MinPlayers, game.CreatedAt,
-                game.Players.Select(p => p.TelegramUsername).Take(6).ToList(), game.GetPlayer(you) is not null);
+                game.Players.Select(p => p.DisplayName).Take(6).ToList(), game.GetPlayer(you) is not null);
         }).ToList();
     }
 
     // ------------------------------------------------------------------ create
 
     /// <summary>Opens a table in the app. The host lands in its lobby and shares the invite link from there.</summary>
-    public async Task<IResult> CreateAsync(long userId, string username, CreateTableRequest request)
+    public async Task<IResult> CreateAsync(Guid userId, string username, CreateTableRequest request)
     {
-        var gameId = await _games.CreateGameAsync(null, userId, username, null,
+        var gameId = await _games.CreateGameAsync(userId, username,
             new TableOptions(request.Name, request.IsOpen, request.Seats, request.Rules));
         return Results.Ok(new CreateGameResponse(gameId));
     }
@@ -132,20 +130,19 @@ public sealed class TableService
     }
 
     /// <summary>Table details for a game screen. Only the host gets the invite code.</summary>
-    public async Task<TableInfoDto?> GetInfoAsync(Guid gameId, long userId)
+    public async Task<TableInfoDto?> GetInfoAsync(Guid gameId, Guid userId)
     {
         var record = await _db.MafiaTables.AsNoTracking().FirstOrDefaultAsync(t => t.GameId == gameId);
         if (record is null) return null;
-        var title = await _db.ChatProfiles.AsNoTracking().Where(c => c.TelegramChatId == record.TelegramChatId).Select(c => c.Title).FirstOrDefaultAsync();
-        bool isHost = record.CreatorTelegramUserId == userId;
-        return new TableInfoDto(gameId, record.Name, title, record.IsOpen, isHost, isHost ? record.InviteCode : null);
+        bool isHost = record.CreatorUserId == userId;
+        return new TableInfoDto(gameId, record.Name, record.IsOpen, isHost, isHost ? record.InviteCode : null);
     }
 
-    public async Task<IResult> SetOpenAsync(Guid gameId, long userId, bool isOpen)
+    public async Task<IResult> SetOpenAsync(Guid gameId, Guid userId, bool isOpen)
     {
         var record = await _db.MafiaTables.FirstOrDefaultAsync(t => t.GameId == gameId);
         if (record is null) return Results.Problem(statusCode: 404, title: "Game not found", detail: "That table no longer exists.");
-        if (record.CreatorTelegramUserId != userId) return Results.Problem(statusCode: 403, title: "Forbidden", detail: "Only the host can change who can join.");
+        if (record.CreatorUserId != userId) return Results.Problem(statusCode: 403, title: "Forbidden", detail: "Only the host can change who can join.");
         record.IsOpen = isOpen;
         await _db.SaveChangesAsync();
         return Results.Ok(await GetInfoAsync(gameId, userId));
@@ -153,12 +150,12 @@ public sealed class TableService
 }
 
 public sealed record TableDto(
-    Guid GameId, string? Name, string? ChatTitle, string? Host, bool IsOpen,
+    Guid GameId, string? Name, string? Host, bool IsOpen,
     GamePhase Phase, int Round, int Seated, int MaxPlayers, int MinPlayers, DateTimeOffset CreatedAt,
     IReadOnlyList<string> Players, bool YouAreSeated);
 
 /// <summary><paramref name="IsOpen"/>: public (listed in Open tables) or private (invite link or code only).
 /// <paramref name="Rules"/>: timers and rule switches; missing ones keep the defaults.</summary>
 public sealed record CreateTableRequest(string? Name, bool IsOpen, int? Seats, TableRules? Rules = null);
-public sealed record TableInfoDto(Guid GameId, string? Name, string? ChatTitle, bool IsOpen, bool IsHost, string? InviteCode);
+public sealed record TableInfoDto(Guid GameId, string? Name, bool IsOpen, bool IsHost, string? InviteCode);
 public sealed record SetTableOpenRequest(bool IsOpen);

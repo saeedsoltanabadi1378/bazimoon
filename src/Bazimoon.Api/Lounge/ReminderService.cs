@@ -87,7 +87,7 @@ public sealed class ReminderService : BackgroundService
             string text = streak > 0
                 ? (player.Language == "fa" ? persian : english).Replace("{streak}", streak.ToString())
                 : player.Language == "fa" ? "پازل‌های امروز آماده‌اند." : "Today's puzzles are ready.";
-            if (await notifier.NotifyAsync(player.TelegramUserId, text)) sent++; else failed++;
+            if (await notifier.NotifyAsync(player.UserId, text)) sent++; else failed++;
         }
 
         var couples = await db.Couples
@@ -97,8 +97,8 @@ public sealed class ReminderService : BackgroundService
         foreach (var couple in couples)
         {
             couple.LastReminderDay = today;
-            var played = await db.CoupleAnswers.Where(a => a.CoupleId == couple.Id && a.Day == today).Select(a => a.TelegramUserId).ToListAsync(ct);
-            foreach (long id in new[] { couple.InviterId, couple.PartnerId!.Value }.Except(played))
+            var played = await db.CoupleAnswers.Where(a => a.CoupleId == couple.Id && a.Day == today).Select(a => a.UserId).ToListAsync(ct);
+            foreach (Guid id in new[] { couple.InviterId, couple.PartnerId!.Value }.Except(played))
             {
                 string text = couple.Language == "fa" ? "سؤال‌های امروز کوییز زوج‌ها منتظر شماست." : "Today's Couple Quiz questions are waiting for you.";
                 if (await notifier.NotifyAsync(id, text, "couple")) sent++; else failed++;

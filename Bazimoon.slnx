@@ -1,7 +1,6 @@
 <Solution>
   <Folder Name="/src/">
     <Project Path="src/Bazimoon.Api/Bazimoon.Api.csproj" />
-    <Project Path="src/Bazimoon.Bot/Bazimoon.Bot.csproj" />
     <Project Path="src/Bazimoon.Domain/Bazimoon.Domain.csproj" />
     <Project Path="src/Bazimoon.Infrastructure/Bazimoon.Infrastructure.csproj" />
     <Project Path="src/Bazimoon.Tests/Bazimoon.Tests.csproj" />

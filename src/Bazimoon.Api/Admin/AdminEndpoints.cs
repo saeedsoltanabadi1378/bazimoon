@@ -50,20 +50,18 @@ public static class AdminEndpoints
             var live = await sessions.GetAsync(id);
             if (live is not null) return Results.Ok(live.ToSnapshot());
             var past = await db.Games.AsNoTracking().Where(game => game.Id == id).Select(game => new AdminGameView(
-                game.Id, game.TelegramChatId, game.CreatedAt, game.EndedAt, game.Result, game.Status,
+                game.Id, game.CreatedAt, game.EndedAt, game.Result, game.Status,
                 game.CancellationReason,
                 game.Players.Select(player => new AdminGamePlayerView(
-                    player.PlayerId, player.TelegramUserId, player.TelegramUsername, player.Role,
+                    player.PlayerId, player.UserId, player.DisplayName, player.Role,
                     player.SurvivedToEnd, player.GodfatherRank)).ToList())).SingleOrDefaultAsync();
             return past is not null ? Results.Ok(past) : Results.NotFound();
         });
         group.MapPost("/games/{id:guid}/cancel", async (Guid id, CancelRequest request, HttpContext http, GameService games) => { if (!ValidCsrf(http)) return Results.BadRequest(new { detail = "Invalid CSRF token." }); if (string.IsNullOrWhiteSpace(request.Reason)) return Results.BadRequest(new { detail = "A cancellation reason is required." }); return await games.CancelByAdminAsync(id, request.Reason, http.User.Identity?.Name ?? "admin") ? Results.Ok() : Results.NotFound(); });
         group.MapGet("/players", async (int? page, int? pageSize, string? search, AdminDashboardService dash) =>
             Results.Ok(await dash.GetPlayersAsync(Math.Max(1, page ?? 1), Math.Clamp(pageSize ?? 25, 1, 100), search)));
-        group.MapGet("/players/{id:long}", async (long id, AdminDashboardService dash) =>
+        group.MapGet("/players/{id:guid}", async (Guid id, AdminDashboardService dash) =>
             await dash.GetPlayerAsync(id) is { } player ? Results.Ok(player) : Results.NotFound());
-        group.MapGet("/chats", async (int? page, int? pageSize, string? search, AdminDashboardService dash) =>
-            Results.Ok(await dash.GetChatsAsync(Math.Max(1, page ?? 1), Math.Clamp(pageSize ?? 25, 1, 100), search)));
         group.MapGet("/puzzles", async (AdminDashboardService dash) => Results.Ok(await dash.GetPuzzlesAsync()));
         group.MapGet("/events", async (string? level, long? before, int? pageSize, AdminDashboardService dash) =>
             Results.Ok(await dash.GetEventsAsync(level, before, Math.Clamp(pageSize ?? 25, 1, 100))));
@@ -104,5 +102,5 @@ public sealed record LoginRequest(string Username, string Password);
 public sealed record CancelRequest(string Reason);
 public sealed record SettingsRequest(int Version,int MinPlayers,int MaxPlayers,bool MaintenanceMode,string MaintenanceMessage,string[] EnabledCommands,bool SoloTestEnabled,string MiniAppBaseUrl,string HelpMessage,string WelcomeMessage,
     string? MaintenanceMessageFa = null, string? HelpMessageFa = null, string? WelcomeMessageFa = null, string? ReminderMessage = null, string? ReminderMessageFa = null, string[]? DisabledGames = null);
-public sealed record AdminGameView(Guid Id, long TelegramChatId, DateTime CreatedAt, DateTime EndedAt, Bazimoon.Domain.WinCondition Result, string Status, string? CancellationReason, IReadOnlyList<AdminGamePlayerView> Players);
-public sealed record AdminGamePlayerView(Guid PlayerId, long? TelegramUserId, string TelegramUsername, Bazimoon.Domain.Role? Role, bool SurvivedToEnd, int? GodfatherRank);
+public sealed record AdminGameView(Guid Id, DateTime CreatedAt, DateTime EndedAt, Bazimoon.Domain.WinCondition Result, string Status, string? CancellationReason, IReadOnlyList<AdminGamePlayerView> Players);
+public sealed record AdminGamePlayerView(Guid PlayerId, Guid? UserId, string DisplayName, Bazimoon.Domain.Role? Role, bool SurvivedToEnd, int? GodfatherRank);

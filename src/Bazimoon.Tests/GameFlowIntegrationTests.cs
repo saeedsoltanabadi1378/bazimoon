@@ -18,17 +18,17 @@ public class GameFlowIntegrationTests : IClassFixture<BazimoonApiFactory>, IAsyn
 
     public Task DisposeAsync() => Task.CompletedTask;
 
-    private sealed record TestPlayer(long TelegramUserId, string Username, HttpClient Client);
+    private sealed record TestPlayer(long UserId, string Username, HttpClient Client);
 
     private async Task<List<TestPlayer>> CreateAuthenticatedPlayersAsync(int count, long seed)
     {
         var players = new List<TestPlayer>();
         for (int i = 0; i < count; i++)
         {
-            long telegramUserId = seed * 1000 + i;
+            long userId = seed * 1000 + i;
             string username = $"player{seed}_{i}";
-            var client = await AuthTestHelper.CreateAuthenticatedClientAsync(_factory, telegramUserId, username);
-            players.Add(new TestPlayer(telegramUserId, username, client));
+            var client = await AuthTestHelper.CreateAuthenticatedClientAsync(_factory, userId, username);
+            players.Add(new TestPlayer(userId, username, client));
         }
         return players;
     }
@@ -39,7 +39,7 @@ public class GameFlowIntegrationTests : IClassFixture<BazimoonApiFactory>, IAsyn
         var players = await CreateAuthenticatedPlayersAsync(5, seed: 1);
         var creator = players[0];
 
-        var createResponse = await creator.Client.PostAsJsonAsync("/api/games", new CreateGameRequest(TelegramChatId: 42001));
+        var createResponse = await creator.Client.PostAsync("/api/games", null);
         createResponse.EnsureSuccessStatusCode();
         var created = await createResponse.Content.ReadFromJsonAsync<CreateGameResponse>();
         Guid gameId = created!.GameId;
@@ -171,62 +171,11 @@ public class GameFlowIntegrationTests : IClassFixture<BazimoonApiFactory>, IAsyn
     }
 
     [Fact]
-    public async Task GetActiveGameForChat_ResolvesTheGameJustCreated_AndIsClearedWhenTheGameEnds()
-    {
-        var players = await CreateAuthenticatedPlayersAsync(5, seed: 5);
-        var creator = players[0];
-        const long chatId = 42004;
-
-        var created = await (await creator.Client.PostAsJsonAsync("/api/games", new CreateGameRequest(chatId)))
-            .Content.ReadFromJsonAsync<CreateGameResponse>();
-
-        var byChatResponse = await creator.Client.GetAsync($"/api/games/by-chat/{chatId}");
-        byChatResponse.EnsureSuccessStatusCode();
-        var byChat = await byChatResponse.Content.ReadFromJsonAsync<CreateGameResponse>();
-        Assert.Equal(created!.GameId, byChat!.GameId);
-
-        // 5 players, mafiaCount == 1 -> voting out the sole Godfather ends the game immediately.
-        foreach (var player in players.Skip(1))
-        {
-            (await player.Client.PostAsync($"/api/games/{created.GameId}/players", null)).EnsureSuccessStatusCode();
-        }
-        (await creator.Client.PostAsync($"/api/games/{created.GameId}/start", null)).EnsureSuccessStatusCode();
-        (await creator.Client.PostAsync($"/api/games/{created.GameId}/resolve-night", null)).EnsureSuccessStatusCode();
-        (await creator.Client.PostAsync($"/api/games/{created.GameId}/start-voting", null)).EnsureSuccessStatusCode();
-
-        // Find whichever authenticated player IS the Godfather by checking each one's own view.
-        TestPlayer? godfather = null;
-        Guid godfatherPlayerId = default;
-        foreach (var player in players)
-        {
-            var v = await player.Client.GetFromJsonAsync<GameView>($"/api/games/{created.GameId}");
-            if (v!.YourRole == Role.Godfather)
-            {
-                godfather = player;
-                godfatherPlayerId = v.YourPlayerId;
-            }
-        }
-        Assert.NotNull(godfather);
-
-        foreach (var voter in players.Where(p => p != godfather))
-        {
-            (await voter.Client.PostAsJsonAsync($"/api/games/{created.GameId}/votes", new SubmitVoteRequest(godfatherPlayerId)))
-                .EnsureSuccessStatusCode();
-        }
-        var resolveResponse = await creator.Client.PostAsync($"/api/games/{created.GameId}/resolve-voting", null);
-        resolveResponse.EnsureSuccessStatusCode();
-        (await godfather!.Client.PostAsync($"/api/games/{created.GameId}/last-words/finish", null)).EnsureSuccessStatusCode();
-
-        var afterEndResponse = await creator.Client.GetAsync($"/api/games/by-chat/{chatId}");
-        Assert.Equal(HttpStatusCode.NotFound, afterEndResponse.StatusCode);
-    }
-
-    [Fact]
     public async Task SubmitNightAction_OutsideNightPhase_Returns400()
     {
         var players = await CreateAuthenticatedPlayersAsync(5, seed: 3);
         var creator = players[0];
-        var created = await (await creator.Client.PostAsJsonAsync("/api/games", new CreateGameRequest(42002)))
+        var created = await (await creator.Client.PostAsync("/api/games", null))
             .Content.ReadFromJsonAsync<CreateGameResponse>();
 
         foreach (var player in players.Skip(1))
@@ -245,7 +194,7 @@ public class GameFlowIntegrationTests : IClassFixture<BazimoonApiFactory>, IAsyn
     {
         var client = _factory.CreateClient();
 
-        var response = await client.PostAsJsonAsync("/api/games", new CreateGameRequest(1));
+        var response = await client.PostAsync("/api/games", null);
 
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
@@ -256,7 +205,7 @@ public class GameFlowIntegrationTests : IClassFixture<BazimoonApiFactory>, IAsyn
         var players = await CreateAuthenticatedPlayersAsync(2, seed: 8);
         var creator = players[0];
         var other = players[1];
-        var created = await (await creator.Client.PostAsJsonAsync("/api/games", new CreateGameRequest(42008)))
+        var created = await (await creator.Client.PostAsync("/api/games", null))
             .Content.ReadFromJsonAsync<CreateGameResponse>();
         (await other.Client.PostAsync($"/api/games/{created!.GameId}/players", null)).EnsureSuccessStatusCode();
 
@@ -270,7 +219,7 @@ public class GameFlowIntegrationTests : IClassFixture<BazimoonApiFactory>, IAsyn
     {
         var players = await CreateAuthenticatedPlayersAsync(5, seed: 4);
         var creator = players[0];
-        var created = await (await creator.Client.PostAsJsonAsync("/api/games", new CreateGameRequest(42003)))
+        var created = await (await creator.Client.PostAsync("/api/games", null))
             .Content.ReadFromJsonAsync<CreateGameResponse>();
         foreach (var player in players.Skip(1))
         {
@@ -309,7 +258,7 @@ public class GameFlowIntegrationTests : IClassFixture<BazimoonApiFactory>, IAsyn
     {
         var players = await CreateAuthenticatedPlayersAsync(3, seed: 7);
         var creator = players[0];
-        var created = await (await creator.Client.PostAsJsonAsync("/api/games", new CreateGameRequest(42007)))
+        var created = await (await creator.Client.PostAsync("/api/games", null))
             .Content.ReadFromJsonAsync<CreateGameResponse>();
         var gameId = created!.GameId;
         foreach (var player in players.Skip(1))

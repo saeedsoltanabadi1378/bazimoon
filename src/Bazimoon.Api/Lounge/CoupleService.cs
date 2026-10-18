@@ -31,7 +31,7 @@ public sealed class CoupleService
     private int Today => Progression.PuzzleDay(_clock.GetUtcNow());
 
     /// <summary>The user's active couple, or their own pending invite if it has not expired.</summary>
-    private async Task<CoupleRecord?> FindAsync(long userId)
+    private async Task<CoupleRecord?> FindAsync(Guid userId)
     {
         var active = await _db.Couples.FirstOrDefaultAsync(c => c.PartnerId != null && (c.InviterId == userId || c.PartnerId == userId));
         if (active is not null) return active;
@@ -39,10 +39,10 @@ public sealed class CoupleService
         return await _db.Couples.FirstOrDefaultAsync(c => c.PartnerId == null && c.InviterId == userId && c.InviteExpiresAt > now);
     }
 
-    private async Task<string> NameOfAsync(long userId) =>
-        await _db.PlayerStats.Where(s => s.TelegramUserId == userId).Select(s => s.Username).FirstOrDefaultAsync() ?? "?";
+    private async Task<string> NameOfAsync(Guid userId) =>
+        await _db.PlayerStats.Where(s => s.UserId == userId).Select(s => s.Username).FirstOrDefaultAsync() ?? "?";
 
-    public async Task<CoupleStateDto> GetStateAsync(long userId, string username)
+    public async Task<CoupleStateDto> GetStateAsync(Guid userId, string username)
     {
         await _db.GetOrCreateStatsAsync(userId, username);
         await _db.SaveChangesAsync();
@@ -52,15 +52,15 @@ public sealed class CoupleService
         return new CoupleStateDto("active", null, await BuildCoupleAsync(couple, userId));
     }
 
-    private async Task<CoupleDto> BuildCoupleAsync(CoupleRecord couple, long userId)
+    private async Task<CoupleDto> BuildCoupleAsync(CoupleRecord couple, Guid userId)
     {
-        long partnerId = couple.InviterId == userId ? couple.PartnerId!.Value : couple.InviterId;
+        Guid partnerId = couple.InviterId == userId ? couple.PartnerId!.Value : couple.InviterId;
         int today = Today;
         int start = couple.StartDay ?? today;
         int number = CoupleRules.DayNumber(start, today);
         var answers = await _db.CoupleAnswers.Where(a => a.CoupleId == couple.Id && a.Day > today - HistoryDays - 1).ToListAsync();
-        bool youDone = answers.Any(a => a.Day == today && a.TelegramUserId == userId);
-        bool partnerDone = answers.Any(a => a.Day == today && a.TelegramUserId == partnerId);
+        bool youDone = answers.Any(a => a.Day == today && a.UserId == userId);
+        bool partnerDone = answers.Any(a => a.Day == today && a.UserId == partnerId);
         int? nudgedDay = couple.InviterId == userId ? couple.InviterNudgedDay : couple.PartnerNudgedDay;
 
         var history = answers
@@ -69,8 +69,8 @@ public sealed class CoupleService
             .OrderByDescending(g => g.Key)
             .Select(g =>
             {
-                var mine = CoupleRules.Parse(g.First(a => a.TelegramUserId == userId).Answers);
-                var theirs = CoupleRules.Parse(g.First(a => a.TelegramUserId == partnerId).Answers);
+                var mine = CoupleRules.Parse(g.First(a => a.UserId == userId).Answers);
+                var theirs = CoupleRules.Parse(g.First(a => a.UserId == partnerId).Answers);
                 var matches = CoupleRules.Matches(mine, theirs);
                 int n = CoupleRules.DayNumber(start, g.Key);
                 return new CoupleHistoryDto(n, CoupleRules.SetForDay(n), Progression.DateOfDay(g.Key), matches.Count(m => m), matches);
@@ -95,7 +95,7 @@ public sealed class CoupleService
         if (!(await _settings.GetAsync()).IsGameOn("couple")) throw new GameException("Couple Quiz is switched off for now.");
     }
 
-    public async Task<CoupleStateDto> CreateInviteAsync(long userId, string username)
+    public async Task<CoupleStateDto> CreateInviteAsync(Guid userId, string username)
     {
         await EnsureOnAsync();
         await _db.GetOrCreateStatsAsync(userId, username);
@@ -109,13 +109,13 @@ public sealed class CoupleService
         return new CoupleStateDto("pending", new CoupleInviteDto(couple.InviteToken, couple.InviteExpiresAt), null);
     }
 
-    public async Task CancelInviteAsync(long userId)
+    public async Task CancelInviteAsync(Guid userId)
     {
         _db.Couples.RemoveRange(await _db.Couples.Where(c => c.InviterId == userId && c.PartnerId == null).ToListAsync());
         await _db.SaveChangesAsync();
     }
 
-    public async Task<CoupleInvitePreviewDto> GetInvitePreviewAsync(long userId, string token)
+    public async Task<CoupleInvitePreviewDto> GetInvitePreviewAsync(Guid userId, string token)
     {
         var couple = await _db.Couples.FirstOrDefaultAsync(c => c.InviteToken == token);
         if (couple is null) return new CoupleInvitePreviewDto("invalid", null);
@@ -126,7 +126,7 @@ public sealed class CoupleService
         return new CoupleInvitePreviewDto("open", inviter);
     }
 
-    public async Task<CoupleStateDto> AcceptAsync(long userId, string username, string token)
+    public async Task<CoupleStateDto> AcceptAsync(Guid userId, string username, string token)
     {
         await EnsureOnAsync();
         await _db.GetOrCreateStatsAsync(userId, username);
@@ -152,19 +152,19 @@ public sealed class CoupleService
         return await GetStateAsync(userId, username);
     }
 
-    public async Task<CoupleDayDto> SubmitAnswersAsync(long userId, CoupleAnswersRequest request)
+    public async Task<CoupleDayDto> SubmitAnswersAsync(Guid userId, CoupleAnswersRequest request)
     {
         var couple = await RequireActiveAsync(userId);
         int today = Today;
         int number = CoupleRules.DayNumber(couple.StartDay!.Value, today);
         if (request.Number != number) throw new GameException("These questions are no longer open.");
         if (!CoupleRules.IsValid(request.Answers)) throw new GameException("Send six answers between -1 and 3.");
-        if (await _db.CoupleAnswers.AnyAsync(a => a.CoupleId == couple.Id && a.Day == today && a.TelegramUserId == userId))
+        if (await _db.CoupleAnswers.AnyAsync(a => a.CoupleId == couple.Id && a.Day == today && a.UserId == userId))
             throw new GameException("Your answers for today are already locked in.");
 
-        _db.CoupleAnswers.Add(new CoupleAnswerRecord { CoupleId = couple.Id, Day = today, TelegramUserId = userId, Answers = CoupleRules.Format(request.Answers!) });
-        long partnerId = couple.InviterId == userId ? couple.PartnerId!.Value : couple.InviterId;
-        var partner = await _db.CoupleAnswers.FirstOrDefaultAsync(a => a.CoupleId == couple.Id && a.Day == today && a.TelegramUserId == partnerId);
+        _db.CoupleAnswers.Add(new CoupleAnswerRecord { CoupleId = couple.Id, Day = today, UserId = userId, Answers = CoupleRules.Format(request.Answers!) });
+        Guid partnerId = couple.InviterId == userId ? couple.PartnerId!.Value : couple.InviterId;
+        var partner = await _db.CoupleAnswers.FirstOrDefaultAsync(a => a.CoupleId == couple.Id && a.Day == today && a.UserId == partnerId);
         if (partner is not null)
         {
             // Second to finish: today's reveal opens for both, with the streak, totals and XP.
@@ -189,16 +189,16 @@ public sealed class CoupleService
         return await GetDayAsync(userId, number);
     }
 
-    public async Task<CoupleDayDto> GetDayAsync(long userId, int number)
+    public async Task<CoupleDayDto> GetDayAsync(Guid userId, int number)
     {
         var couple = await RequireActiveAsync(userId);
         int start = couple.StartDay!.Value;
         int day = start + number - 1;
         if (number < 1 || day > Today) throw new GameException("That day has not happened yet.");
-        long partnerId = couple.InviterId == userId ? couple.PartnerId!.Value : couple.InviterId;
+        Guid partnerId = couple.InviterId == userId ? couple.PartnerId!.Value : couple.InviterId;
         var rows = await _db.CoupleAnswers.Where(a => a.CoupleId == couple.Id && a.Day == day).ToListAsync();
-        var mine = rows.FirstOrDefault(a => a.TelegramUserId == userId);
-        var theirs = rows.FirstOrDefault(a => a.TelegramUserId == partnerId);
+        var mine = rows.FirstOrDefault(a => a.UserId == userId);
+        var theirs = rows.FirstOrDefault(a => a.UserId == partnerId);
         int? nudgedDay = couple.InviterId == userId ? couple.InviterNudgedDay : couple.PartnerNudgedDay;
         int streak = CoupleRules.CurrentStreak(couple.Streak, couple.LastBothDay, Today);
         string partnerName = await NameOfAsync(partnerId);
@@ -214,14 +214,14 @@ public sealed class CoupleService
             streak, CoupleRules.Level(couple.TotalMatches), CoupleRules.XpEach, nudgedDay == Today);
     }
 
-    public async Task NudgeAsync(long userId)
+    public async Task NudgeAsync(Guid userId)
     {
         var couple = await RequireActiveAsync(userId);
         int today = Today;
         bool inviter = couple.InviterId == userId;
-        long partnerId = inviter ? couple.PartnerId!.Value : couple.InviterId;
+        Guid partnerId = inviter ? couple.PartnerId!.Value : couple.InviterId;
         if ((inviter ? couple.InviterNudgedDay : couple.PartnerNudgedDay) == today) throw new GameException("You already sent a reminder today.");
-        if (await _db.CoupleAnswers.AnyAsync(a => a.CoupleId == couple.Id && a.Day == today && a.TelegramUserId == partnerId))
+        if (await _db.CoupleAnswers.AnyAsync(a => a.CoupleId == couple.Id && a.Day == today && a.UserId == partnerId))
             throw new GameException("Your partner has already played today.");
         if (inviter) couple.InviterNudgedDay = today;
         else couple.PartnerNudgedDay = today;
@@ -229,11 +229,11 @@ public sealed class CoupleService
         await _notifier.NotifyAsync(partnerId, $"{await NameOfAsync(userId)} played today's Couple Quiz and is waiting for you.", "couple");
     }
 
-    public async Task LeaveAsync(long userId)
+    public async Task LeaveAsync(Guid userId)
     {
         var couple = await FindAsync(userId);
         if (couple is null) return;
-        long? partnerId = couple.PartnerId is null ? null : couple.InviterId == userId ? couple.PartnerId : couple.InviterId;
+        Guid? partnerId = couple.PartnerId is null ? null : couple.InviterId == userId ? couple.PartnerId : couple.InviterId;
         _db.CoupleAnswers.RemoveRange(await _db.CoupleAnswers.Where(a => a.CoupleId == couple.Id).ToListAsync());
         _db.Couples.Remove(couple);
         await _db.SaveChangesAsync();
@@ -241,7 +241,7 @@ public sealed class CoupleService
             await _notifier.NotifyAsync(other, $"{await NameOfAsync(userId)} left your Couple Quiz space. Your shared history has been deleted.");
     }
 
-    public async Task<CoupleStateDto> UpdateSettingsAsync(long userId, string username, CoupleSettingsRequest request)
+    public async Task<CoupleStateDto> UpdateSettingsAsync(Guid userId, string username, CoupleSettingsRequest request)
     {
         var couple = await RequireActiveAsync(userId);
         if (request.ReminderTime is { } time)
@@ -258,7 +258,7 @@ public sealed class CoupleService
         return await GetStateAsync(userId, username);
     }
 
-    private async Task<CoupleRecord> RequireActiveAsync(long userId)
+    private async Task<CoupleRecord> RequireActiveAsync(Guid userId)
     {
         var couple = await FindAsync(userId);
         if (couple?.PartnerId is null || couple.StartDay is null) throw new GameException("You are not in a couple space yet.");

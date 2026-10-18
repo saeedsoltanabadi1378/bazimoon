@@ -7,7 +7,6 @@ namespace Bazimoon.Infrastructure.History;
 public sealed class GameRecord
 {
     public Guid Id { get; set; }
-    public long TelegramChatId { get; set; }
 
     /// <summary>UTC. Stored as DateTime (not DateTimeOffset) since the Sqlite EF Core provider can't
     /// translate ORDER BY over DateTimeOffset columns; Bazimoon always deals in UTC anyway.</summary>

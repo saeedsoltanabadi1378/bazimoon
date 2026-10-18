@@ -9,43 +9,43 @@ public static class CoupleEndpoints
         var couple = app.MapGroup("/api/couple").RequireAuthorization();
 
         couple.MapGet("", (CoupleService service, HttpContext http) =>
-            service.GetStateAsync(http.User.GetTelegramUserId(), http.User.GetTelegramUsername())).WithName("GetCouple");
+            service.GetStateAsync(http.User.GetUserId(), http.User.GetDisplayName())).WithName("GetCouple");
 
         couple.MapPost("/invite", (CoupleService service, HttpContext http) =>
-            service.CreateInviteAsync(http.User.GetTelegramUserId(), http.User.GetTelegramUsername())).WithName("CreateCoupleInvite");
+            service.CreateInviteAsync(http.User.GetUserId(), http.User.GetDisplayName())).WithName("CreateCoupleInvite");
 
         couple.MapDelete("/invite", async (CoupleService service, HttpContext http) =>
         {
-            await service.CancelInviteAsync(http.User.GetTelegramUserId());
+            await service.CancelInviteAsync(http.User.GetUserId());
             return Results.NoContent();
         }).WithName("CancelCoupleInvite");
 
         couple.MapGet("/invite/{token}", (string token, CoupleService service, HttpContext http) =>
-            service.GetInvitePreviewAsync(http.User.GetTelegramUserId(), token)).WithName("PreviewCoupleInvite");
+            service.GetInvitePreviewAsync(http.User.GetUserId(), token)).WithName("PreviewCoupleInvite");
 
         couple.MapPost("/invite/{token}/accept", (string token, CoupleService service, HttpContext http) =>
-            service.AcceptAsync(http.User.GetTelegramUserId(), http.User.GetTelegramUsername(), token)).WithName("AcceptCoupleInvite");
+            service.AcceptAsync(http.User.GetUserId(), http.User.GetDisplayName(), token)).WithName("AcceptCoupleInvite");
 
         couple.MapPost("/answers", (CoupleAnswersRequest request, CoupleService service, HttpContext http) =>
-            service.SubmitAnswersAsync(http.User.GetTelegramUserId(), request)).WithName("SubmitCoupleAnswers");
+            service.SubmitAnswersAsync(http.User.GetUserId(), request)).WithName("SubmitCoupleAnswers");
 
         couple.MapGet("/days/{number:int}", (int number, CoupleService service, HttpContext http) =>
-            service.GetDayAsync(http.User.GetTelegramUserId(), number)).WithName("GetCoupleDay");
+            service.GetDayAsync(http.User.GetUserId(), number)).WithName("GetCoupleDay");
 
         couple.MapPost("/nudge", async (CoupleService service, HttpContext http) =>
         {
-            await service.NudgeAsync(http.User.GetTelegramUserId());
+            await service.NudgeAsync(http.User.GetUserId());
             return Results.NoContent();
         }).WithName("NudgeCouplePartner");
 
         couple.MapPost("/leave", async (CoupleService service, HttpContext http) =>
         {
-            await service.LeaveAsync(http.User.GetTelegramUserId());
+            await service.LeaveAsync(http.User.GetUserId());
             return Results.NoContent();
         }).WithName("LeaveCouple");
 
         couple.MapPut("/settings", (CoupleSettingsRequest request, CoupleService service, HttpContext http) =>
-            service.UpdateSettingsAsync(http.User.GetTelegramUserId(), http.User.GetTelegramUsername(), request)).WithName("UpdateCoupleSettings");
+            service.UpdateSettingsAsync(http.User.GetUserId(), http.User.GetDisplayName(), request)).WithName("UpdateCoupleSettings");
     }
 }
 
@@ -55,7 +55,7 @@ public sealed record CoupleInviteDto(string Token, DateTime ExpiresAt);
 /// <summary>status is open, own, joined, used, expired or invalid.</summary>
 public sealed record CoupleInvitePreviewDto(string Status, string? InviterName);
 public sealed record CoupleDto(
-    long PartnerId, string PartnerName, int TogetherDays, int Streak, int MatchRate, int Level,
+    Guid PartnerId, string PartnerName, int TogetherDays, int Streak, int MatchRate, int Level,
     string ReminderTime, string Language, CoupleTodayDto Today, IReadOnlyList<CoupleHistoryDto> History);
 public sealed record CoupleTodayDto(int Number, int SetId, bool YouDone, bool PartnerDone, bool YouNudged);
 public sealed record CoupleHistoryDto(int Number, int SetId, DateOnly Date, int Score, IReadOnlyList<bool> Matches);

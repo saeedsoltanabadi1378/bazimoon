@@ -29,7 +29,7 @@ public class GameStateSnapshotTests
             Assert.Equal(original.Role, copy!.Role);
             Assert.Equal(original.IsAlive, copy.IsAlive);
             Assert.Equal(original.GodfatherRank, copy.GodfatherRank);
-            Assert.Equal(original.TelegramUsername, copy.TelegramUsername);
+            Assert.Equal(original.DisplayName, copy.DisplayName);
         }
     }
 

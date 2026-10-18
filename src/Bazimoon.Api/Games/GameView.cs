@@ -66,7 +66,7 @@ public sealed record GameView(
         var players = game.Players
             .Select(p => new PlayerView(
                 p.Id,
-                p.TelegramUsername,
+                p.DisplayName,
                 p.IsAlive,
                 RevealedRole: RoleShown(p) ? p.Role : null,
                 EliminatedBy: p.EliminatedBy,
@@ -218,7 +218,7 @@ public sealed record MvpView(Guid PlayerId, int Points, IReadOnlyList<MvpPointsV
 
 public sealed record PlayerView(
     Guid PlayerId,
-    string TelegramUsername,
+    string DisplayName,
     bool IsAlive,
     Role? RevealedRole,
     EliminationCause? EliminatedBy = null,

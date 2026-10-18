@@ -31,7 +31,7 @@ public class CoupleEndpointsTests : IClassFixture<BazimoonApiFactory>, IAsyncLif
         var (alice, bob, state) = await PairAsync(890001, 890002);
         Assert.Equal("active", state.Status);
         Assert.Equal("alice890001", state.Couple!.PartnerName);
-        Assert.Contains(_factory.Notifier.Sent, m => m.UserId == 890001);
+        Assert.Contains(_factory.Notifier.Sent, m => m.UserId == AuthTestHelper.UserIdOf(_factory, 890001));
         int number = state.Couple.Today.Number;
         Assert.Equal(1, number);
 
@@ -67,7 +67,7 @@ public class CoupleEndpointsTests : IClassFixture<BazimoonApiFactory>, IAsyncLif
     {
         var (alice, bob, state) = await PairAsync(890011, 890012);
         (await alice.PostAsync("/api/couple/nudge", null)).EnsureSuccessStatusCode();
-        Assert.Contains(_factory.Notifier.Sent, m => m.UserId == 890012 && m.StartParam == "couple");
+        Assert.Contains(_factory.Notifier.Sent, m => m.UserId == AuthTestHelper.UserIdOf(_factory, 890012) && m.StartParam == "couple");
         Assert.Equal(HttpStatusCode.BadRequest, (await alice.PostAsync("/api/couple/nudge", null)).StatusCode);
 
         (await alice.PostAsJsonAsync("/api/couple/answers", new CoupleAnswersRequest(state.Couple!.Today.Number, new[] { 0, 0, 0, 0, 0, 0 }))).EnsureSuccessStatusCode();
@@ -81,7 +81,7 @@ public class CoupleEndpointsTests : IClassFixture<BazimoonApiFactory>, IAsyncLif
         (await bob.PostAsync("/api/couple/leave", null)).EnsureSuccessStatusCode();
         Assert.Equal("none", (await alice.GetFromJsonAsync<CoupleStateDto>("/api/couple"))!.Status);
         Assert.Equal("none", (await bob.GetFromJsonAsync<CoupleStateDto>("/api/couple"))!.Status);
-        Assert.Contains(_factory.Notifier.Sent, m => m.UserId == 890021 && m.Text.Contains("left"));
+        Assert.Contains(_factory.Notifier.Sent, m => m.UserId == AuthTestHelper.UserIdOf(_factory, 890021) && m.Text.Contains("left"));
     }
 
     [Fact]

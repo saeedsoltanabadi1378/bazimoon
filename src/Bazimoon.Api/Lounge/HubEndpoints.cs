@@ -11,17 +11,17 @@ public static class HubEndpoints
         var me = app.MapGroup("/api/me").RequireAuthorization();
 
         me.MapGet("/profile", (HubService hub, HttpContext http) =>
-            hub.GetProfileAsync(http.User.GetTelegramUserId(), http.User.GetTelegramUsername())).WithName("GetProfile");
+            hub.GetProfileAsync(http.User.GetUserId(), http.User.GetDisplayName())).WithName("GetProfile");
 
         me.MapPut("/settings", (SettingsDto settings, HubService hub, HttpContext http) =>
-            hub.UpdateSettingsAsync(http.User.GetTelegramUserId(), http.User.GetTelegramUsername(), settings)).WithName("UpdateSettings");
+            hub.UpdateSettingsAsync(http.User.GetUserId(), http.User.GetDisplayName(), settings)).WithName("UpdateSettings");
 
         me.MapGet("/games/{gameId:guid}", async (Guid gameId, HubService hub, HttpContext http) =>
-            await hub.GetMyGameResultAsync(http.User.GetTelegramUserId(), gameId) is { } result ? Results.Ok(result) : Results.NotFound())
+            await hub.GetMyGameResultAsync(http.User.GetUserId(), gameId) is { } result ? Results.Ok(result) : Results.NotFound())
             .WithName("GetMyGameResult");
 
         me.MapGet("/mafia-stats", (HubService hub, HttpContext http) =>
-            hub.GetMafiaStatsAsync(http.User.GetTelegramUserId())).WithName("GetMafiaStats");
+            hub.GetMafiaStatsAsync(http.User.GetUserId())).WithName("GetMafiaStats");
 
         var hubGroup = app.MapGroup("/api/hub").RequireAuthorization();
 
@@ -32,42 +32,42 @@ public static class HubEndpoints
             await hub.GetRecapAsync(gameId) is { } recap ? Results.Ok(recap) : Results.NotFound()).WithName("GetGameRecap");
 
         hubGroup.MapGet("/home", (HubService hub, HttpContext http) =>
-            hub.GetHomeAsync(http.User.GetTelegramUserId(), http.User.GetTelegramUsername())).WithName("GetHome");
+            hub.GetHomeAsync(http.User.GetUserId(), http.User.GetDisplayName())).WithName("GetHome");
 
         hubGroup.MapGet("/tables", (TableService tables, HttpContext http) =>
-            tables.GetYourTablesAsync(http.User.GetTelegramUserId())).WithName("GetTables");
+            tables.GetYourTablesAsync(http.User.GetUserId())).WithName("GetTables");
 
         hubGroup.MapPost("/quick-match", async (TableService tables, Games.GameService games, HttpContext http) =>
         {
-            long userId = http.User.GetTelegramUserId();
+            Guid userId = http.User.GetUserId();
             var gameId = await tables.FindQuickMatchAsync(userId);
             if (gameId is null) return Results.NotFound(new { detail = "No public table has a free seat right now." });
-            await games.JoinGameAsync(gameId.Value, userId, http.User.GetTelegramUsername());
+            await games.JoinGameAsync(gameId.Value, userId, http.User.GetDisplayName());
             return Results.Ok(new Games.CreateGameResponse(gameId.Value));
         }).WithName("QuickMatch");
 
         hubGroup.MapGet("/league", (string? board, HubService hub, HttpContext http) =>
-            hub.GetLeagueAsync(http.User.GetTelegramUserId(), http.User.GetTelegramUsername(), board == "puzzles" ? "puzzles" : "mafia"))
+            hub.GetLeagueAsync(http.User.GetUserId(), http.User.GetDisplayName(), board == "puzzles" ? "puzzles" : "mafia"))
             .WithName("GetLeague");
 
         var puzzles = app.MapGroup("/api/puzzles").RequireAuthorization();
 
         puzzles.MapPost("/results", (PuzzleSubmitRequest request, HubService hub, HttpContext http) =>
-            hub.SubmitPuzzleAsync(http.User.GetTelegramUserId(), http.User.GetTelegramUsername(), request)).WithName("SubmitPuzzleResult");
+            hub.SubmitPuzzleAsync(http.User.GetUserId(), http.User.GetDisplayName(), request)).WithName("SubmitPuzzleResult");
 
         puzzles.MapGet("/{game}/stats", (string game, HubService hub, HttpContext http) =>
-            hub.GetGameStatsAsync(http.User.GetTelegramUserId(), game)).WithName("GetPuzzleStats");
+            hub.GetGameStatsAsync(http.User.GetUserId(), game)).WithName("GetPuzzleStats");
 
         puzzles.MapGet("/{game}/weekly", (string game, HubService hub, HttpContext http) =>
-            hub.GetWeeklyAsync(http.User.GetTelegramUserId(), http.User.GetTelegramUsername(), game)).WithName("GetWeeklyScores");
+            hub.GetWeeklyAsync(http.User.GetUserId(), http.User.GetDisplayName(), game)).WithName("GetWeeklyScores");
 
         puzzles.MapGet("/{game}/board", (string game, int? number, string? mode, HubService hub, HttpContext http) =>
-            hub.GetBoardAsync(http.User.GetTelegramUserId(), game, number, mode)).WithName("GetPuzzleBoard");
+            hub.GetBoardAsync(http.User.GetUserId(), game, number, mode)).WithName("GetPuzzleBoard");
 
         puzzles.MapGet("/{game}/archive", async (string game, int year, int month, HubService hub, HttpContext http) =>
         {
             if (month is < 1 or > 12 || year is < 2026 or > 2100) return Results.BadRequest();
-            return Results.Ok(await hub.GetArchiveAsync(http.User.GetTelegramUserId(), game, year, month));
+            return Results.Ok(await hub.GetArchiveAsync(http.User.GetUserId(), game, year, month));
         }).WithName("GetPuzzleArchive");
     }
 }

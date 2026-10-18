@@ -11,16 +11,14 @@ namespace Bazimoon.Api.Lounge;
 public sealed class HubService
 {
     private readonly BazimoonDbContext _db;
-    private readonly IChatGameIndex _chatGameIndex;
     private readonly IGameSessionStore _sessions;
     private readonly TimeProvider _clock;
     private readonly TableService _tables;
 
-    public HubService(BazimoonDbContext db, IChatGameIndex chatGameIndex, IGameSessionStore sessions, TimeProvider clock, TableService tables)
+    public HubService(BazimoonDbContext db, IGameSessionStore sessions, TimeProvider clock, TableService tables)
     {
         _tables = tables;
         _db = db;
-        _chatGameIndex = chatGameIndex;
         _sessions = sessions;
         _clock = clock;
     }
@@ -29,7 +27,7 @@ public sealed class HubService
 
     // ------------------------------------------------------------------ profile
 
-    public async Task<ProfileDto> GetProfileAsync(long userId, string username)
+    public async Task<ProfileDto> GetProfileAsync(Guid userId, string username)
     {
         var stats = await _db.GetOrCreateStatsAsync(userId, username);
         await _db.SaveChangesAsync();
@@ -44,7 +42,7 @@ public sealed class HubService
         var bestRole = mafiaGames.Where(g => g.Won == true && g.Role.HasValue)
             .GroupBy(g => g.Role!.Value).OrderByDescending(g => g.Count()).Select(g => (Role?)g.Key).FirstOrDefault();
 
-        var puzzles = await _db.PuzzleResults.Where(r => r.TelegramUserId == userId).ToListAsync();
+        var puzzles = await _db.PuzzleResults.Where(r => r.UserId == userId).ToListAsync();
         int? bestZip = puzzles.Where(r => r.Game == "zip" && r.Solved && r.TimeMs.HasValue).Select(r => r.TimeMs).Min();
         int streak = Progression.CurrentStreak(stats.PuzzleStreak, stats.LastPuzzleDay, stats.StreakFreezes, today);
 
@@ -80,7 +78,7 @@ public sealed class HubService
             ToSettings(stats));
     }
 
-    public async Task<SettingsDto> UpdateSettingsAsync(long userId, string username, SettingsDto settings)
+    public async Task<SettingsDto> UpdateSettingsAsync(Guid userId, string username, SettingsDto settings)
     {
         var stats = await _db.GetOrCreateStatsAsync(userId, username);
         stats.Language = settings.Language is "fa" ? "fa" : "en";
@@ -95,10 +93,10 @@ public sealed class HubService
 
     private static SettingsDto ToSettings(PlayerStatsRecord s) => new(s.Language, s.ReminderEnabled, s.ReminderTime, s.HighContrast, s.Haptics);
 
-    public async Task<MyGameResultDto?> GetMyGameResultAsync(long userId, Guid gameId)
+    public async Task<MyGameResultDto?> GetMyGameResultAsync(Guid userId, Guid gameId)
     {
         var row = await _db.GamePlayers.Include(p => p.GameRecord)
-            .FirstOrDefaultAsync(p => p.GameRecordId == gameId && p.TelegramUserId == userId);
+            .FirstOrDefaultAsync(p => p.GameRecordId == gameId && p.UserId == userId);
         if (row is null || row.Won is null) return null;
         int rating = (row.RatingBefore ?? Progression.StartingRating) + (row.RatingDelta ?? 0);
         var earnedHere = MafiaStats.Achievements(await MafiaRowsAsync(userId))
@@ -107,13 +105,13 @@ public sealed class HubService
     }
 
     /// <summary>Your finished, rated Mafia games with their game record, oldest first.</summary>
-    private async Task<List<GamePlayerRecord>> MafiaRowsAsync(long userId) =>
+    private async Task<List<GamePlayerRecord>> MafiaRowsAsync(Guid userId) =>
         await _db.GamePlayers.AsNoTracking().Include(p => p.GameRecord)
-            .Where(p => p.TelegramUserId == userId && p.Won != null && p.GameRecord.Status == "Completed")
+            .Where(p => p.UserId == userId && p.Won != null && p.GameRecord.Status == "Completed")
             .OrderBy(p => p.GameRecord.EndedAt)
             .ToListAsync();
 
-    public async Task<MafiaStatsDto> GetMafiaStatsAsync(long userId)
+    public async Task<MafiaStatsDto> GetMafiaStatsAsync(Guid userId)
     {
         var rows = await MafiaRowsAsync(userId);
         var recentIds = rows.OrderByDescending(r => r.GameRecord.EndedAt).Take(20).Select(r => r.GameRecordId).ToList();
@@ -134,15 +132,15 @@ public sealed class HubService
         var events = System.Text.Json.JsonSerializer.Deserialize<List<GameEvent>>(game.EventsJson) ?? [];
         string? name = await _db.MafiaTables.Where(t => t.GameId == gameId).Select(t => t.Name).FirstOrDefaultAsync();
         return new GameRecapDto(game.Id, name, game.EndedAt, game.Result,
-            game.Players.Select(p => new RecapPlayerDto(p.PlayerId, p.TelegramUsername, p.Role, p.EliminatedBy, p.EliminatedRound, p.WasPromoted, p.IsMvp, p.MvpPoints)).ToList(),
+            game.Players.Select(p => new RecapPlayerDto(p.PlayerId, p.DisplayName, p.Role, p.EliminatedBy, p.EliminatedRound, p.WasPromoted, p.IsMvp, p.MvpPoints)).ToList(),
             events);
     }
 
     private record RatedGame(Role? Role, bool? Won, DateTime EndedAt, int? RatingDelta);
 
-    private IQueryable<RatedGame> RatedGamesAsync(long userId) =>
+    private IQueryable<RatedGame> RatedGamesAsync(Guid userId) =>
         _db.GamePlayers
-            .Where(p => p.TelegramUserId == userId && p.Won != null && p.GameRecord.Status == "Completed")
+            .Where(p => p.UserId == userId && p.Won != null && p.GameRecord.Status == "Completed")
             .Select(p => new RatedGame(p.Role, p.Won, p.GameRecord.EndedAt, p.RatingDelta));
 
     private static bool IsDaily(string mode) => mode == "daily" || mode.StartsWith("daily-", StringComparison.Ordinal);
@@ -151,13 +149,13 @@ public sealed class HubService
 
     // ------------------------------------------------------------------ home
 
-    public async Task<HomeDto> GetHomeAsync(long userId, string username)
+    public async Task<HomeDto> GetHomeAsync(Guid userId, string username)
     {
         var stats = await _db.GetOrCreateStatsAsync(userId, username);
         await _db.SaveChangesAsync();
         var today = Today;
         var todays = await _db.PuzzleResults
-            .Where(r => r.TelegramUserId == userId && r.Day == today && r.Mode == "daily")
+            .Where(r => r.UserId == userId && r.Day == today && r.Mode == "daily")
             .ToListAsync();
         var daily = new[] { "zip", "queens", "sudoku", "word", "ladder" }.Select(game =>
         {
@@ -165,7 +163,7 @@ public sealed class HubService
             return new DailyStatusDto(game, Progression.DailyNumber(game, today) ?? 0, solved is not null, solved?.Solved ?? false, solved?.TimeMs, solved?.Moves);
         }).ToList();
 
-        int? mergeBest = await _db.PuzzleResults.Where(r => r.TelegramUserId == userId && r.Game == "merge").MaxAsync(r => r.Score);
+        int? mergeBest = await _db.PuzzleResults.Where(r => r.UserId == userId && r.Game == "merge").MaxAsync(r => r.Score);
         var league = await GetLeagueAsync(userId, username, "mafia");
         var tables = await _tables.GetYourTablesAsync(userId);
         return new HomeDto(
@@ -180,7 +178,7 @@ public sealed class HubService
 
     // ------------------------------------------------------------------ league
 
-    public async Task<LeagueDto> GetLeagueAsync(long userId, string username, string board)
+    public async Task<LeagueDto> GetLeagueAsync(Guid userId, string username, string board)
     {
         var me = await _db.GetOrCreateStatsAsync(userId, username);
         await _db.SaveChangesAsync();
@@ -190,15 +188,15 @@ public sealed class HubService
         var seasonStart = Progression.DateOfDay(seasonStartDay).ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
         var (division, tier) = Progression.Division(me.Rating);
         var everyone = await _db.PlayerStats.AsNoTracking().ToListAsync();
-        var sameDivision = everyone.Where(s => Progression.Division(s.Rating).Division == division).ToDictionary(s => s.TelegramUserId);
+        var sameDivision = everyone.Where(s => Progression.Division(s.Rating).Division == division).ToDictionary(s => s.UserId);
 
         List<LeagueEntry> entries;
         QualificationDto qualification;
         if (board == "puzzles")
         {
             int weekStart = Progression.WeekStartDay(today);
-            var results = await _db.PuzzleResults.Where(r => r.Day >= seasonStartDay).Select(r => new { r.TelegramUserId, r.Points, r.Day, r.Mode, r.Solved }).ToListAsync();
-            entries = results.GroupBy(r => r.TelegramUserId)
+            var results = await _db.PuzzleResults.Where(r => r.Day >= seasonStartDay).Select(r => new { r.UserId, r.Points, r.Day, r.Mode, r.Solved }).ToListAsync();
+            entries = results.GroupBy(r => r.UserId)
                 .Where(g => sameDivision.ContainsKey(g.Key))
                 .Select(g =>
                 {
@@ -208,14 +206,14 @@ public sealed class HubService
                         g.Count(r => IsDaily(r.Mode) && r.Solved && r.Day >= weekStart) >= Progression.PuzzleQualifyingSolves);
                 })
                 .ToList();
-            int mySolves = results.Count(r => r.TelegramUserId == userId && IsDaily(r.Mode) && r.Solved && r.Day >= weekStart);
+            int mySolves = results.Count(r => r.UserId == userId && IsDaily(r.Mode) && r.Solved && r.Day >= weekStart);
             qualification = new QualificationDto(mySolves, Progression.PuzzleQualifyingSolves);
         }
         else
         {
             var games = await _db.GamePlayers
-                .Where(p => p.TelegramUserId != null && p.Won != null && p.GameRecord.Status == "Completed" && p.GameRecord.EndedAt >= seasonStart)
-                .Select(p => new { UserId = p.TelegramUserId!.Value, p.Won, p.RatingDelta })
+                .Where(p => p.UserId != null && p.Won != null && p.GameRecord.Status == "Completed" && p.GameRecord.EndedAt >= seasonStart)
+                .Select(p => new { UserId = p.UserId!.Value, p.Won, p.RatingDelta })
                 .ToListAsync();
             entries = games.GroupBy(g => g.UserId)
                 .Where(g => sameDivision.ContainsKey(g.Key))
@@ -255,11 +253,11 @@ public sealed class HubService
         return new LeagueDto(board, season, Progression.DaysLeftInSeason(today), division, tier, n, you, qualification, rows);
     }
 
-    private sealed record LeagueEntry(long UserId, string Name, int Score, int Delta, int Games, int WinRateOrStreak, bool Qualified);
+    private sealed record LeagueEntry(Guid UserId, string Name, int Score, int Delta, int Games, int WinRateOrStreak, bool Qualified);
 
     // ------------------------------------------------------------------ puzzles
 
-    public async Task<PuzzleResultDto> SubmitPuzzleAsync(long userId, string username, PuzzleSubmitRequest request)
+    public async Task<PuzzleResultDto> SubmitPuzzleAsync(Guid userId, string username, PuzzleSubmitRequest request)
     {
         if (!Progression.Games.Contains(request.Game))
             throw new GameException("Unknown game.");
@@ -279,7 +277,7 @@ public sealed class HubService
             number = Progression.DailyNumber(request.Game, today);
             var dailyMode = mode;
             // Only the first daily attempt counts; replays are recorded as practice.
-            countsAsDaily = !await _db.PuzzleResults.AnyAsync(r => r.TelegramUserId == userId && r.Game == request.Game && r.Mode == dailyMode && r.PuzzleNumber == number);
+            countsAsDaily = !await _db.PuzzleResults.AnyAsync(r => r.UserId == userId && r.Game == request.Game && r.Mode == dailyMode && r.PuzzleNumber == number);
             if (!countsAsDaily) mode = "practice";
         }
         else if (mode == "archive" && request.PuzzleNumber is { } archived)
@@ -289,7 +287,7 @@ public sealed class HubService
             number = archived;
         }
 
-        var history = await _db.PuzzleResults.Where(r => r.TelegramUserId == userId && r.Game == request.Game).ToListAsync();
+        var history = await _db.PuzzleResults.Where(r => r.UserId == userId && r.Game == request.Game).ToListAsync();
         bool higherIsBetter = request.Score.HasValue && !request.TimeMs.HasValue;
         bool newBest = request.Solved && (higherIsBetter
             ? history.All(h => (h.Score ?? 0) < request.Score)
@@ -319,7 +317,7 @@ public sealed class HubService
 
         _db.PuzzleResults.Add(new PuzzleResultRecord
         {
-            TelegramUserId = userId, Game = request.Game, Mode = mode, PuzzleNumber = number, Day = today,
+            UserId = userId, Game = request.Game, Mode = mode, PuzzleNumber = number, Day = today,
             Solved = request.Solved, TimeMs = request.TimeMs, Score = request.Score, Moves = request.Moves, Detail = request.Detail,
             Hints = Math.Max(0, request.Hints), XpGained = xp, Points = points
         });
@@ -328,7 +326,7 @@ public sealed class HubService
         int? percentile = null;
         if (countsAsDaily && request.Solved)
         {
-            var others = await _db.PuzzleResults.Where(r => r.Game == request.Game && r.Mode == mode && r.PuzzleNumber == number && r.TelegramUserId != userId)
+            var others = await _db.PuzzleResults.Where(r => r.Game == request.Game && r.Mode == mode && r.PuzzleNumber == number && r.UserId != userId)
                 .Select(r => new { r.Solved, r.TimeMs, r.Moves }).ToListAsync();
             if (others.Count > 0)
             {
@@ -344,11 +342,11 @@ public sealed class HubService
         return new PuzzleResultDto(xp, points, stats.Xp, level, into, forNext, levelBefore, intoBefore, streak, streakExtended, newBest, countsAsDaily, number, percentile);
     }
 
-    public async Task<GameStatsDto> GetGameStatsAsync(long userId, string game)
+    public async Task<GameStatsDto> GetGameStatsAsync(Guid userId, string game)
     {
         if (!Progression.Games.Contains(game)) throw new GameException("Unknown game.");
         var today = Today;
-        var rows = await _db.PuzzleResults.Where(r => r.TelegramUserId == userId && r.Game == game).OrderBy(r => r.CreatedAt).ToListAsync();
+        var rows = await _db.PuzzleResults.Where(r => r.UserId == userId && r.Game == game).OrderBy(r => r.CreatedAt).ToListAsync();
         var solved = rows.Where(r => r.Solved).ToList();
         var timed = solved.Where(r => r.TimeMs.HasValue).ToList();
         var scored = rows.Where(r => r.Score.HasValue).ToList();
@@ -385,7 +383,7 @@ public sealed class HubService
             solved.Where(r => r.Detail.HasValue).GroupBy(r => r.Detail!.Value).ToDictionary(g => g.Key, g => g.Count()));
     }
 
-    public async Task<BoardDto> GetBoardAsync(long userId, string game, int? number, string? mode = null)
+    public async Task<BoardDto> GetBoardAsync(Guid userId, string game, int? number, string? mode = null)
     {
         if (!Progression.Games.Contains(game)) throw new GameException("Unknown game.");
         // A language variant of a daily (Daily Word and Esm-Famil have a Persian one).
@@ -393,9 +391,9 @@ public sealed class HubService
         number ??= Progression.DailyNumber(game, Today);
         var group = await GroupMembersAsync(userId);
         var results = await _db.PuzzleResults
-            .Where(r => r.Game == game && r.Mode == dailyMode && r.PuzzleNumber == number && group.Contains(r.TelegramUserId))
+            .Where(r => r.Game == game && r.Mode == dailyMode && r.PuzzleNumber == number && group.Contains(r.UserId))
             .ToListAsync();
-        var names = await _db.PlayerStats.Where(s => group.Contains(s.TelegramUserId)).ToDictionaryAsync(s => s.TelegramUserId, s => s.Username);
+        var names = await _db.PlayerStats.Where(s => group.Contains(s.UserId)).ToDictionaryAsync(s => s.UserId, s => s.Username);
         var ordered = game == "esmfamil"
             ? results.OrderByDescending(r => r.Score ?? 0).ToList() // solo Esm-Famil is scored, not timed
             : results
@@ -404,18 +402,18 @@ public sealed class HubService
             .ThenBy(r => r.Moves ?? int.MaxValue)
             .ThenByDescending(r => r.Score ?? 0)
             .ToList();
-        var rows = ordered.Select((r, i) => new BoardRowDto(r.Solved ? i + 1 : null, names.GetValueOrDefault(r.TelegramUserId, "?"), r.TelegramUserId == userId, r.Solved, r.TimeMs, r.Score, r.Moves)).ToList();
+        var rows = ordered.Select((r, i) => new BoardRowDto(r.Solved ? i + 1 : null, names.GetValueOrDefault(r.UserId, "?"), r.UserId == userId, r.Solved, r.TimeMs, r.Score, r.Moves)).ToList();
         return new BoardDto(game, number, results.Count(r => r.Solved), rows);
     }
 
-    public async Task<ArchiveDto> GetArchiveAsync(long userId, string game, int year, int month)
+    public async Task<ArchiveDto> GetArchiveAsync(Guid userId, string game, int year, int month)
     {
         var first = new DateOnly(year, month, 1);
         var today = Today;
         int firstDay = first.DayNumber - Progression.DateOfDay(0).DayNumber;
         int days = DateTime.DaysInMonth(year, month);
         var results = await _db.PuzzleResults
-            .Where(r => r.TelegramUserId == userId && r.Game == game && (r.Mode == "daily" || r.Mode == "archive") && r.Day >= firstDay - 1)
+            .Where(r => r.UserId == userId && r.Game == game && (r.Mode == "daily" || r.Mode == "archive") && r.Day >= firstDay - 1)
             .ToListAsync();
         var list = new List<ArchiveDayDto>();
         for (int d = 0; d < days; d++)
@@ -431,7 +429,7 @@ public sealed class HubService
     }
 
     /// <summary>This week's best score per player in your division for an endless game (Merge, Stack, Blocks…).</summary>
-    public async Task<WeeklyDto> GetWeeklyAsync(long userId, string username, string game)
+    public async Task<WeeklyDto> GetWeeklyAsync(Guid userId, string username, string game)
     {
         if (!Progression.Games.Contains(game)) throw new GameException("Unknown game.");
         var me = await _db.GetOrCreateStatsAsync(userId, username);
@@ -440,10 +438,10 @@ public sealed class HubService
         int weekStart = Progression.WeekStartDay(today);
         var (division, tier) = Progression.Division(me.Rating);
         var everyone = await _db.PlayerStats.AsNoTracking().ToListAsync();
-        var sameDivision = everyone.Where(s => Progression.Division(s.Rating).Division == division).ToDictionary(s => s.TelegramUserId, s => s.Username);
+        var sameDivision = everyone.Where(s => Progression.Division(s.Rating).Division == division).ToDictionary(s => s.UserId, s => s.Username);
         var scores = await _db.PuzzleResults
             .Where(r => r.Game == game && r.Day >= weekStart && r.Score != null)
-            .GroupBy(r => r.TelegramUserId)
+            .GroupBy(r => r.UserId)
             .Select(g => new { UserId = g.Key, Best = g.Max(r => r.Score!.Value) })
             .ToListAsync();
         var ranked = scores.Where(x => sameDivision.ContainsKey(x.UserId)).OrderByDescending(x => x.Best).ToList();
@@ -453,10 +451,12 @@ public sealed class HubService
         return new WeeklyDto(game, division, tier, 7 - (today - weekStart), myIndex >= 0 ? myIndex + 1 : null, rows);
     }
 
-    private async Task<HashSet<long>> GroupMembersAsync(long userId)
+    /// <summary>You and everyone you have shared a finished Mafia table with.</summary>
+    private async Task<HashSet<Guid>> GroupMembersAsync(Guid userId)
     {
-        var chats = await _db.ChatMembers.Where(m => m.TelegramUserId == userId).Select(m => m.TelegramChatId).ToListAsync();
-        var members = await _db.ChatMembers.Where(m => chats.Contains(m.TelegramChatId)).Select(m => m.TelegramUserId).Distinct().ToListAsync();
+        var games = _db.GamePlayers.Where(p => p.UserId == userId).Select(p => p.GameRecordId);
+        var members = await _db.GamePlayers.Where(p => games.Contains(p.GameRecordId) && p.UserId != null)
+            .Select(p => p.UserId!.Value).Distinct().ToListAsync();
         var set = members.ToHashSet();
         set.Add(userId);
         return set;

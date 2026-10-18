@@ -48,7 +48,7 @@ public class GameSwitchTests : IClassFixture<BazimoonApiFactory>, IAsyncLifetime
         Assert.Equal(["mafia", "nard"], config!.DisabledGames.Order().ToArray());
 
         // No new tables while Mafia is off, from the bot or the app.
-        var refused = await player.PostAsJsonAsync("/api/games", new { telegramChatId = -893001 });
+        var refused = await player.PostAsync("/api/games", null);
         Assert.Equal(HttpStatusCode.BadRequest, refused.StatusCode);
         Assert.Contains("switched off", await refused.Content.ReadAsStringAsync());
 
@@ -56,7 +56,7 @@ public class GameSwitchTests : IClassFixture<BazimoonApiFactory>, IAsyncLifetime
         (await player.PostAsJsonAsync("/api/puzzles/results", new PuzzleSubmitRequest("nard", "classic", null, true, null, null, null, 1, 0))).EnsureSuccessStatusCode();
 
         (await SaveDisabledAsync(admin)).EnsureSuccessStatusCode();
-        (await player.PostAsJsonAsync("/api/games", new { telegramChatId = -893001 })).EnsureSuccessStatusCode();
+        (await player.PostAsync("/api/games", null)).EnsureSuccessStatusCode();
     }
 
     [Theory]

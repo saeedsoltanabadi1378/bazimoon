@@ -34,9 +34,9 @@ public class GameHistoryRepositoryTests : IDisposable
         _connection.Dispose();
     }
 
-    private static GameState EndedGame(out List<Player> players, long telegramChatId = 1)
+    private static GameState EndedGame(out List<Player> players)
     {
-        var (game, ps) = TestGameFactory.CreateAssignedGame(5, telegramChatId: telegramChatId);
+        var (game, ps) = TestGameFactory.CreateAssignedGame(5);
         players = ps;
         var godfather = ps.Godfather();
 
@@ -55,28 +55,15 @@ public class GameHistoryRepositoryTests : IDisposable
     [Fact]
     public async Task SaveCompletedGameAsync_NonEndedGame_Throws()
     {
-        var (game, _) = TestGameFactory.CreateAssignedGame(5, telegramChatId: 1);
+        var (game, _) = TestGameFactory.CreateAssignedGame(5);
 
         await Assert.ThrowsAsync<InvalidOperationException>(() => _repository.SaveCompletedGameAsync(game));
     }
 
     [Fact]
-    public async Task SaveCompletedGameAsync_AppTableWithoutChat_IsSavedWithChatZero()
-    {
-        var game = EndedGame(out _, telegramChatId: 0);
-        // Tables opened in the app belong to no Telegram group.
-        var gameWithoutChat = GameState.FromSnapshot(game.ToSnapshot() with { TelegramChatId = null });
-
-        await _repository.SaveCompletedGameAsync(gameWithoutChat);
-
-        var record = await _repository.GetAsync(gameWithoutChat.GameId);
-        Assert.Equal(0, record!.TelegramChatId);
-    }
-
-    [Fact]
     public async Task SaveCompletedGameAsync_ThenGet_RoundTripsGameAndPlayers()
     {
-        var game = EndedGame(out var players, telegramChatId: 555);
+        var game = EndedGame(out var players);
 
         await _repository.SaveCompletedGameAsync(game);
 
@@ -84,30 +71,12 @@ public class GameHistoryRepositoryTests : IDisposable
 
         Assert.NotNull(record);
         Assert.Equal(game.GameId, record!.Id);
-        Assert.Equal(555, record.TelegramChatId);
         Assert.Equal(WinCondition.VillagersWin, record.Result);
         Assert.Equal(players.Count, record.Players.Count);
 
         var godfatherRecord = record.Players.Single(p => p.Role == Role.Godfather);
         Assert.False(godfatherRecord.SurvivedToEnd);
         Assert.Equal(1, godfatherRecord.GodfatherRank);
-    }
-
-    [Fact]
-    public async Task GetForChatAsync_OnlyReturnsGamesForThatChat_NewestFirst()
-    {
-        var gameA = EndedGame(out _, telegramChatId: 100);
-        var gameB = EndedGame(out _, telegramChatId: 100);
-        var gameOtherChat = EndedGame(out _, telegramChatId: 200);
-
-        await _repository.SaveCompletedGameAsync(gameA);
-        await _repository.SaveCompletedGameAsync(gameB);
-        await _repository.SaveCompletedGameAsync(gameOtherChat);
-
-        var results = await _repository.GetForChatAsync(100);
-
-        Assert.Equal(2, results.Count);
-        Assert.All(results, r => Assert.Equal(100, r.TelegramChatId));
     }
 
     [Fact]
@@ -121,7 +90,7 @@ public class GameHistoryRepositoryTests : IDisposable
     [Fact]
     public async Task PlayerWhoLeft_LosesEvenWhenTheirTeamWins()
     {
-        var (game, ps) = TestGameFactory.CreateAssignedGame(5, telegramChatId: 1);
+        var (game, ps) = TestGameFactory.CreateAssignedGame(5);
         var leaver = ps.Villagers()[0];
         game.LeaveMidGame(leaver.Id, DateTimeOffset.UtcNow);
         game.LeaveMidGame(ps.Godfather().Id, DateTimeOffset.UtcNow); // town wins

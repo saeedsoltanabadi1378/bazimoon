@@ -17,12 +17,12 @@ public sealed class GameHub : Hub
     }
 
     /// <summary>Joins the caller's connection to a game's broadcast group, after verifying they're
-    /// actually a player in that game (derived from their authenticated Telegram id).</summary>
+    /// actually a player in that game (derived from their authenticated user id).</summary>
     public async Task JoinGame(Guid gameId)
     {
         var game = await _sessionStore.GetAsync(gameId) ?? throw new HubException("Game not found.");
-        long telegramUserId = Context.User!.GetTelegramUserId();
-        var playerId = PlayerIdentity.DeriveId(gameId, telegramUserId);
+        Guid userId = Context.User!.GetUserId();
+        var playerId = PlayerIdentity.DeriveId(gameId, userId);
 
         if (game.GetPlayer(playerId) is null)
             throw new HubException("You are not a player in this game.");

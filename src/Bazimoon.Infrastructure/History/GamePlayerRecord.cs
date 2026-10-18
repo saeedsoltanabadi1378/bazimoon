@@ -8,8 +8,8 @@ public sealed class GamePlayerRecord
     public Guid GameRecordId { get; set; }
     public GameRecord GameRecord { get; set; } = null!;
     public Guid PlayerId { get; set; }
-    public long? TelegramUserId { get; set; }
-    public string TelegramUsername { get; set; } = string.Empty;
+    public Guid? UserId { get; set; }
+    public string DisplayName { get; set; } = string.Empty;
     public Role? Role { get; set; }
     public bool SurvivedToEnd { get; set; }
     public int? GodfatherRank { get; set; }

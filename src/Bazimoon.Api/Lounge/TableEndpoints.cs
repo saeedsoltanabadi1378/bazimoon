@@ -10,12 +10,12 @@ public static class TableEndpoints
 
         tables.MapGet("", async (string? scope, TableService service, HttpContext http) =>
         {
-            long userId = http.User.GetTelegramUserId();
+            Guid userId = http.User.GetUserId();
             return scope == "mine" ? await service.GetYourTablesAsync(userId) : await service.GetOpenTablesAsync(userId);
         }).WithName("ListTables");
 
         tables.MapPost("", (CreateTableRequest request, TableService service, HttpContext http) =>
-            service.CreateAsync(http.User.GetTelegramUserId(), http.User.GetTelegramUsername(), request)).WithName("CreateTable");
+            service.CreateAsync(http.User.GetUserId(), http.User.GetDisplayName(), request)).WithName("CreateTable");
 
         tables.MapGet("/code/{code}", async (string code, TableService service) =>
             await service.ResolveAsync(code) is { } gameId
@@ -23,11 +23,11 @@ public static class TableEndpoints
                 : Results.Problem(statusCode: 404, title: "Game not found", detail: "No live table has that code.")).WithName("ResolveTableCode");
 
         tables.MapGet("/{gameId:guid}", async (Guid gameId, TableService service, HttpContext http) =>
-            await service.GetInfoAsync(gameId, http.User.GetTelegramUserId()) is { } info
+            await service.GetInfoAsync(gameId, http.User.GetUserId()) is { } info
                 ? Results.Ok(info)
                 : Results.Problem(statusCode: 404, title: "Game not found", detail: "That table no longer exists.")).WithName("GetTable");
 
         tables.MapPut("/{gameId:guid}/open", (Guid gameId, SetTableOpenRequest request, TableService service, HttpContext http) =>
-            service.SetOpenAsync(gameId, http.User.GetTelegramUserId(), request.IsOpen)).WithName("SetTableOpen");
+            service.SetOpenAsync(gameId, http.User.GetUserId(), request.IsOpen)).WithName("SetTableOpen");
     }
 }

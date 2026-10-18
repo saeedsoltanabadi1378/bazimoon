@@ -10,7 +10,6 @@ namespace Bazimoon.Domain;
 public sealed record GameStateSnapshot(
     Guid GameId,
     DateTimeOffset CreatedAt,
-    long? TelegramChatId,
     GamePhase CurrentPhase,
     int NightNumber,
     GameConfig Config,
@@ -40,7 +39,7 @@ public sealed record GameStateSnapshot(
 
 public sealed record PlayerSnapshot(
     Guid Id,
-    string TelegramUsername,
+    string DisplayName,
     Role? Role,
     bool IsAlive,
     int? GodfatherRank,

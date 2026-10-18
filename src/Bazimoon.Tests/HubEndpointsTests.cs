@@ -79,7 +79,7 @@ public class HubEndpointsTests : IClassFixture<BazimoonApiFactory>, IAsyncLifeti
         var clients = new List<HttpClient>();
         for (int i = 0; i < 3; i++)
             clients.Add(await AuthTestHelper.CreateAuthenticatedClientAsync(_factory, 881000 + i, $"rated{i}"));
-        var created = await (await clients[0].PostAsJsonAsync("/api/games", new CreateGameRequest(42900))).Content.ReadFromJsonAsync<CreateGameResponse>();
+        var created = await (await clients[0].PostAsync("/api/games", null)).Content.ReadFromJsonAsync<CreateGameResponse>();
         var gameId = created!.GameId;
 
         var tables = await clients[0].GetFromJsonAsync<List<TableDto>>("/api/hub/tables");

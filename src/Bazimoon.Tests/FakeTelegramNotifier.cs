@@ -5,14 +5,14 @@ using ApiAssembly::Bazimoon.Api.Lounge;
 
 namespace Bazimoon.Tests;
 
-/// <summary>Records bot notifications instead of calling the Telegram Bot API.</summary>
+/// <summary>Records player notifications instead of calling the Telegram Bot API.</summary>
 public sealed class FakeTelegramNotifier : ITelegramNotifier
 {
-    public ConcurrentQueue<(long UserId, string Text, string? StartParam)> Sent { get; } = new();
+    public ConcurrentQueue<(Guid UserId, string Text, string? StartParam)> Sent { get; } = new();
 
-    public Task<bool> NotifyAsync(long telegramUserId, string text, string? startParam = null)
+    public Task<bool> NotifyAsync(Guid userId, string text, string? startParam = null)
     {
-        Sent.Enqueue((telegramUserId, text, startParam));
+        Sent.Enqueue((userId, text, startParam));
         return Task.FromResult(true);
     }
 }

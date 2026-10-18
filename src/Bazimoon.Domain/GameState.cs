@@ -28,10 +28,6 @@ public sealed class GameState
     public Guid GameId { get; private init; }
     public DateTimeOffset CreatedAt { get; private init; }
 
-    /// <summary>Which Telegram chat this game belongs to. Optional/nullable so pure-Domain usage
-    /// (e.g. unit tests) doesn't need a fake chat id; the API always supplies one.</summary>
-    public long? TelegramChatId { get; private init; }
-
     public GameConfig Config { get; private init; } = GameConfig.Default;
     public GamePhase CurrentPhase { get; private set; } = GamePhase.Lobby;
     public int NightNumber { get; private set; }
@@ -92,12 +88,11 @@ public sealed class GameState
     /// <summary>The phase LastWords leads to: Results after a vote, Day after a night kill (or Ended if the game is won).</summary>
     public GamePhase AfterLastWords => _afterLastWords;
 
-    public GameState(GameConfig? config = null, Guid? gameId = null, long? telegramChatId = null)
+    public GameState(GameConfig? config = null, Guid? gameId = null)
     {
         Config = config ?? GameConfig.Default;
         GameId = gameId ?? Guid.NewGuid();
         CreatedAt = DateTimeOffset.UtcNow;
-        TelegramChatId = telegramChatId;
     }
 
     public Player? GetPlayer(Guid id) => _players.FirstOrDefault(p => p.Id == id);
@@ -106,11 +101,10 @@ public sealed class GameState
     public GameStateSnapshot ToSnapshot() => new(
         GameId,
         CreatedAt,
-        TelegramChatId,
         CurrentPhase,
         NightNumber,
         Config,
-        _players.Select(p => new PlayerSnapshot(p.Id, p.TelegramUsername, p.Role, p.IsAlive, p.GodfatherRank, p.EliminatedBy, p.EliminatedRound, p.WasPromoted, p.Revealed, p.AbilityUsed, p.InquiryUsed)).ToList(),
+        _players.Select(p => new PlayerSnapshot(p.Id, p.DisplayName, p.Role, p.IsAlive, p.GodfatherRank, p.EliminatedBy, p.EliminatedRound, p.WasPromoted, p.Revealed, p.AbilityUsed, p.InquiryUsed)).ToList(),
         _nightActions.Values.Select(a => new NightActionSnapshot(a.ActorId, a.TargetId, a.ActionType)).ToList(),
         new Dictionary<Guid, Guid?>(_votes),
         _investigatedTargets.ToList(),
@@ -137,7 +131,7 @@ public sealed class GameState
     /// <summary>Reconstructs a GameState (including in-flight submissions) from a snapshot, bypassing normal transition guards.</summary>
     public static GameState FromSnapshot(GameStateSnapshot snapshot)
     {
-        var game = new GameState(snapshot.Config, snapshot.GameId, snapshot.TelegramChatId)
+        var game = new GameState(snapshot.Config, snapshot.GameId)
         {
             CreatedAt = snapshot.CreatedAt,
             CurrentPhase = snapshot.CurrentPhase,
@@ -164,7 +158,7 @@ public sealed class GameState
 
         foreach (var ps in snapshot.Players)
         {
-            var player = new Player(ps.Id, ps.TelegramUsername);
+            var player = new Player(ps.Id, ps.DisplayName);
             if (ps.Role.HasValue)
                 player.AssignRole(ps.Role.Value);
             if (ps.GodfatherRank.HasValue)

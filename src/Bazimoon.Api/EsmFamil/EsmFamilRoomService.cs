@@ -28,7 +28,7 @@ public sealed class EsmFamilRoomService
 
     private DateTimeOffset Now => _clock.GetUtcNow();
 
-    public async Task<EsmRoomView> CreateAsync(long userId, string name, EsmRoomSettings settings)
+    public async Task<EsmRoomView> CreateAsync(Guid userId, string name, EsmRoomSettings settings)
     {
         if (!(await _settings.GetAsync()).IsGameOn("esmfamil")) throw new GameException("Esm-Famil is switched off for now.");
         var clean = Clean(settings);
@@ -45,9 +45,9 @@ public sealed class EsmFamilRoomService
         }
     }
 
-    public async Task<EsmRoomView> GetAsync(string code, long userId) => await Act(code, userId, (_, _) => { }, requireMember: true);
+    public async Task<EsmRoomView> GetAsync(string code, Guid userId) => await Act(code, userId, (_, _) => { }, requireMember: true);
 
-    public async Task<EsmRoomView> JoinAsync(string code, long userId, string name)
+    public async Task<EsmRoomView> JoinAsync(string code, Guid userId, string name)
     {
         return await Act(code, userId, (room, seat) =>
         {
@@ -58,13 +58,13 @@ public sealed class EsmFamilRoomService
         }, requireMember: false);
     }
 
-    public Task<EsmRoomView> SetReadyAsync(string code, long userId, bool ready) => Act(code, userId, (room, seat) =>
+    public Task<EsmRoomView> SetReadyAsync(string code, Guid userId, bool ready) => Act(code, userId, (room, seat) =>
     {
         if (room.Phase != EsmPhase.Lobby) throw new GameException("The game has already started.");
         seat!.Ready = ready || seat.Id == room.HostSeat;
     });
 
-    public Task<EsmRoomView> UpdateSettingsAsync(string code, long userId, EsmRoomSettings settings)
+    public Task<EsmRoomView> UpdateSettingsAsync(string code, Guid userId, EsmRoomSettings settings)
     {
         var clean = Clean(settings);
         return Act(code, userId, (room, seat) =>
@@ -75,7 +75,7 @@ public sealed class EsmFamilRoomService
         });
     }
 
-    public Task<EsmRoomView> StartAsync(string code, long userId) => Act(code, userId, (room, seat) =>
+    public Task<EsmRoomView> StartAsync(string code, Guid userId) => Act(code, userId, (room, seat) =>
     {
         RequireHost(room, seat!);
         if (room.Phase != EsmPhase.Lobby) throw new GameException("The game has already started.");
@@ -87,14 +87,14 @@ public sealed class EsmFamilRoomService
         StartRound(room, 0);
     });
 
-    public Task<EsmRoomView> SaveAnswersAsync(string code, long userId, IReadOnlyList<string>? answers) => Act(code, userId, (room, seat) =>
+    public Task<EsmRoomView> SaveAnswersAsync(string code, Guid userId, IReadOnlyList<string>? answers) => Act(code, userId, (room, seat) =>
     {
         if (room.Phase != EsmPhase.Writing) return; // too late: the round already moved on
         if (Now > room.Deadline.AddSeconds(1.5)) return;
         seat!.Answers = Fit(answers, room.Settings.Categories.Count);
     });
 
-    public Task<EsmRoomView> StopAsync(string code, long userId, IReadOnlyList<string>? answers) => Act(code, userId, (room, seat) =>
+    public Task<EsmRoomView> StopAsync(string code, Guid userId, IReadOnlyList<string>? answers) => Act(code, userId, (room, seat) =>
     {
         if (room.Phase != EsmPhase.Writing) return;
         seat!.Answers = Fit(answers, room.Settings.Categories.Count);
@@ -105,7 +105,7 @@ public sealed class EsmFamilRoomService
         if (stopAt < room.Deadline) room.Deadline = stopAt;
     });
 
-    public Task<EsmRoomView> VoteAsync(string code, long userId, EsmVoteRequest request) => Act(code, userId, (room, seat) =>
+    public Task<EsmRoomView> VoteAsync(string code, Guid userId, EsmVoteRequest request) => Act(code, userId, (room, seat) =>
     {
         if (room.Phase != EsmPhase.Judging) return;
         foreach (var v in request.Votes ?? [])
@@ -118,13 +118,13 @@ public sealed class EsmFamilRoomService
         if (request.Done) seat!.VotesDone = true;
     });
 
-    public Task<EsmRoomView> NextRoundAsync(string code, long userId) => Act(code, userId, (room, seat) =>
+    public Task<EsmRoomView> NextRoundAsync(string code, Guid userId) => Act(code, userId, (room, seat) =>
     {
         RequireHost(room, seat!);
         if (room.Phase == EsmPhase.Scores) AdvanceFromScores(room);
     });
 
-    public Task<EsmRoomView> LeaveAsync(string code, long userId) => Act(code, userId, (room, seat) =>
+    public Task<EsmRoomView> LeaveAsync(string code, Guid userId) => Act(code, userId, (room, seat) =>
     {
         if (room.Phase == EsmPhase.Lobby) room.Players.Remove(seat!);
         else seat!.Left = true;
@@ -133,7 +133,7 @@ public sealed class EsmFamilRoomService
 
     // ------------------------------------------------------------------ internals
 
-    private async Task<EsmRoomView> Act(string code, long userId, Action<Room, Seat?> action, bool requireMember = true)
+    private async Task<EsmRoomView> Act(string code, Guid userId, Action<Room, Seat?> action, bool requireMember = true)
     {
         List<Award>? awards;
         EsmRoomView view;
@@ -267,14 +267,14 @@ public sealed class EsmFamilRoomService
             stats.UpdatedAt = DateTime.UtcNow;
             db.PuzzleResults.Add(new PuzzleResultRecord
             {
-                TelegramUserId = a.UserId, Game = "esmfamil", Mode = "online", Day = day, Solved = a.Won,
+                UserId = a.UserId, Game = "esmfamil", Mode = "online", Day = day, Solved = a.Won,
                 Moves = a.Total, Detail = a.Place, XpGained = xp, Points = Progression.LeaguePoints(outcome, xp),
             });
         }
         await db.SaveChangesAsync();
     }
 
-    private EsmRoomView View(Room room, long userId)
+    private EsmRoomView View(Room room, Guid userId)
     {
         var me = room.Players.FirstOrDefault(p => p.UserId == userId);
         bool reveal = room.Phase is EsmPhase.Judging or EsmPhase.Scores or EsmPhase.Finished;
@@ -342,12 +342,12 @@ public sealed class EsmFamilRoomService
 
     private enum EsmPhase { Lobby, Writing, Judging, Scores, Finished }
 
-    private sealed record Award(long UserId, string Name, bool Won, int Total, int Place);
+    private sealed record Award(Guid UserId, string Name, bool Won, int Total, int Place);
 
     private sealed class Seat
     {
         public int Id;
-        public long UserId;
+        public Guid UserId;
         public string Name = string.Empty;
         public bool Ready;
         public bool Left;

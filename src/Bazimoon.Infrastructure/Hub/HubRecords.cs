@@ -1,10 +1,10 @@
 namespace Bazimoon.Infrastructure.Hub;
 
 /// <summary>Per-player progression and settings for the Mini App hub (XP, Mafia rating, puzzle
-/// streak). One row per Telegram user, created lazily the first time they appear.</summary>
+/// streak). One row per user, created lazily the first time they appear.</summary>
 public sealed class PlayerStatsRecord
 {
-    public long TelegramUserId { get; set; }
+    public Guid UserId { get; set; }
     public string Username { get; set; } = string.Empty;
     public int Xp { get; set; }
     public int Rating { get; set; } = Progression.StartingRating;
@@ -31,7 +31,7 @@ public sealed class PlayerStatsRecord
 public sealed class PuzzleResultRecord
 {
     public long Id { get; set; }
-    public long TelegramUserId { get; set; }
+    public Guid UserId { get; set; }
     /// <summary>Game key: zip, queens, merge, mines, memory, nard, word, ladder, stack, blocks.</summary>
     public string Game { get; set; } = string.Empty;
     /// <summary>daily, practice, archive, classic, endless, timed, easy/medium/hard, ...</summary>
@@ -50,12 +50,4 @@ public sealed class PuzzleResultRecord
     public int XpGained { get; set; }
     public int Points { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-}
-
-/// <summary>Which Telegram users have played in which group chats ("your group" boards, tables).</summary>
-public sealed class ChatMemberRecord
-{
-    public long TelegramChatId { get; set; }
-    public long TelegramUserId { get; set; }
-    public DateTime LastSeenAt { get; set; } = DateTime.UtcNow;
 }

@@ -68,8 +68,6 @@ jobs:
         include:
           - service: api
             dockerfile: src/Bazimoon.Api/Dockerfile
-          - service: bot
-            dockerfile: src/Bazimoon.Bot/Dockerfile
           - service: frontend
             dockerfile: frontend/bazimoon-app/Dockerfile
     steps:

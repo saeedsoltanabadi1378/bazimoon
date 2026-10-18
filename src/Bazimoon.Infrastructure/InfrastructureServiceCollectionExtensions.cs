@@ -13,16 +13,10 @@ namespace Bazimoon.Infrastructure;
 
 public static class InfrastructureServiceCollectionExtensions
 {
-    /// <summary>Registers Postgres (game history), Redis (live game sessions + chat/roster
-    /// indexes), Agora token generation, and JWT issuance. Expects config keys:
+    /// <summary>Registers Postgres (game history), Redis (live game sessions + roster
+    /// index), Agora token generation, and JWT issuance. Expects config keys:
     /// ConnectionStrings:Postgres, ConnectionStrings:Redis, Agora:AppId, Agora:AppCertificate,
     /// Jwt:SigningKey.
-    ///
-    /// Both Bazimoon.Api and Bazimoon.Bot call this — Bot only actually uses JwtTokenService
-    /// (to mint tokens for trusted Bot-API-sourced identities) plus the chat/roster indexes, not
-    /// Postgres history or Agora tokens directly, but registering everything through one shared
-    /// method is simpler to maintain than splintering DI wiring per-service at this project's
-    /// scale; the cost is Bot's config needing a couple of settings it doesn't strictly touch.
     ///
     /// All config is consumed lazily via IOptions, validated with ValidateOnStart() rather than
     /// read eagerly here: eager reads of `configuration` at registration time only see whatever
@@ -47,7 +41,6 @@ public static class InfrastructureServiceCollectionExtensions
             ConnectionMultiplexer.Connect(sp.GetRequiredService<IOptions<ConnectionStringsOptions>>().Value.Redis));
         services.AddSingleton<IKeyValueCache, RedisKeyValueCache>();
         services.AddSingleton<IGameSessionStore, GameSessionStore>();
-        services.AddSingleton<IChatGameIndex, ChatGameIndex>();
         services.AddSingleton<IGameRosterStore, GameRosterStore>();
 
         services.AddOptions<AgoraOptions>()

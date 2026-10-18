@@ -49,6 +49,4 @@ public static class BotMessages
         languageCode is { } code && code.StartsWith("fa", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrWhiteSpace(persian) ? persian : english;
 }
 
-public sealed class UserProfileRecord { public long TelegramUserId { get; set; } public string Username { get; set; } = string.Empty; public DateTime FirstSeenAt { get; set; } = DateTime.UtcNow; public DateTime LastSeenAt { get; set; } = DateTime.UtcNow; }
-public sealed class ChatProfileRecord { public long TelegramChatId { get; set; } public string? Title { get; set; } public DateTime FirstSeenAt { get; set; } = DateTime.UtcNow; public DateTime LastSeenAt { get; set; } = DateTime.UtcNow; }
 public sealed class OperationalEventRecord { public long Id { get; set; } public DateTime CreatedAt { get; set; } = DateTime.UtcNow; public string Category { get; set; } = string.Empty; public string Severity { get; set; } = "Information"; public string Message { get; set; } = string.Empty; public string? TargetType { get; set; } public string? TargetId { get; set; } public string? MetadataJson { get; set; } public bool IsAdminAudit { get; set; } }

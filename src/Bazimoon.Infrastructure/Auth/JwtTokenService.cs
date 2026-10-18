@@ -3,6 +3,7 @@ using System.Security.Claims;
 using System.Text;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
+using Bazimoon.Infrastructure.Identity;
 
 namespace Bazimoon.Infrastructure.Auth;
 
@@ -15,12 +16,13 @@ public sealed class JwtTokenService
         _options = options.Value;
     }
 
-    public string IssueToken(TelegramIdentity identity)
+    public string IssueToken(UserRecord user)
     {
         var claims = new[]
         {
-            new Claim(BazimoonClaimTypes.TelegramUserId, identity.Id.ToString()),
-            new Claim(BazimoonClaimTypes.TelegramUsername, identity.Username ?? identity.FirstName)
+            new Claim(BazimoonClaimTypes.UserId, user.Id.ToString()),
+            new Claim(BazimoonClaimTypes.DisplayName, user.DisplayName),
+            new Claim(BazimoonClaimTypes.IsGuest, user.IsGuest ? "true" : "false")
         };
 
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_options.SigningKey));

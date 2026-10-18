@@ -1,3 +1,4 @@
+using static Bazimoon.Tests.TestIds;
 using System.Net;
 using System.Net.Http.Json;
 using Microsoft.EntityFrameworkCore;
@@ -83,7 +84,7 @@ public class EsmFamilRoomTests : IClassFixture<BazimoonApiFactory>, IAsyncLifeti
     public async Task FullOnlineGame_StopVoteScoreAndAwardXp()
     {
         var (rooms, clock) = NewService();
-        const long host = 7_100_001, guest = 7_100_002, third = 7_100_003;
+        Guid host = U(7_100_001), guest = U(7_100_002), third = U(7_100_003);
 
         var room = await rooms.CreateAsync(host, "host", Settings());
         Assert.Equal("lobby", room.Phase);
@@ -141,28 +142,28 @@ public class EsmFamilRoomTests : IClassFixture<BazimoonApiFactory>, IAsyncLifeti
 
         using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<BazimoonDbContext>();
-        var results = await db.PuzzleResults.Where(r => r.Game == "esmfamil" && r.Mode == "online" && (r.TelegramUserId == host || r.TelegramUserId == guest || r.TelegramUserId == third)).ToListAsync();
+        var results = await db.PuzzleResults.Where(r => r.Game == "esmfamil" && r.Mode == "online" && (r.UserId == host || r.UserId == guest || r.UserId == third)).ToListAsync();
         Assert.Equal(3, results.Count);
-        Assert.Equal(30, results.Single(r => r.TelegramUserId == host).XpGained);
-        Assert.Equal(10, results.Single(r => r.TelegramUserId == guest).XpGained);
+        Assert.Equal(30, results.Single(r => r.UserId == host).XpGained);
+        Assert.Equal(10, results.Single(r => r.UserId == guest).XpGained);
 
         // Reading the finished room again never awards twice.
         await rooms.GetAsync(room.Code, third);
-        Assert.Equal(3, await db.PuzzleResults.CountAsync(r => r.Game == "esmfamil" && r.Mode == "online" && (r.TelegramUserId == host || r.TelegramUserId == guest || r.TelegramUserId == third)));
+        Assert.Equal(3, await db.PuzzleResults.CountAsync(r => r.Game == "esmfamil" && r.Mode == "online" && (r.UserId == host || r.UserId == guest || r.UserId == third)));
     }
 
     [Fact]
     public async Task HostLeaving_HandsOverTheRoom_AndStrangersCannotPeek()
     {
         var (rooms, _) = NewService();
-        var room = await rooms.CreateAsync(7_100_011, "a", Settings());
-        await rooms.JoinAsync(room.Code, 7_100_012, "b");
-        await Assert.ThrowsAsync<Bazimoon.Api.Games.ForbiddenGameActionException>(() => rooms.GetAsync(room.Code, 7_100_013));
-        room = await rooms.LeaveAsync(room.Code, 7_100_011);
-        room = await rooms.GetAsync(room.Code, 7_100_012);
+        var room = await rooms.CreateAsync(U(7_100_011), "a", Settings());
+        await rooms.JoinAsync(room.Code, U(7_100_012), "b");
+        await Assert.ThrowsAsync<Bazimoon.Api.Games.ForbiddenGameActionException>(() => rooms.GetAsync(room.Code, U(7_100_013)));
+        room = await rooms.LeaveAsync(room.Code, U(7_100_011));
+        room = await rooms.GetAsync(room.Code, U(7_100_012));
         Assert.True(room.YouAreHost);
         Assert.Single(room.Players);
-        await Assert.ThrowsAsync<GameException>(() => rooms.GetAsync("EF-ZZZ", 7_100_012));
+        await Assert.ThrowsAsync<GameException>(() => rooms.GetAsync("EF-ZZZ", U(7_100_012)));
     }
 
     [Fact]
