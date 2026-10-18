@@ -121,6 +121,12 @@ public static class GameEndpoints
             return Results.Ok();
         }).WithName("FinishDiscussionSegment");
 
+        group.MapPut("/{gameId:guid}/ready", async (Guid gameId, SetReadyRequest request, GameService games, HttpContext http) =>
+        {
+            await games.SetReadyAsync(gameId, http.User.GetTelegramUserId(), request.Ready);
+            return Results.Ok();
+        }).WithName("SetReady");
+
         group.MapPost("/{gameId:guid}/last-words/finish", async (Guid gameId, GameService games, HttpContext http) =>
         {
             await games.FinishLastWordsAsync(gameId, http.User.GetTelegramUserId());
@@ -182,3 +188,5 @@ public sealed record SubmitNightActionRequest(Guid TargetPlayerId, NightActionTy
 public sealed record SubmitVoteRequest(Guid? TargetPlayerId);
 
 public sealed record VoiceTokenResponse(string Token, string Channel, uint Uid, string Role);
+
+public sealed record SetReadyRequest(bool Ready);

@@ -43,7 +43,8 @@ public sealed class GameHistoryRepository : IGameHistoryRepository
                 EliminatedBy = p.EliminatedBy,
                 EliminatedRound = p.EliminatedRound,
                 WasPromoted = p.WasPromoted,
-                Won = result == WinCondition.None ? null : p.IsMafiaAligned == (result == WinCondition.MafiaWin)
+                // Leaving mid-game, or being removed for inactivity, is always a loss.
+                Won = result == WinCondition.None ? null : p.EliminatedBy != EliminationCause.Left && p.IsMafiaAligned == (result == WinCondition.MafiaWin)
             }).ToList()
         };
 

@@ -116,7 +116,17 @@ public sealed class GameService
     {
         using var held = await _mutationLock.EnterAsync(gameId);
         var game = await LoadOrThrowAsync(gameId);
-        game.RemovePlayer(PlayerIdentity.DeriveId(gameId, telegramUserId));
+        var playerId = PlayerIdentity.DeriveId(gameId, telegramUserId);
+        if (game.CurrentPhase == GamePhase.Lobby) game.RemovePlayer(playerId);
+        else game.LeaveMidGame(playerId, DateTimeOffset.UtcNow);
+        await SaveAndNotifyAsync(game);
+    }
+
+    public async Task SetReadyAsync(Guid gameId, long telegramUserId, bool ready)
+    {
+        using var held = await _mutationLock.EnterAsync(gameId);
+        var game = await LoadOrThrowAsync(gameId);
+        game.SetReady(PlayerIdentity.DeriveId(gameId, telegramUserId), ready, DateTimeOffset.UtcNow);
         await SaveAndNotifyAsync(game);
     }
 
@@ -259,7 +269,7 @@ public sealed class GameService
 
     private static void EnsureController(GameState game, long telegramUserId)
     {
-        var controller = game.Players.FirstOrDefault()
+        var controller = game.Controller
             ?? throw new ForbiddenGameActionException("This game has no controller.");
         var callerId = PlayerIdentity.DeriveId(game.GameId, telegramUserId);
         if (controller.Id != callerId)

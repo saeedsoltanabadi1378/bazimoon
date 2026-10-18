@@ -12,6 +12,15 @@ public sealed class GameState
     private readonly HashSet<Guid> _pendingChallengeRequests = new();
     private readonly List<Guid> _runoffCandidates = new();
     private GamePhase _afterLastWords = GamePhase.Results;
+    private readonly HashSet<Guid> _ready = new();
+    private readonly Dictionary<Guid, int> _strikes = new();
+    private readonly List<Guid> _lastRemoved = new();
+
+    /// <summary>Seconds between everyone being ready at a full table and the game starting by itself.</summary>
+    public const int AutoStartSeconds = 5;
+
+    /// <summary>Two timed turns missed in a row remove a player.</summary>
+    public const int StrikesToRemove = 2;
 
     public Guid GameId { get; private init; }
     public DateTimeOffset CreatedAt { get; private init; }
@@ -49,6 +58,22 @@ public sealed class GameState
     /// <summary>Who is saying their last words, during LastWords.</summary>
     public Guid? LastWordsPlayerId { get; private set; }
 
+    /// <summary>Lobby players who tapped Ready.</summary>
+    public IReadOnlyCollection<Guid> ReadyPlayers => _ready;
+
+    /// <summary>When a full lobby where everyone is ready starts by itself.</summary>
+    public DateTimeOffset? AutoStartAt { get; private set; }
+
+    /// <summary>Timed turns each player has missed in a row.</summary>
+    public IReadOnlyDictionary<Guid, int> Strikes => _strikes;
+
+    /// <summary>Players removed for inactivity when the last timed night or vote closed.</summary>
+    public IReadOnlyList<Guid> LastRemovedForInactivity => _lastRemoved;
+
+    /// <summary>Who runs the game: the longest-seated player who has not left. Being killed or voted
+    /// out does not hand it over; leaving or being removed for inactivity does.</summary>
+    public Player? Controller => _players.FirstOrDefault(p => p.EliminatedBy != EliminationCause.Left);
+
     /// <summary>The phase LastWords leads to: Results after a vote, Day after a night kill (or Ended if the game is won).</summary>
     public GamePhase AfterLastWords => _afterLastWords;
 
@@ -83,7 +108,11 @@ public sealed class GameState
         _runoffCandidates.ToList(),
         PhaseDeadline,
         LastWordsPlayerId,
-        _afterLastWords);
+        _afterLastWords,
+        _ready.ToList(),
+        AutoStartAt,
+        new Dictionary<Guid, int>(_strikes),
+        _lastRemoved.ToList());
 
     /// <summary>Reconstructs a GameState (including in-flight submissions) from a snapshot, bypassing normal transition guards.</summary>
     public static GameState FromSnapshot(GameStateSnapshot snapshot)
@@ -99,8 +128,12 @@ public sealed class GameState
             VotingRound = snapshot.VotingRound,
             PhaseDeadline = snapshot.PhaseDeadline,
             LastWordsPlayerId = snapshot.LastWordsPlayerId,
-            _afterLastWords = snapshot.AfterLastWords
+            _afterLastWords = snapshot.AfterLastWords,
+            AutoStartAt = snapshot.AutoStartAt
         };
+        if (snapshot.ReadyPlayers is { } ready) game._ready.UnionWith(ready);
+        if (snapshot.Strikes is { } strikes) foreach (var (id, n) in strikes) game._strikes[id] = n;
+        if (snapshot.LastRemovedForInactivity is { } removed) game._lastRemoved.AddRange(removed);
         if (snapshot.RunoffCandidates is { } runoff)
             game._runoffCandidates.AddRange(runoff);
 
@@ -157,7 +190,23 @@ public sealed class GameState
             throw new GameException($"Lobby is full (max {Config.MaxPlayers} players).");
 
         _players.Add(player);
+        ResetAutoStart();
     }
+
+    /// <summary>A lobby player taps Ready (or Not ready). A full table where everyone is ready starts
+    /// <see cref="AutoStartSeconds"/> later; anyone un-readying or leaving stops the countdown.</summary>
+    public void SetReady(Guid playerId, bool ready, DateTimeOffset now)
+    {
+        if (CurrentPhase != GamePhase.Lobby)
+            throw new GameException("Ready can only be set in the lobby.");
+        if (GetPlayer(playerId) is null)
+            throw new GameException("You are not in this lobby.");
+        if (ready) _ready.Add(playerId); else _ready.Remove(playerId);
+        bool everyone = _players.Count >= Config.MaxPlayers && _players.Count >= Config.MinPlayers && _players.All(p => _ready.Contains(p.Id));
+        AutoStartAt = everyone ? AutoStartAt ?? now.AddSeconds(AutoStartSeconds) : null;
+    }
+
+    private void ResetAutoStart() => AutoStartAt = null;
 
     /// <summary>Links a finished game to the rematch its players can join.</summary>
     public void SetRematch(Guid rematchGameId)
@@ -174,6 +223,8 @@ public sealed class GameState
             throw new GameException("Players can only leave during the Lobby phase.");
         var player = GetPlayer(playerId) ?? throw new GameException("You are not in this lobby.");
         _players.Remove(player);
+        _ready.Remove(playerId);
+        ResetAutoStart();
     }
 
     /// <summary>Players the Detective has already investigated (each can be checked only once).</summary>
@@ -230,6 +281,8 @@ public sealed class GameState
     private void AssignRolesCore(List<Player> ordered)
     {
         CurrentPhase = GamePhase.RoleAssignment;
+        _ready.Clear();
+        AutoStartAt = null;
 
         int mafiaCount = DetermineMafiaCount(ordered.Count);
         int i = 0;
@@ -308,7 +361,14 @@ public sealed class GameState
         if (CurrentPhase is not (GamePhase.Night or GamePhase.NightZero))
             throw new GameException("ResolveNight can only be called during Night or NightZero.");
         var at = now ?? DateTimeOffset.UtcNow;
+        bool timedOut = PhaseDeadline is { } nightDeadline && nightDeadline <= at;
         PhaseDeadline = null;
+        _lastRemoved.Clear();
+        if (CurrentPhase == GamePhase.Night && timedOut)
+        {
+            var required = _players.Where(p => p.IsAlive && p.Role is Role.Godfather or Role.Detective or Role.Doctor).Select(p => p.Id);
+            RemoveInactive(required, id => _nightActions.ContainsKey(id));
+        }
 
         NightNumber++;
 
@@ -318,7 +378,7 @@ public sealed class GameState
 
         bool wasSaved = killTarget.HasValue && killTarget == healTarget;
         Guid? eliminated = null;
-        if (killTarget.HasValue && !wasSaved)
+        if (killTarget.HasValue && !wasSaved && GetPlayer(killTarget.Value)!.IsAlive)
         {
             var victim = GetPlayer(killTarget.Value)!;
             victim.Eliminate(EliminationCause.Night, NightNumber);
@@ -364,7 +424,18 @@ public sealed class GameState
             return null;
         if (_nightActions.TryGetValue(godfather.Id, out var action) && action.ActionType == NightActionType.Kill)
             return action.TargetId;
-        return null;
+        // The Godfather did nothing: the kill goes to the living target the other Mafia suggested most.
+        // A tie between suggestions, or none at all, means nobody dies.
+        var top = _nightActions.Values
+            .Where(a => a.ActionType == NightActionType.Kill && GetPlayer(a.ActorId)?.IsAlive == true && GetPlayer(a.TargetId)?.IsAlive == true)
+            .GroupBy(a => a.TargetId)
+            .Select(g => (Target: g.Key, Count: g.Count()))
+            .OrderByDescending(x => x.Count)
+            .Take(2)
+            .ToList();
+        if (top.Count == 0 || (top.Count == 2 && top[0].Count == top[1].Count))
+            return null;
+        return top[0].Target;
     }
 
     private Guid? ResolveDoctorHealTarget()
@@ -418,10 +489,14 @@ public sealed class GameState
         if (CurrentPhase != GamePhase.Voting)
             throw new GameException("ResolveVoting can only be called during Voting.");
         var at = now ?? DateTimeOffset.UtcNow;
+        bool timedOut = PhaseDeadline is { } voteDeadline && voteDeadline <= at;
+        _lastRemoved.Clear();
+        if (timedOut)
+            RemoveInactive(_players.Where(p => p.IsAlive).Select(p => p.Id), id => _votes.ContainsKey(id));
 
         var ballots = new Dictionary<Guid, Guid?>(_votes);
         var tally = _votes.Values
-            .Where(v => v.HasValue)
+            .Where(v => v.HasValue && GetPlayer(v.Value)?.IsAlive == true)
             .GroupBy(v => v!.Value)
             .Select(g => (PlayerId: g.Key, Count: g.Count()))
             .ToList();
@@ -431,7 +506,7 @@ public sealed class GameState
         int round = VotingRound;
         var previous = round == 2 ? LastVotingResult : null;
 
-        if (tally.Count == 0)
+        if (tally.Count == 0 || CheckWinCondition() != WinCondition.None)
         {
             var noVotesResult = new VotingResult(null, false, Array.Empty<Guid>(), null, ballots, round, previous);
             LastVotingResult = noVotesResult;
@@ -470,11 +545,57 @@ public sealed class GameState
         return result;
     }
 
+    /// <summary>Gives a strike to every one of <paramref name="expected"/> who did not act, clears the strikes of
+    /// those who did, and removes anyone who reached <see cref="StrikesToRemove"/>.</summary>
+    private void RemoveInactive(IEnumerable<Guid> expected, Func<Guid, bool> acted)
+    {
+        foreach (var id in expected.ToList())
+        {
+            if (acted(id)) { _strikes.Remove(id); continue; }
+            _strikes[id] = _strikes.GetValueOrDefault(id) + 1;
+            if (_strikes[id] < StrikesToRemove) continue;
+            var player = GetPlayer(id)!;
+            player.Eliminate(EliminationCause.Left, NightNumber);
+            _strikes.Remove(id);
+            _lastRemoved.Add(id);
+            HandlePotentialGodfatherDeath(id);
+        }
+    }
+
+    /// <summary>A player leaves a game that has started: they are out, their role is shown, and it counts as
+    /// a loss. If they held the floor their turn ends; if they were the creator, the next seat takes over.</summary>
+    public void LeaveMidGame(Guid playerId, DateTimeOffset now)
+    {
+        if (CurrentPhase is GamePhase.Lobby or GamePhase.Ended)
+            throw new GameException("You can only leave a game that is under way.");
+        var player = GetAliveOrThrow(playerId, "Player");
+        player.Eliminate(EliminationCause.Left, NightNumber);
+        _votes.Remove(playerId);
+        _nightActions.Remove(playerId);
+        _strikes.Remove(playerId);
+        HandlePotentialGodfatherDeath(playerId);
+
+        if (CheckWinCondition() != WinCondition.None && CurrentPhase != GamePhase.LastWords)
+        {
+            Discussion = null;
+            PhaseDeadline = null;
+            CurrentPhase = GamePhase.Ended;
+            return;
+        }
+        if (Discussion?.ActivePlayerId == playerId)
+            CompleteActiveDiscussionSegment(now);
+        if (CurrentPhase == GamePhase.Voting && VotingRound == 2 && _runoffCandidates.All(id => GetPlayer(id)?.IsAlive != true))
+        {
+            // Nobody left to vote for in the re-vote.
+            ResolveVoting(now);
+        }
+    }
+
     private void StartRunoff(IReadOnlyCollection<Guid> tied, DateTimeOffset now)
     {
         VotingRound = 2;
         _runoffCandidates.Clear();
-        _runoffCandidates.AddRange(_players.Where(p => tied.Contains(p.Id)).Select(p => p.Id));
+        _runoffCandidates.AddRange(_players.Where(p => tied.Contains(p.Id) && p.IsAlive).Select(p => p.Id));
         CurrentPhase = GamePhase.Defence;
         _discussionSpeakerOrder.Clear();
         _discussionSpeakerOrder.AddRange(_runoffCandidates);
@@ -534,6 +655,9 @@ public sealed class GameState
                 return AdvanceExpiredDiscussion(now);
             case GamePhase.LastWords when PhaseDeadline <= now:
                 CompleteLastWords(now);
+                return true;
+            case GamePhase.Lobby when AutoStartAt <= now:
+                AssignRoles();
                 return true;
             case GamePhase.Night when PhaseDeadline <= now:
                 ResolveNight(now);

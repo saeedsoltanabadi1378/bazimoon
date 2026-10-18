@@ -27,7 +27,11 @@ public sealed record GameStateSnapshot(
     IReadOnlyList<Guid>? RunoffCandidates = null,
     DateTimeOffset? PhaseDeadline = null,
     Guid? LastWordsPlayerId = null,
-    GamePhase AfterLastWords = GamePhase.Results);
+    GamePhase AfterLastWords = GamePhase.Results,
+    IReadOnlyCollection<Guid>? ReadyPlayers = null,
+    DateTimeOffset? AutoStartAt = null,
+    IReadOnlyDictionary<Guid, int>? Strikes = null,
+    IReadOnlyList<Guid>? LastRemovedForInactivity = null);
 
 public sealed record PlayerSnapshot(
     Guid Id,

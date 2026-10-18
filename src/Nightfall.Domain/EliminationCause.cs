@@ -9,5 +9,8 @@ public enum EliminationCause
     Night,
 
     /// <summary>Voted out by the town during a day.</summary>
-    Vote
+    Vote,
+
+    /// <summary>Left mid-game, or removed for missing two timed turns in a row. Always counts as a loss.</summary>
+    Left
 }

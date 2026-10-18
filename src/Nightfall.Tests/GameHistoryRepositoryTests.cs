@@ -117,4 +117,19 @@ public class GameHistoryRepositoryTests : IDisposable
 
         Assert.Null(record);
     }
+
+    [Fact]
+    public async Task PlayerWhoLeft_LosesEvenWhenTheirTeamWins()
+    {
+        var (game, ps) = TestGameFactory.CreateAssignedGame(5, telegramChatId: 1);
+        var leaver = ps.Villagers()[0];
+        game.LeaveMidGame(leaver.Id, DateTimeOffset.UtcNow);
+        game.LeaveMidGame(ps.Godfather().Id, DateTimeOffset.UtcNow); // town wins
+
+        await _repository.SaveCompletedGameAsync(game);
+
+        var players = await _db.GamePlayers.ToListAsync();
+        Assert.False(players.Single(p => p.PlayerId == leaver.Id).Won);
+        Assert.True(players.Single(p => p.PlayerId == ps.Detective().Id).Won);
+    }
 }

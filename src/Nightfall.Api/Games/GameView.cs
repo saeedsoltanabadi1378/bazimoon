@@ -34,14 +34,20 @@ public sealed record GameView(
     int VotingRound = 1,
     IReadOnlyList<Guid>? RunoffCandidateIds = null,
     LastWordsView? LastWords = null,
-    RulesView? Rules = null)
+    RulesView? Rules = null,
+    IReadOnlyList<Guid>? ReadyPlayerIds = null,
+    DateTimeOffset? AutoStartAt = null,
+    Guid? ControllerPlayerId = null,
+    int YourStrikes = 0,
+    IReadOnlyList<Guid>? RemovedForInactivity = null)
 {
     public static GameView For(GameState game, Guid viewerId)
     {
         var viewer = game.GetPlayer(viewerId);
         bool revealAll = game.CurrentPhase == GamePhase.Ended;
         bool viewerIsMafia = viewer?.IsMafiaAligned == true;
-        bool isController = game.Players.FirstOrDefault()?.Id == viewerId;
+        var controller = game.Controller;
+        bool isController = controller?.Id == viewerId;
         // A player's role is shown after their last words, not while they are still speaking.
         Guid? speakingLastWords = game.CurrentPhase == GamePhase.LastWords ? game.LastWordsPlayerId : null;
 
@@ -146,7 +152,12 @@ public sealed record GameView(
             game.CurrentPhase == GamePhase.LastWords && game.LastWordsPlayerId is { } lastWords && game.PhaseDeadline is { } lastWordsDeadline
                 ? new LastWordsView(lastWords, game.GetPlayer(lastWords)?.EliminatedBy ?? EliminationCause.Vote, lastWordsDeadline, lastWords == viewerId)
                 : null,
-            RulesView.From(game.Config));
+            RulesView.From(game.Config),
+            game.CurrentPhase == GamePhase.Lobby ? game.ReadyPlayers.ToList() : null,
+            game.AutoStartAt,
+            controller?.Id,
+            game.Strikes.GetValueOrDefault(viewerId),
+            game.LastRemovedForInactivity.Count > 0 ? game.LastRemovedForInactivity.ToList() : null);
     }
 }
 
