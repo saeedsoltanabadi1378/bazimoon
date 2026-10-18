@@ -20,6 +20,7 @@ import { initAppShell } from "./lib/platform";
 import { readLocal } from "./lib/storage";
 import { readDeepLink } from "./lib/links";
 import { GoogleButton } from "./ui/GoogleButton";
+import { UpdatePrompt } from "./app/UpdatePrompt";
 
 /** Where the app opens: an invite or game link (/t/CODE, /g/ID, /couple/TOKEN, /ef/CODE), first-launch welcome, or home. */
 function initialRoutes(): Route[] {
@@ -108,6 +109,7 @@ export default function App() {
       <SessionProvider>
         <SessionGate />
       </SessionProvider>
+      <UpdatePrompt />
     </LanguageProvider>
   );
 }

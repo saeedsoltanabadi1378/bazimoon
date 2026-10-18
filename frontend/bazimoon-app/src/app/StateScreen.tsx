@@ -3,7 +3,7 @@ import { IconDisc, Screen } from "../ui/components";
 import type { IconName } from "../ui/Icon";
 import { useLanguage } from "../i18n/LanguageContext";
 
-export type AppState = "offline" | "reconnecting" | "expired" | "not-found" | "error" | "no-table";
+export type AppState = "offline" | "reconnecting" | "expired" | "update" | "not-found" | "error" | "no-table";
 
 interface StateDef {
   icon: IconName;
@@ -15,6 +15,7 @@ const defs: Record<AppState, StateDef> = {
   offline: { icon: "wifiOff", bg: "#2A1418", fg: "#F08A7A" },
   reconnecting: { icon: "refresh", bg: "#1E2138", fg: "#9C8CFF" },
   expired: { icon: "clock", bg: "#2A2113", fg: "#F0A83A" },
+  update: { icon: "download", bg: "#1B2A44", fg: "#8FA8FF" },
   "not-found": { icon: "searchMinus", bg: "#1E2138", fg: "#9A9CB8" },
   error: { icon: "alert", bg: "#2A1418", fg: "#F08A7A" },
   "no-table": { icon: "moon", bg: "#1E2138", fg: "#9C8CFF" },

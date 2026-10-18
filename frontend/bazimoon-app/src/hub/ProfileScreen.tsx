@@ -15,6 +15,8 @@ import { haptic } from "../lib/haptics";
 import { forgetGoogleChoice } from "../lib/google";
 import { GoogleButton } from "../ui/GoogleButton";
 import { SaveProgressSheet, useGoogleLink } from "./SaveProgress";
+import { InstallSheet } from "./InstallSheet";
+import { useInstallMode } from "../lib/install";
 
 
 export function ProfileScreen() {
@@ -24,6 +26,8 @@ export function ProfileScreen() {
   const { push } = useNavigation();
   const [editingTime, setEditingTime] = useState(false);
   const google = useGoogleLink();
+  const installMode = useInstallMode();
+  const [showInstall, setShowInstall] = useState(false);
 
   if (!profile) {
     return (
@@ -163,6 +167,9 @@ export function ProfileScreen() {
             void saveSettings({ haptics: !s.haptics });
             haptic.tap();
           }} />
+          {(installMode === "prompt" || installMode === "ios") && (
+            <SettingRow label={t("installApp")} value={t("addToHomeScreen")} onClick={() => setShowInstall(true)} />
+          )}
           <SettingRow label={t("inviteFriends")} value={t("share")} onClick={() => void shareLink(appLink(), t("inviteText"))} />
           {!session.isGuest && (
             <button type="button" onClick={() => { forgetGoogleChoice(); void session.logout(); }} style={{ width: "100%", minHeight: 52, padding: "0 16px", border: 0, borderTop: "1px solid #232734", background: "transparent", color: "#F08A7A", fontSize: 15, fontWeight: 600, textAlign: "start", cursor: "pointer" }}>
@@ -172,6 +179,7 @@ export function ProfileScreen() {
         </section>
       </Body>
       {google.stage && google.stage !== "prompt" && <SaveProgressSheet link={google} onClose={() => google.setStage(null)} />}
+      {showInstall && <InstallSheet mode={installMode} onClose={() => setShowInstall(false)} />}
       <TabBar />
     </Screen>
   );
