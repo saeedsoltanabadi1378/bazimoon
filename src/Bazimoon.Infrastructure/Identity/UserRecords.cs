@@ -6,6 +6,9 @@ public sealed class UserRecord
 {
     public Guid Id { get; set; } = Guid.NewGuid();
     public bool IsGuest { get; set; } = true;
+    /// <summary>Marked by an admin as an automated or test account: left out of player counts,
+    /// active players, leaderboards and leagues.</summary>
+    public bool IsBot { get; set; }
     public string DisplayName { get; set; } = string.Empty;
     public string Language { get; set; } = "en";
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

@@ -33,6 +33,8 @@ export interface Page<T> {
   total: number;
   page: number;
   pageSize: number;
+  /** Players list only: how many are in the other tab (bots, or real players). */
+  otherTotal?: number | null;
 }
 
 export interface PlayerInGame {
@@ -123,6 +125,7 @@ export interface PlayerRow {
   streak: number;
   language: string;
   lastSeen: string;
+  isBot: boolean;
 }
 
 export interface ActivityItem {
@@ -157,6 +160,7 @@ export interface PlayerDetail {
   couple: { status: "none" | "pending" | "active"; partnerName: string | null; since: string | null };
   mafiaByRole: { role: string; games: number; winRate: number }[] | null;
   /** Totals over the games that have a log; older games are left out. */
+  isBot: boolean;
   mafiaSkills: { trackedGames: number; checksMade: number; mafiaFound: number; killsBlocked: number; votesCast: number; votesOnMafia: number } | null;
 }
 

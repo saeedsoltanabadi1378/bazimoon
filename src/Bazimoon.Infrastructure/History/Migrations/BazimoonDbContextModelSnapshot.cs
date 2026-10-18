@@ -657,6 +657,9 @@ namespace Bazimoon.Infrastructure.History.Migrations
                         .HasMaxLength(64)
                         .HasColumnType("character varying(64)");
 
+                    b.Property<bool>("IsBot")
+                        .HasColumnType("boolean");
+
                     b.Property<bool>("IsGuest")
                         .HasColumnType("boolean");
 

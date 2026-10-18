@@ -187,8 +187,9 @@ public sealed class HubService
         var seasonStartDay = Progression.SeasonStartDay(season);
         var seasonStart = Progression.DateOfDay(seasonStartDay).ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
         var (division, tier) = Progression.Division(me.Rating);
+        var bots = await BotIdsExceptAsync(userId);
         var everyone = await _db.PlayerStats.AsNoTracking().ToListAsync();
-        var sameDivision = everyone.Where(s => Progression.Division(s.Rating).Division == division).ToDictionary(s => s.UserId);
+        var sameDivision = everyone.Where(s => !bots.Contains(s.UserId) && Progression.Division(s.Rating).Division == division).ToDictionary(s => s.UserId);
 
         List<LeagueEntry> entries;
         QualificationDto qualification;
@@ -390,6 +391,7 @@ public sealed class HubService
         var dailyMode = mode == "daily-fa" ? "daily-fa" : "daily";
         number ??= Progression.DailyNumber(game, Today);
         var group = await GroupMembersAsync(userId);
+        group.ExceptWith(await BotIdsExceptAsync(userId));
         var results = await _db.PuzzleResults
             .Where(r => r.Game == game && r.Mode == dailyMode && r.PuzzleNumber == number && group.Contains(r.UserId))
             .ToListAsync();
@@ -437,8 +439,9 @@ public sealed class HubService
         var today = Today;
         int weekStart = Progression.WeekStartDay(today);
         var (division, tier) = Progression.Division(me.Rating);
+        var bots = await BotIdsExceptAsync(userId);
         var everyone = await _db.PlayerStats.AsNoTracking().ToListAsync();
-        var sameDivision = everyone.Where(s => Progression.Division(s.Rating).Division == division).ToDictionary(s => s.UserId, s => s.Username);
+        var sameDivision = everyone.Where(s => !bots.Contains(s.UserId) && Progression.Division(s.Rating).Division == division).ToDictionary(s => s.UserId, s => s.Username);
         var scores = await _db.PuzzleResults
             .Where(r => r.Game == game && r.Day >= weekStart && r.Score != null)
             .GroupBy(r => r.UserId)
@@ -450,6 +453,10 @@ public sealed class HubService
             .Where(r => r.Rank <= 5 || r.IsYou).ToList();
         return new WeeklyDto(game, division, tier, 7 - (today - weekStart), myIndex >= 0 ? myIndex + 1 : null, rows);
     }
+
+    /// <summary>Accounts an admin marked as bots, other than you (a bot still sees itself).</summary>
+    private async Task<HashSet<Guid>> BotIdsExceptAsync(Guid userId) =>
+        (await _db.Users.Where(u => u.IsBot && u.Id != userId).Select(u => u.Id).ToListAsync()).ToHashSet();
 
     /// <summary>You and everyone you have shared a finished Mafia table with.</summary>
     private async Task<HashSet<Guid>> GroupMembersAsync(Guid userId)

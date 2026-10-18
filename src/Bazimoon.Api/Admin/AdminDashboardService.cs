@@ -110,6 +110,10 @@ public sealed class AdminDashboardService
             .Select(p => new { p.UserId, p.GameRecord.EndedAt }).ToListAsync())
             .Select(p => new { UserId = p.UserId!.Value, Day = DayOf(p.EndedAt) }).Where(p => p.Day >= from).ToList();
         var coupleRows = await _db.CoupleAnswers.AsNoTracking().Where(a => a.Day >= from).Select(a => new { a.UserId, a.Day, a.CoupleId }).ToListAsync();
+        var bots = await BotIdsAsync();
+        puzzleRows.RemoveAll(r => bots.Contains(r.UserId));
+        mafiaRows.RemoveAll(r => bots.Contains(r.UserId));
+        coupleRows.RemoveAll(r => bots.Contains(r.UserId));
 
         HashSet<Guid> ActiveBetween(int first, int last) =>
             puzzleRows.Where(r => r.Day >= first && r.Day <= last).Select(r => r.UserId)
@@ -142,27 +146,32 @@ public sealed class AdminDashboardService
             (await GetEventsAsync(null, null, 5)).Items);
     }
 
+    private async Task<HashSet<Guid>> BotIdsAsync() =>
+        (await _db.Users.AsNoTracking().Where(u => u.IsBot).Select(u => u.Id).ToListAsync()).ToHashSet();
+
     private static bool IsDaily(string mode) => mode == "daily" || mode.StartsWith("daily-", StringComparison.Ordinal);
 
     // ------------------------------------------------------------------ players
 
-    public async Task<AdminPageDto<AdminPlayerRowDto>> GetPlayersAsync(int page, int size, string? search)
+    public async Task<AdminPageDto<AdminPlayerRowDto>> GetPlayersAsync(int page, int size, string? search, bool bots = false)
     {
         var stats = await _db.PlayerStats.AsNoTracking().ToListAsync();
         var seen = await _db.Users.AsNoTracking().ToDictionaryAsync(u => u.Id, u => u.LastSeenAt);
+        var botIds = await BotIdsAsync();
         int today = Today;
         var rows = stats
-            .Where(s => Matches(search, s.UserId.ToString(), null, new[] { s.Username }))
+            .Where(s => botIds.Contains(s.UserId) == bots && Matches(search, s.UserId.ToString(), null, new[] { s.Username }))
             .Select(s =>
             {
                 var (division, tier) = Progression.Division(s.Rating);
                 var last = seen.TryGetValue(s.UserId, out var l) && l > s.UpdatedAt ? l : s.UpdatedAt;
                 return new AdminPlayerRowDto(s.UserId, s.Username, Progression.Level(s.Xp).Level, s.Rating, division, tier,
-                    Progression.CurrentStreak(s.PuzzleStreak, s.LastPuzzleDay, s.StreakFreezes, today), s.Language, last);
+                    Progression.CurrentStreak(s.PuzzleStreak, s.LastPuzzleDay, s.StreakFreezes, today), s.Language, last, bots);
             })
             .OrderByDescending(r => r.LastSeen)
             .ToList();
-        return new AdminPageDto<AdminPlayerRowDto>(rows.Skip((page - 1) * size).Take(size).ToList(), rows.Count, page, size);
+        return new AdminPageDto<AdminPlayerRowDto>(rows.Skip((page - 1) * size).Take(size).ToList(), rows.Count, page, size,
+            bots ? stats.Count - rows.Count : botIds.Count(stats.Select(s => s.UserId).ToHashSet().Contains));
     }
 
     public async Task<AdminPlayerDetailDto?> GetPlayerAsync(Guid userId)
@@ -203,7 +212,20 @@ public sealed class AdminDashboardService
             puzzles.Count(p => p.Solved),
             Progression.CurrentStreak(s.PuzzleStreak, s.LastPuzzleDay, s.StreakFreezes, Today), s.BestPuzzleStreak, s.StreakFreezes,
             s.Language, recent, coupleStatus,
-            MafiaStats.ByRole(rows), MafiaStats.Skills(rows));
+            MafiaStats.ByRole(rows), MafiaStats.Skills(rows), profile?.IsBot ?? false);
+    }
+
+    /// <summary>Marks a player as a bot or a real player. False when there is no such player.</summary>
+    public async Task<bool> SetBotAsync(Guid userId, bool isBot, string actor)
+    {
+        var user = await _db.Users.FirstOrDefaultAsync(u => u.Id == userId);
+        if (user is null) return false;
+        if (user.IsBot == isBot) return true;
+        user.IsBot = isBot;
+        _db.OperationalEvents.Add(new() { Category = "AdminAudit", Message = isBot ? "Player marked as a bot" : "Player marked as not a bot", IsAdminAudit = true,
+            TargetType = "Player", TargetId = userId.ToString(), MetadataJson = JsonSerializer.Serialize(new { actor }) });
+        await _db.SaveChangesAsync();
+        return true;
     }
 
     // ------------------------------------------------------------------ puzzles, leagues and couples
@@ -211,7 +233,8 @@ public sealed class AdminDashboardService
     public async Task<AdminPuzzlesDto> GetPuzzlesAsync()
     {
         int today = Today;
-        var rows = await _db.PuzzleResults.AsNoTracking().Where(r => r.Day == today).ToListAsync();
+        var bots = await BotIdsAsync();
+        var rows = (await _db.PuzzleResults.AsNoTracking().Where(r => r.Day == today).ToListAsync()).Where(r => !bots.Contains(r.UserId)).ToList();
         var dailies = new List<AdminDailyDto>();
         foreach (var game in new[] { "zip", "queens", "sudoku", "word", "ladder", "mines", "stack", "blocks", "snake" })
         {
@@ -229,12 +252,13 @@ public sealed class AdminDashboardService
         int season = Progression.Season(today);
         int seasonStart = Progression.SeasonStartDay(season);
         var rated = await _db.GamePlayers.AsNoTracking().Where(p => p.UserId != null && p.RatingDelta != null).Select(p => p.UserId!.Value).Distinct().ToListAsync();
+        rated.RemoveAll(bots.Contains);
         var ratings = await _db.PlayerStats.AsNoTracking().Where(s => rated.Contains(s.UserId)).Select(s => s.Rating).ToListAsync();
         var divisions = new[] { "Bronze", "Silver", "Gold", "Platinum", "Diamond" }
             .Select(name => new AdminDivisionDto(name, ratings.Count(r => Progression.Division(r).Division == name))).ToList();
 
         int weekStart = Progression.WeekStartDay(today);
-        var weekly = await _db.PuzzleResults.AsNoTracking().Where(r => r.Day >= weekStart).GroupBy(r => r.UserId)
+        var weekly = await _db.PuzzleResults.AsNoTracking().Where(r => r.Day >= weekStart && !bots.Contains(r.UserId)).GroupBy(r => r.UserId)
             .Select(g => new { UserId = g.Key, Points = g.Sum(r => r.Points) }).OrderByDescending(x => x.Points).Take(5).ToListAsync();
         var names = await _db.PlayerStats.AsNoTracking().Where(s => weekly.Select(w => w.UserId).Contains(s.UserId)).ToDictionaryAsync(s => s.UserId, s => s.Username);
         var leaders = weekly.Select((w, i) => new AdminLeaderDto(i + 1, names.GetValueOrDefault(w.UserId, "?"), w.Points)).ToList();
@@ -347,7 +371,8 @@ public sealed class AdminDashboardService
     }
 }
 
-public sealed record AdminPageDto<T>(IReadOnlyList<T> Items, int Total, int Page, int PageSize);
+/// <summary>OtherTotal: on the players list, how many are in the other tab (bots, or real players).</summary>
+public sealed record AdminPageDto<T>(IReadOnlyList<T> Items, int Total, int Page, int PageSize, int? OtherTotal = null);
 public sealed record AdminPlayerInGameDto(string Name, string? Role, bool Alive, string? EliminatedBy, int? EliminatedRound, int? RatingDelta, bool? Won);
 public sealed record AdminLiveGameDto(
     Guid Id, string? Title, string Phase, int Round, int Alive, int Seated, int MaxPlayers, DateTimeOffset StartedAt,
@@ -363,13 +388,13 @@ public sealed record AdminOverviewDto(
     int RangeDays, int LiveGames, int NightGames, int ActivePlayers, int ActivePlayersBefore, int DailySolves, string? TopDailyGame,
     int ActiveCouples, int CouplesBothToday, IReadOnlyList<AdminActivityDayDto> Activity, IReadOnlyList<AdminServiceDto> Services,
     IReadOnlyList<AdminLiveGameDto> Live, IReadOnlyList<AdminEventDto> Events);
-public sealed record AdminPlayerRowDto(Guid Id, string Name, int Level, int Rating, string Division, int Tier, int Streak, string Language, DateTime LastSeen);
+public sealed record AdminPlayerRowDto(Guid Id, string Name, int Level, int Rating, string Division, int Tier, int Streak, string Language, DateTime LastSeen, bool IsBot = false);
 public sealed record AdminActivityItemDto(string Kind, DateTime At, string? Game, int? Number, bool? Won, string? Role, int? RatingDelta, int? TimeMs, int? Score);
 public sealed record AdminCoupleStatusDto(string Status, string? PartnerName, DateTime? Since);
 public sealed record AdminPlayerDetailDto(
     Guid Id, string Name, DateTime Joined, int Level, int Xp, int Rating, string Division, int Tier, int MafiaGames, int MafiaWinRate,
     int PuzzlesSolved, int Streak, int BestStreak, int Freezes, string Language, IReadOnlyList<AdminActivityItemDto> Recent, AdminCoupleStatusDto Couple,
-    IReadOnlyList<RoleStats>? MafiaByRole = null, MafiaSkillStats? MafiaSkills = null);
+    IReadOnlyList<RoleStats>? MafiaByRole = null, MafiaSkillStats? MafiaSkills = null, bool IsBot = false);
 public sealed record AdminDailyDto(string Game, string Mode, int Number, int Players, int Solved, int? MedianTimeMs, int? MedianMoves, int? MedianScore);
 public sealed record AdminSeasonDto(int Number, int Day, int Length, DateOnly EndsOn);
 public sealed record AdminDivisionDto(string Name, int Count);

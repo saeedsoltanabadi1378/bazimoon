@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { adminApi } from "../adminApi";
 import type { ActivityItem, Page, PlayerDetail, PlayerRow } from "../adminApi";
 import { useAdminI18n } from "../i18n";
 import { AVATAR_COLORS, divisionName, Header, PageState, Search, Svg, ICONS, formatDuration, gameName, initial, roleName, useAdminData } from "../ui";
@@ -8,7 +9,8 @@ export function PlayersPage() {
   const [search, setSearch] = useState("");
   const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const players = useAdminData<Page<PlayerRow>>(`/players?pageSize=50&search=${encodeURIComponent(query)}`);
+  const [bots, setBots] = useState(false);
+  const players = useAdminData<Page<PlayerRow>>(`/players?pageSize=50&bots=${bots}&search=${encodeURIComponent(query)}`);
 
   useEffect(() => {
     const id = window.setTimeout(() => setQuery(search.trim()), 300);
@@ -26,10 +28,21 @@ export function PlayersPage() {
         <Search label={t("searchPlayers")} placeholder={t("searchPlayers")} value={search} onChange={setSearch} />
       </Header>
 
+      <div role="tablist" aria-label={t("navPlayers")} className="adm-tabs">
+        {[false, true].map((b) => {
+          const count = players.data ? (b === bots ? players.data.total : players.data.otherTotal ?? 0) : 0;
+          return (
+            <button key={String(b)} type="button" role="tab" aria-selected={bots === b} onClick={() => { setBots(b); setSelectedId(null); }}>
+              {t(b ? "tabBots" : "tabPlayers", { count: n(count) })}
+            </button>
+          );
+        })}
+      </div>
+
       {!data.data ? <PageState error={data.error} onRetry={data.reload} /> : (
         <div className="adm-split">
           <section className="adm-panel flush wide" aria-label={t("navPlayers")}>
-            {rows.length === 0 ? <div className="adm-empty">{t("noPlayers")}</div> : (
+            {rows.length === 0 ? <div className="adm-empty">{t(bots && !query ? "noBots" : "noPlayers")}</div> : (
               <div className="adm-table-wrap">
                 <table className="adm-table" style={{ minWidth: 640 }}>
                   <thead>
@@ -51,7 +64,10 @@ export function PlayersPage() {
                             <button type="button" className="adm-rowbtn" aria-pressed={on} onClick={() => setSelectedId(p.id)}>
                               <span className="adm-avatar" style={{ width: 30, height: 30, fontSize: 12, background: AVATAR_COLORS[i % AVATAR_COLORS.length], color: "#0B0D1A" }}>{initial(p.name)}</span>
                               <span style={{ display: "flex", flexDirection: "column" }}>
-                                <span>{p.name}</span>
+                                <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                                  {p.name}
+                                  {p.isBot && <span className="adm-pill" style={{ padding: "1px 7px", fontSize: 11, background: "#1E2138", color: "#8FA8FF" }}>{t("botBadge")}</span>}
+                                </span>
                                 <span className="tiny muted num" style={{ fontWeight: 400 }} dir="ltr">{p.id}</span>
                               </span>
                             </button>
@@ -72,7 +88,7 @@ export function PlayersPage() {
 
           <aside className="adm-panel side" aria-labelledby="player-title" style={{ gap: 14 }}>
             {!detail.data || detail.data.id !== selected?.id ? <PageState error={detail.error} onRetry={detail.reload} /> : (
-              <PlayerPanel d={detail.data} color={AVATAR_COLORS[Math.max(0, rows.findIndex((r) => r.id === detail.data!.id)) % AVATAR_COLORS.length]} />
+              <PlayerPanel d={detail.data} onBotChanged={() => { setSelectedId(null); players.reload(); }} color={AVATAR_COLORS[Math.max(0, rows.findIndex((r) => r.id === detail.data!.id)) % AVATAR_COLORS.length]} />
             )}
           </aside>
         </div>
@@ -83,8 +99,22 @@ export function PlayersPage() {
 
 const roman = (tier: number) => ["", "I", "II", "III"][tier] ?? "";
 
-function PlayerPanel({ d, color }: { d: PlayerDetail; color: string }) {
+function PlayerPanel({ d, color, onBotChanged }: { d: PlayerDetail; color: string; onBotChanged: () => void }) {
   const { t, n, date, ago, lang } = useAdminI18n();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const toggleBot = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      await adminApi.put(`/players/${d.id}/bot`, { isBot: !d.isBot });
+      onBotChanged();
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
   const stats: [string, string][] = [
     [n(d.mafiaGames), t("statMafiaGames")],
     [`${n(d.mafiaWinRate)}${lang === "fa" ? "٪" : "%"}`, t("statWinRate")],
@@ -114,6 +144,14 @@ function PlayerPanel({ d, color }: { d: PlayerDetail; color: string }) {
           <h2 id="player-title" className="display" style={{ fontSize: 22, fontWeight: 800 }}>{d.name}</h2>
           <span className="small muted">{t("playerId", { id: d.id, date: date(d.joined) })}</span>
         </div>
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 8, padding: 12, borderRadius: 12, background: "#0B0D1A" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+          <span style={{ fontSize: 14, fontWeight: 600 }}>{d.isBot ? t("botMarked") : t("botReal")}</span>
+          <button type="button" className={d.isBot ? "adm-btn" : "adm-btn primary"} disabled={busy} onClick={toggleBot}>{d.isBot ? t("unmarkBot") : t("markBot")}</button>
+        </div>
+        <span className="tiny muted" style={{ lineHeight: 1.45 }}>{t("botNote")}</span>
+        {error && <span className="tiny" role="alert" style={{ color: "#F08A7A" }}>{error}</span>}
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 8 }}>
         {stats.map(([v, l]) => (

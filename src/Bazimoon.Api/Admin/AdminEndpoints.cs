@@ -58,8 +58,13 @@ public static class AdminEndpoints
             return past is not null ? Results.Ok(past) : Results.NotFound();
         });
         group.MapPost("/games/{id:guid}/cancel", async (Guid id, CancelRequest request, HttpContext http, GameService games) => { if (!ValidCsrf(http)) return Results.BadRequest(new { detail = "Invalid CSRF token." }); if (string.IsNullOrWhiteSpace(request.Reason)) return Results.BadRequest(new { detail = "A cancellation reason is required." }); return await games.CancelByAdminAsync(id, request.Reason, http.User.Identity?.Name ?? "admin") ? Results.Ok() : Results.NotFound(); });
-        group.MapGet("/players", async (int? page, int? pageSize, string? search, AdminDashboardService dash) =>
-            Results.Ok(await dash.GetPlayersAsync(Math.Max(1, page ?? 1), Math.Clamp(pageSize ?? 25, 1, 100), search)));
+        group.MapGet("/players", async (int? page, int? pageSize, string? search, bool? bots, AdminDashboardService dash) =>
+            Results.Ok(await dash.GetPlayersAsync(Math.Max(1, page ?? 1), Math.Clamp(pageSize ?? 25, 1, 100), search, bots ?? false)));
+        group.MapPut("/players/{id:guid}/bot", async (Guid id, BotRequest request, HttpContext http, AdminDashboardService dash) =>
+        {
+            if (!ValidCsrf(http)) return Results.BadRequest(new { detail = "Invalid CSRF token." });
+            return await dash.SetBotAsync(id, request.IsBot, http.User.Identity?.Name ?? "admin") ? Results.Ok() : Results.NotFound();
+        });
         group.MapGet("/players/{id:guid}", async (Guid id, AdminDashboardService dash) =>
             await dash.GetPlayerAsync(id) is { } player ? Results.Ok(player) : Results.NotFound());
         group.MapGet("/puzzles", async (AdminDashboardService dash) => Results.Ok(await dash.GetPuzzlesAsync()));
@@ -100,6 +105,7 @@ public static class AdminEndpoints
 
 public sealed record LoginRequest(string Username, string Password);
 public sealed record CancelRequest(string Reason);
+public sealed record BotRequest(bool IsBot);
 public sealed record SettingsRequest(int Version, int MinPlayers, int MaxPlayers, bool MaintenanceMode, string MaintenanceMessage,
     string? MaintenanceMessageFa = null, string? ReminderMessage = null, string? ReminderMessageFa = null, string[]? DisabledGames = null,
     string? TableStartMessage = null, string? TableStartMessageFa = null, string? CoupleTurnMessage = null, string? CoupleTurnMessageFa = null);
