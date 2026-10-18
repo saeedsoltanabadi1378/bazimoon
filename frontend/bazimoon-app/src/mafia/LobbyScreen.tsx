@@ -47,7 +47,7 @@ export function LobbyScreen() {
         <IconButton icon="back" label={t("backToGames")} onClick={back} />
         <div className="topbar__text">
           <div className="row tiny muted" style={{ gap: 6 }}>
-            <span>{info?.name ?? info?.chatTitle ?? t("roomLabel", { code: roomCode(view.gameId) })}</span>
+            <span>{info?.name ?? t("roomLabel", { code: roomCode(view.gameId) })}</span>
             {info && (
               <span className="row" style={{ gap: 4, padding: "1px 8px", borderRadius: 999, background: info.isOpen ? "#13302C" : "#1E2138", color: info.isOpen ? "#5FD0BE" : "#B79CF2", fontWeight: 600 }}>
                 <Icon name={info.isOpen ? "globe" : "lock"} size={11} strokeWidth={2.6} />
@@ -141,8 +141,8 @@ export function LobbyScreen() {
             const you = p.playerId === view.yourPlayerId;
             return (
               <li key={p.playerId} className="list__row">
-                <Avatar name={p.telegramUsername} color={playerColor(view, p.playerId)} size={36} fontSize={15} />
-                <span className="grow" style={{ fontSize: 15 }}>{you ? t("youName", { name: p.telegramUsername }) : p.telegramUsername}</span>
+                <Avatar name={p.displayName} color={playerColor(view, p.playerId)} size={36} fontSize={15} />
+                <span className="grow" style={{ fontSize: 15 }}>{you ? t("youName", { name: p.displayName }) : p.displayName}</span>
                 {p.playerId === controllerId && <span className="tiny strong" style={{ color: "#9C8CFF" }}>{t("creator")}</span>}
                 <span className="tiny strong" style={{ padding: "3px 10px", borderRadius: 999, background: ready.has(p.playerId) ? "#13302C" : "#1E2138", color: ready.has(p.playerId) ? "#5FD0BE" : "#9A9CB8" }}>
                   {ready.has(p.playerId) ? t("ready") : t("notYet")}

@@ -21,7 +21,7 @@ export function DefenceScreen() {
   const name = (id: string | null | undefined) => {
     const p = findPlayer(view, id);
     if (!p) return t("unknown");
-    return p.playerId === view.yourPlayerId ? t("youName", { name: p.telegramUsername }) : p.telegramUsername;
+    return p.playerId === view.yourPlayerId ? t("youName", { name: p.displayName }) : p.displayName;
   };
 
   const discussion = view.discussion;
@@ -69,7 +69,7 @@ export function DefenceScreen() {
                 aria-hidden="true"
                 style={{ position: "absolute", left: 16, top: 16, width: 100, height: 100, fontSize: 40, fontWeight: 800, background: playerColor(view, active.playerId) }}
               >
-                {Array.from(active.telegramUsername)[0]?.toUpperCase()}
+                {Array.from(active.displayName)[0]?.toUpperCase()}
               </span>
             </div>
             <div style={{ textAlign: "center" }}>
@@ -100,7 +100,7 @@ export function DefenceScreen() {
                       boxShadow: now ? "0 0 0 3px #14110D, 0 0 0 5px #F0A83A" : "none",
                     }}
                   >
-                    {Array.from(p?.telegramUsername ?? "?")[0]?.toUpperCase()}
+                    {Array.from(p?.displayName ?? "?")[0]?.toUpperCase()}
                   </span>
                   <span style={{ fontSize: 11, color: now ? "#F0A83A" : "var(--muted)" }}>{now ? t("now") : done ? t("done") : t("next")}</span>
                 </li>

@@ -29,12 +29,12 @@ export function GamesPage() {
     return () => window.clearInterval(id);
   }, [live.reload]);
 
-  const liveItems = (live.data?.items ?? []).filter((g) => !query || matches(query, g.chatTitle, g.id, g.players));
+  const liveItems = (live.data?.items ?? []).filter((g) => !query || matches(query, g.title, g.id, g.players));
   const pastItems = past.data?.items ?? [];
   const selected: Selected | null = tab === 0
     ? (() => { const g = liveItems.find((x) => x.id === selectedId) ?? liveItems[0]; return g ? { kind: "live", game: g } : null; })()
     : (() => { const g = pastItems.find((x) => x.id === selectedId) ?? pastItems[0]; return g ? { kind: "past", game: g } : null; })();
-  const chatName = (title: string | null, id: number) => title ?? t("unnamedChat", { id: String(id) });
+  const tableName = (title: string | null) => title ?? t("unnamedTable");
 
   const outcome = (g: PastGame): [string, string, string] =>
     g.status === "Cancelled" ? [t("outcomeCancelled"), "#1E2138", "#C9C8DC"]
@@ -79,7 +79,7 @@ export function GamesPage() {
                         <tr key={g.id} className={on ? "on" : undefined}>
                           <td>
                             <button type="button" className="adm-rowbtn" aria-pressed={on} onClick={() => setSelectedId(g.id)} style={{ flexDirection: "column", alignItems: "flex-start", gap: 2 }}>
-                              <span>{chatName(g.chatTitle, g.chatId)}</span>
+                              <span>{tableName(g.title)}</span>
                               <span className="tiny muted" style={{ fontWeight: 400 }} dir="ltr">{g.id.slice(0, 8)}</span>
                             </button>
                           </td>
@@ -97,7 +97,7 @@ export function GamesPage() {
                         <tr key={g.id} className={on ? "on" : undefined}>
                           <td>
                             <button type="button" className="adm-rowbtn" aria-pressed={on} onClick={() => setSelectedId(g.id)} style={{ flexDirection: "column", alignItems: "flex-start", gap: 2 }}>
-                              <span>{chatName(g.chatTitle, g.chatId)}</span>
+                              <span>{tableName(g.title)}</span>
                               <span className="tiny muted" style={{ fontWeight: 400 }} dir="ltr">{g.id.slice(0, 8)}</span>
                             </button>
                           </td>
@@ -119,7 +119,7 @@ export function GamesPage() {
               <>
                 <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                   <span className="tiny muted num" dir="ltr" style={{ textAlign: "start" }}>{selected.game.id}</span>
-                  <h2 id="detail-title" className="display" style={{ fontSize: 22, fontWeight: 800 }}>{chatName(selected.game.chatTitle, selected.game.chatId)}</h2>
+                  <h2 id="detail-title" className="display" style={{ fontSize: 22, fontWeight: 800 }}>{tableName(selected.game.title)}</h2>
                   <span className="text-2">{selected.kind === "live" ? liveDetail(selected.game) : outcome(selected.game)[0]}</span>
                 </div>
                 <ol aria-label={t("timeline")} style={{ margin: 0, padding: 0, listStyle: "none", display: "flex", flexWrap: "wrap", gap: 6 }}>
@@ -149,7 +149,7 @@ export function GamesPage() {
       {cancelOpen && selected?.kind === "live" && (
         <CancelDialog
           game={selected.game}
-          name={chatName(selected.game.chatTitle, selected.game.chatId)}
+          name={tableName(selected.game.title)}
           onClose={() => setCancelOpen(false)}
           onDone={() => { setCancelOpen(false); setSelectedId(null); live.reload(); }}
         />

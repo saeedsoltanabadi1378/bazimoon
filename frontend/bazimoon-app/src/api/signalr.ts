@@ -8,14 +8,15 @@ import * as signalR from "@microsoft/signalr";
  */
 export async function connectToGameHub(
   baseUrl: string,
-  token: string,
+  /** Read on every (re)connect, so a refreshed access token is picked up. */
+  getToken: () => string,
   gameId: string,
   onGameUpdated: () => void,
   onConnectionChange?: (state: "connected" | "reconnecting" | "closed") => void,
 ): Promise<signalR.HubConnection> {
   const connection = new signalR.HubConnectionBuilder()
     .withUrl(`${baseUrl}/hubs/game`, {
-      accessTokenFactory: () => token,
+      accessTokenFactory: getToken,
     })
     .withAutomaticReconnect()
     .build();

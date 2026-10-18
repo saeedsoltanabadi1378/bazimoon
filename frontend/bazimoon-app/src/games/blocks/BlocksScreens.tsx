@@ -8,8 +8,8 @@ import { puzzleToday } from "../../lib/format";
 import { dailyNumber, randomSeed } from "../../lib/rng";
 import { readLocal, removeLocal, writeLocal } from "../../lib/storage";
 import { haptic } from "../../lib/haptics";
-import { shareToTelegram } from "../../lib/telegram";
-import { botLink } from "../../lib/links";
+import { shareLink } from "../../lib/platform";
+import { appLink } from "../../lib/links";
 import { roman } from "../../hub/HomeScreen";
 import { IntroScreen, PreviewGrid } from "../shared/IntroScreen";
 import { XpCard } from "../shared/ResultScreen";
@@ -573,7 +573,7 @@ export function BlocksResult({ params }: { params?: ResultParams }) {
         )}
       </Body>
       <div className="screen__bar screen__bar--row" style={{ gap: 8 }}>
-        <button type="button" className="btn btn--outline" style={{ flex: 1, fontSize: 15 }} onClick={() => shareToTelegram(botLink(), t("blocksShare", { score: n(score) }))}>
+        <button type="button" className="btn btn--outline" style={{ flex: 1, fontSize: 15 }} onClick={() => void shareLink(appLink(), t("blocksShare", { score: n(score) }))}>
           {t("shareScore")}
         </button>
         <button

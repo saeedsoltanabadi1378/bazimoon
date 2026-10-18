@@ -184,7 +184,7 @@ export function TableNotices() {
           <div key={id} style={box("#2A1612", "#4A2620")}>
             <span style={{ marginTop: 2 }}><Icon name="eliminated" size={18} color="#F08A7A" /></span>
             <span>
-              <b>{t("removedTitle", { name: p.telegramUsername })}</b> {t("removedText")}
+              <b>{t("removedTitle", { name: p.displayName })}</b> {t("removedText")}
               {p.revealedRole && <> {t("removedRole", { role: roleName(p.revealedRole) })}</>}
             </span>
           </div>
@@ -193,7 +193,7 @@ export function TableNotices() {
       {handedOver && (
         <div style={box("#10251F", "#1E4A40")}>
           <span style={{ marginTop: 2 }}><Icon name="godfather" size={18} color="#5FD0BE" /></span>
-          <span><b>{t("newCreatorTitle")}</b> {t("newCreatorText", { name: firstSeat.telegramUsername })}</span>
+          <span><b>{t("newCreatorTitle")}</b> {t("newCreatorText", { name: firstSeat.displayName })}</span>
         </div>
       )}
     </>

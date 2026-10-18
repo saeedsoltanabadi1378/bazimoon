@@ -9,8 +9,8 @@ import { useNavigation } from "../app/router";
 import { Bar, Body, IconDisc, RoleTag, Screen, Stat, Toast } from "../ui/components";
 import { isMafiaRole, playerColor, roleMeta } from "./roles";
 import { useRoleName } from "./parts";
-import { shareToTelegram } from "../lib/telegram";
-import { botLink } from "../lib/links";
+import { shareLink } from "../lib/platform";
+import { appLink } from "../lib/links";
 import { haptic } from "../lib/haptics";
 
 /** Bonus XP for the MVP (Progression.MvpBonusXp on the server). */
@@ -45,7 +45,7 @@ export function GameOverScreen() {
   const town = view.winCondition === "VillagersWin";
   const joker = view.winCondition === "JokerWins";
   const youJoker = joker && view.jokerWinnerId === view.yourPlayerId;
-  const jokerName = view.players.find((p) => p.playerId === view.jokerWinnerId)?.telegramUsername ?? "";
+  const jokerName = view.players.find((p) => p.playerId === view.jokerWinnerId)?.displayName ?? "";
   const accent = joker ? "#B79CF2" : town ? "#5FD0BE" : "#F08A7A";
   const youWon = mine ? mine.won
     : joker ? youJoker
@@ -75,7 +75,7 @@ export function GameOverScreen() {
   const name = (id: string) => {
     const p = view.players.find((x) => x.playerId === id);
     if (!p) return t("unknown");
-    return p.playerId === view.yourPlayerId ? t("youName", { name: p.telegramUsername }) : p.telegramUsername;
+    return p.playerId === view.yourPlayerId ? t("youName", { name: p.displayName }) : p.displayName;
   };
 
   async function playAgain() {
@@ -93,7 +93,7 @@ export function GameOverScreen() {
 
   function share() {
     const text = joker ? t("shareJokerWon") : town ? t("shareTownWon", { nights: view!.nightNumber }) : t("shareMafiaWon", { nights: view!.nightNumber });
-    shareToTelegram(botLink(), text);
+    void shareLink(appLink(), text);
   }
 
   return (
@@ -115,7 +115,7 @@ export function GameOverScreen() {
               {mvps.map((m) => (
                 <div key={m.playerId} className="stack center" style={{ gap: 6 }}>
                   <span className="avatar display" aria-hidden="true" style={{ width: 72, height: 72, fontSize: 30, background: playerColor(view, m.playerId), boxShadow: "0 0 0 3px #1F1A2E, 0 0 0 5px #F0A83A" }}>
-                    {Array.from(view.players.find((p) => p.playerId === m.playerId)?.telegramUsername ?? "?")[0]?.toUpperCase()}
+                    {Array.from(view.players.find((p) => p.playerId === m.playerId)?.displayName ?? "?")[0]?.toUpperCase()}
                   </span>
                   <span style={{ fontSize: 17, fontWeight: 700 }}>{name(m.playerId)}</span>
                   <span className="tiny" style={{ color: "var(--text-2)" }}>{t("mvpPoints", { count: m.points })}</span>
@@ -165,10 +165,10 @@ export function GameOverScreen() {
             return (
               <div key={p.playerId} className="list__row">
                 <span className="avatar" aria-hidden="true" style={{ width: 34, height: 34, fontSize: 14, background: playerColor(view, p.playerId), opacity: p.isAlive ? 1 : 0.45 }}>
-                  {Array.from(p.telegramUsername)[0]?.toUpperCase()}
+                  {Array.from(p.displayName)[0]?.toUpperCase()}
                 </span>
                 <div className="grow">
-                  <div style={{ fontSize: 15, fontWeight: 600 }}>{you ? t("youName", { name: p.telegramUsername }) : p.telegramUsername}</div>
+                  <div style={{ fontSize: 15, fontWeight: 600 }}>{you ? t("youName", { name: p.displayName }) : p.displayName}</div>
                   <div className="tiny muted">{fate(p)}</div>
                 </div>
                 {meta && p.revealedRole && <RoleTag size="sm" icon={meta.icon} bg={meta.bg} fg={meta.fg} label={roleName(p.revealedRole)} />}

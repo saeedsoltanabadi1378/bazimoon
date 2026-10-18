@@ -49,7 +49,7 @@ export function NightScreen() {
   const name = (id: string | null | undefined) => {
     const p = findPlayer(view, id);
     if (!p) return t("unknown");
-    return p.playerId === view.yourPlayerId ? t("youName", { name: p.telegramUsername }) : p.telegramUsername;
+    return p.playerId === view.yourPlayerId ? t("youName", { name: p.displayName }) : p.displayName;
   };
 
   // Info line above the targets, per role.
@@ -188,10 +188,10 @@ export function NightScreen() {
                     }}
                   >
                     <span className="avatar" aria-hidden="true" style={{ width: 36, height: 36, fontSize: 15, background: playerColor(view, p.playerId) }}>
-                      {Array.from(p.telegramUsername)[0]?.toUpperCase()}
+                      {Array.from(p.displayName)[0]?.toUpperCase()}
                     </span>
                     <span style={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
-                      <span style={{ fontSize: 14, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis" }}>{you ? t("youName", { name: p.telegramUsername }) : p.telegramUsername}</span>
+                      <span style={{ fontSize: 14, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis" }}>{you ? t("youName", { name: p.displayName }) : p.displayName}</span>
                       {note && <span className="tiny" style={{ color: noteColor }}>{note}</span>}
                     </span>
                   </button>

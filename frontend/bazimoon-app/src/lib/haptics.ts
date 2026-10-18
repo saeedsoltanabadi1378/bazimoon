@@ -1,4 +1,4 @@
-import { telegram } from "./telegram";
+import { vibrate } from "./platform";
 import { readLocal, writeLocal } from "./storage";
 
 const KEY = "bazimoon-haptics";
@@ -16,18 +16,18 @@ export function hapticsEnabled() {
 /** Light tap on a valid move, warning on an invalid one, success on a win (see the design's app-shell notes). */
 export const haptic = {
   tap() {
-    if (enabled) telegram.HapticFeedback?.impactOccurred("light");
+    if (enabled) vibrate(8);
   },
   select() {
-    if (enabled) telegram.HapticFeedback?.selectionChanged();
+    if (enabled) vibrate(5);
   },
   warn() {
-    if (enabled) telegram.HapticFeedback?.notificationOccurred("warning");
+    if (enabled) vibrate([20, 40, 20]);
   },
   error() {
-    if (enabled) telegram.HapticFeedback?.notificationOccurred("error");
+    if (enabled) vibrate([30, 40, 30, 40, 30]);
   },
   success() {
-    if (enabled) telegram.HapticFeedback?.notificationOccurred("success");
+    if (enabled) vibrate([10, 30, 20]);
   },
 };

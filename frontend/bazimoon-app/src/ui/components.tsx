@@ -1,6 +1,6 @@
 import { forwardRef, useEffect, type CSSProperties, type ReactNode } from "react";
 import { Icon, type IconName } from "./Icon";
-import { setTelegramColors } from "../lib/telegram";
+import { setThemeColor } from "../lib/platform";
 import { useLanguage } from "../i18n/LanguageContext";
 
 export type Theme = "night" | "day" | "hub";
@@ -10,7 +10,7 @@ const themeBackground: Record<Theme, string> = { night: "#0B0D1A", day: "#14110D
 /** Full-height screen: header, scrolling body, optional fixed footer bar or tab bar. */
 export function Screen({ theme, children, label }: { theme: Theme; children: ReactNode; label?: string }) {
   useEffect(() => {
-    setTelegramColors(themeBackground[theme]);
+    setThemeColor(themeBackground[theme]);
   }, [theme]);
   return (
     <main className="screen" data-theme={theme} aria-label={label}>

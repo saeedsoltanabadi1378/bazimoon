@@ -6,8 +6,8 @@ import { Body, IconButton, Screen } from "../../ui/components";
 import { Icon } from "../../ui/Icon";
 import { haptic } from "../../lib/haptics";
 import { formatClock } from "../../lib/format";
-import { shareToTelegram } from "../../lib/telegram";
-import { botLink } from "../../lib/links";
+import { shareLink } from "../../lib/platform";
+import { appLink } from "../../lib/links";
 import { IntroScreen, PreviewGrid } from "../shared/IntroScreen";
 import { XpCard } from "../shared/ResultScreen";
 import { parseXp, useFinish, useSavedState, useStopwatch, type ResultParams } from "../shared/play";
@@ -350,7 +350,7 @@ export function MergeResult({ params }: { params?: ResultParams }) {
         )}
       </Body>
       <div className="screen__bar screen__bar--row" style={{ gap: 8 }}>
-        <button type="button" className="btn btn--outline" style={{ flex: 1, fontSize: 15 }} onClick={() => shareToTelegram(botLink(), t("mergeShare", { score: n(score), top }))}>
+        <button type="button" className="btn btn--outline" style={{ flex: 1, fontSize: 15 }} onClick={() => void shareLink(appLink(), t("mergeShare", { score: n(score), top }))}>
           <Icon name="share" size={18} />
           {t("shareScore")}
         </button>

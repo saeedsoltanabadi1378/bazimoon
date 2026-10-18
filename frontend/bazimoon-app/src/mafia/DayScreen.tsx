@@ -27,7 +27,7 @@ export function DayScreen() {
   const name = (id: string | null | undefined) => {
     const p = findPlayer(view, id);
     if (!p) return t("unknown");
-    return p.playerId === view.yourPlayerId ? t("youName", { name: p.telegramUsername }) : p.telegramUsername;
+    return p.playerId === view.yourPlayerId ? t("youName", { name: p.displayName }) : p.displayName;
   };
 
   // Morning report.
@@ -164,7 +164,7 @@ export function DayScreen() {
                 aria-hidden="true"
                 style={{ position: "absolute", left: 16, top: 16, width: 100, height: 100, fontSize: 40, fontWeight: 800, background: playerColor(view, active.playerId) }}
               >
-                {Array.from(active.telegramUsername)[0]?.toUpperCase()}
+                {Array.from(active.displayName)[0]?.toUpperCase()}
               </span>
             </div>
             <div style={{ textAlign: "center" }}>
@@ -186,7 +186,7 @@ export function DayScreen() {
                 const p = findPlayer(view, id);
                 const nowSpeaking = id === discussion?.originalSpeakerId;
                 const done = completed.has(id);
-                const label = nowSpeaking ? t("now") : done ? t("done") : id === view.yourPlayerId ? t("you") : p?.telegramUsername ?? "";
+                const label = nowSpeaking ? t("now") : done ? t("done") : id === view.yourPlayerId ? t("you") : p?.displayName ?? "";
                 return (
                   <li key={id} className="stack center" style={{ gap: 4, minWidth: 56 }}>
                     <span
@@ -197,7 +197,7 @@ export function DayScreen() {
                         boxShadow: nowSpeaking ? "0 0 0 3px #14110D, 0 0 0 5px #F0A83A" : "none",
                       }}
                     >
-                      {Array.from(p?.telegramUsername ?? "?")[0]?.toUpperCase()}
+                      {Array.from(p?.displayName ?? "?")[0]?.toUpperCase()}
                     </span>
                     <span style={{ fontSize: 11, color: nowSpeaking ? "#F0A83A" : "var(--muted)", maxWidth: 64, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{label}</span>
                   </li>

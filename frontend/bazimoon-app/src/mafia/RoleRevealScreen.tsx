@@ -81,7 +81,7 @@ export function RoleRevealScreen({ onReady }: { onReady: () => void }) {
                   <span style={{ width: 24, height: 24, borderRadius: 999, background: "#3D2328", color: "#F08A7A", fontSize: 12, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center" }}>
                     {member.rank ?? i + 1}
                   </span>
-                  <span className="grow" style={{ fontSize: 15 }}>{you ? t("youName", { name: player?.telegramUsername ?? "" }) : player?.telegramUsername}</span>
+                  <span className="grow" style={{ fontSize: 15 }}>{you ? t("youName", { name: player?.displayName ?? "" }) : player?.displayName}</span>
                   <span style={{ fontSize: 13, color: "#F08A7A", fontWeight: 600 }}>{roleName(member.role)}</span>
                 </div>
               );

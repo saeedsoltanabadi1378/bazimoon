@@ -1,15 +1,15 @@
 import { useEffect, useState } from "react";
-import { adminApi, ALL_COMMANDS, ALL_GAMES, type BotSettings } from "../adminApi";
+import { adminApi, ALL_GAMES, type AppSettings } from "../adminApi";
 import { useAdminI18n } from "../i18n";
 import { Header, PageState, Svg, ICONS, gameName, useAdminData } from "../ui";
 import { GAME_STYLE } from "../gameStyle";
 
-type MessageKey = "welcomeMessage" | "helpMessage" | "reminderMessage";
+type MessageKey = "reminderMessage";
 
 export function SettingsPage() {
   const { t, n, date, lang } = useAdminI18n();
-  const { data, error, reload, setData } = useAdminData<BotSettings>("/settings");
-  const [draft, setDraft] = useState<BotSettings | null>(null);
+  const { data, error, reload, setData } = useAdminData<AppSettings>("/settings");
+  const [draft, setDraft] = useState<AppSettings | null>(null);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<{ text: string; ok: boolean } | null>(null);
 
@@ -33,20 +33,19 @@ export function SettingsPage() {
   );
   if (!data || !draft) return <main className="adm-main">{header()}<PageState error={error} onRetry={reload} /></main>;
 
-  const set = <K extends keyof BotSettings>(key: K, value: BotSettings[K]) => {
+  const set = <K extends keyof AppSettings>(key: K, value: AppSettings[K]) => {
     setMessage(null);
     setDraft({ ...draft, [key]: value });
   };
   const disabled = draft.disabledGames ?? [];
   const toggleGame = (game: string) => set("disabledGames", disabled.includes(game) ? disabled.filter((g) => g !== game) : [...disabled, game]);
-  const toggleCommand = (cmd: string) => set("enabledCommands", draft.enabledCommands.includes(cmd) ? draft.enabledCommands.filter((c) => c !== cmd) : [...draft.enabledCommands, cmd]);
 
   async function save() {
     if (!draft) return;
     setBusy(true);
     setMessage(null);
     try {
-      const saved = await adminApi.put<BotSettings>("/settings", draft);
+      const saved = await adminApi.put<AppSettings>("/settings", draft);
       setData(saved);
       setMessage({ text: t("saved"), ok: true });
     } catch (e) {
@@ -61,8 +60,6 @@ export function SettingsPage() {
     { key: "maxPlayers", label: t("maxPlayers"), hint: t("maxPlayersHint"), min: draft.minPlayers, max: 12 },
   ];
   const messages: { key: MessageKey; title: string; rows: number }[] = [
-    { key: "welcomeMessage", title: t("msgWelcome"), rows: 3 },
-    { key: "helpMessage", title: t("msgHelp"), rows: 7 },
     { key: "reminderMessage", title: t("msgReminder"), rows: 2 },
   ];
 
@@ -93,11 +90,6 @@ export function SettingsPage() {
               </div>
             </div>
           ))}
-          <label className="adm-label" style={{ fontSize: 14, paddingTop: 12, borderTop: "1px solid #1E2138" }}>
-            {t("miniAppLink")}
-            <input className="adm-input" type="url" value={draft.miniAppBaseUrl} onChange={(e) => set("miniAppBaseUrl", e.target.value)} placeholder="https://t.me/YourBot/app" dir="ltr" />
-            <span className="tiny muted" style={{ fontWeight: 400 }}>{t("miniAppHint")}</span>
-          </label>
         </section>
 
         <section className="adm-panel" aria-labelledby="maint-title" style={{ gap: 14 }}>
@@ -148,27 +140,6 @@ export function SettingsPage() {
         </div>
       </section>
 
-      <section className="adm-panel" aria-labelledby="cmd-title" style={{ gap: 12 }}>
-        <div className="adm-panel-head">
-          <h2 id="cmd-title">{t("commandsTitle")}</h2>
-          <span className="tiny muted">{t("commandsHint")}</span>
-        </div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(250px, 100%), 1fr))", gap: 8 }}>
-          {ALL_COMMANDS.map((cmd) => {
-            const on = draft.enabledCommands.includes(cmd);
-            return (
-              <div key={cmd} style={{ display: "flex", alignItems: "center", gap: 10, minHeight: 52, padding: "0 12px", borderRadius: 12, background: "#0B0D1A" }}>
-                <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
-                  <span style={{ fontWeight: 600 }} dir="ltr">/{cmd}</span>
-                  <span className="tiny muted">{t(`cmd_${cmd}`)}</span>
-                </div>
-                <button type="button" role="switch" className="adm-switch sm" aria-checked={on} aria-label={t("enabled", { name: `/${cmd}` })} onClick={() => toggleCommand(cmd)} />
-              </div>
-            );
-          })}
-        </div>
-      </section>
-
       <section className="adm-panel" aria-labelledby="msg-title" style={{ gap: 12 }}>
         <div className="adm-panel-head">
           <h2 id="msg-title">{t("messagesTitle")}</h2>
@@ -204,11 +175,10 @@ export function SettingsPage() {
   );
 }
 
-function countChanges(a: BotSettings, b: BotSettings) {
-  const keys: (keyof BotSettings)[] = ["minPlayers", "maxPlayers", "maintenanceMode", "maintenanceMessage", "maintenanceMessageFa", "miniAppBaseUrl",
-    "welcomeMessage", "welcomeMessageFa", "helpMessage", "helpMessageFa", "reminderMessage", "reminderMessageFa"];
+function countChanges(a: AppSettings, b: AppSettings) {
+  const keys: (keyof AppSettings)[] = ["minPlayers", "maxPlayers", "maintenanceMode", "maintenanceMessage", "maintenanceMessageFa",
+    "reminderMessage", "reminderMessageFa"];
   let n = keys.filter((k) => a[k] !== b[k]).length;
-  for (const cmd of ALL_COMMANDS) if (a.enabledCommands.includes(cmd) !== b.enabledCommands.includes(cmd)) n++;
   for (const game of ALL_GAMES) if ((a.disabledGames ?? []).includes(game) !== (b.disabledGames ?? []).includes(game)) n++;
   return n;
 }

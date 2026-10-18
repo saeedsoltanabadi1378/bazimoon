@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { useLanguage } from "../i18n/LanguageContext";
 import { useHub } from "../hub/HubData";
-import { botLink } from "../lib/links";
-import { shareToTelegram } from "../lib/telegram";
+import { appLink } from "../lib/links";
+import { shareLink } from "../lib/platform";
 import { haptic } from "../lib/haptics";
 import type { TableInfo } from "../api/hub";
 
@@ -14,7 +14,7 @@ export function InviteBox({ info, onChange }: { info: TableInfo; onChange(info: 
   const [copied, setCopied] = useState(false);
   const [saving, setSaving] = useState(false);
   const code = info.inviteCode ?? "";
-  const link = botLink(`t_${code}`);
+  const link = appLink(`t_${code}`);
 
   async function copy() {
     try {
@@ -51,8 +51,8 @@ export function InviteBox({ info, onChange }: { info: TableInfo; onChange(info: 
         <button type="button" className="btn btn--outline" onClick={() => void copy()} style={{ minHeight: 44, fontSize: 14 }}>
           <span aria-live="polite">{copied ? t("linkCopied") : t("copyLink")}</span>
         </button>
-        <button type="button" className="btn" onClick={() => shareToTelegram(link, t("inviteShareText", { code }))} style={{ minHeight: 44, fontSize: 14, background: "#9C8CFF", color: "#120D2E" }}>
-          {t("shareInTelegram")}
+        <button type="button" className="btn" onClick={() => void shareLink(link, t("inviteShareText", { code }))} style={{ minHeight: 44, fontSize: 14, background: "#9C8CFF", color: "#120D2E" }}>
+          {t("shareInviteLink")}
         </button>
       </div>
       <div className="row" style={{ gap: 12, paddingTop: 10, borderTop: "1px solid #1E2138" }}>

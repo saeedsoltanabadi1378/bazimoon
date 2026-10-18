@@ -17,7 +17,7 @@ export function VotingScreen() {
   const name = (id: string | null | undefined) => {
     const p = findPlayer(view, id);
     if (!p) return t("unknown");
-    return p.playerId === view.yourPlayerId ? t("youName", { name: p.telegramUsername }) : p.telegramUsername;
+    return p.playerId === view.yourPlayerId ? t("youName", { name: p.displayName }) : p.displayName;
   };
 
   const alivePlayers = view.players.filter((p) => p.isAlive);
@@ -40,7 +40,7 @@ export function VotingScreen() {
     })
     .sort((a, b) => b.count - a.count);
 
-  const outWatching = view.players.filter((p) => !p.isAlive).map((p) => p.telegramUsername);
+  const outWatching = view.players.filter((p) => !p.isAlive).map((p) => p.displayName);
 
   let doneText = "";
   if (!alive) doneText = t("voteDeadNote");
@@ -95,7 +95,7 @@ export function VotingScreen() {
               >
                 <span style={{ position: "absolute", insetInlineStart: 0, top: 0, bottom: 0, width: `${pct}%`, background: "#3A2A16", transition: "width 240ms ease" }} />
                 <span className="avatar" aria-hidden="true" style={{ position: "relative", width: 38, height: 38, fontSize: 16, background: playerColor(view, p.playerId) }}>
-                  {Array.from(p.telegramUsername)[0]?.toUpperCase()}
+                  {Array.from(p.displayName)[0]?.toUpperCase()}
                 </span>
                 <span style={{ position: "relative", flex: 1, minWidth: 0 }}>
                   <span style={{ display: "block", fontSize: 15, fontWeight: 600 }}>{name(p.playerId)}</span>

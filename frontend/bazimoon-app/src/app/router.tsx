@@ -1,5 +1,4 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
-import { showBackButton } from "../lib/telegram";
 
 export type GameKey = "zip" | "queens" | "merge" | "mines" | "memory" | "nard" | "word" | "ladder" | "stack" | "blocks" | "sudoku" | "snake" | "dooz" | "spy" | "esmfamil";
 export type GameScreen = "intro" | "play" | "result" | "archive" | "setup" | "lobby" | "online" | "solo";
@@ -34,10 +33,24 @@ const NavigationContext = createContext<Navigation | null>(null);
 export function NavigationProvider({ initial, children }: { initial: Route[]; children: ReactNode }) {
   const [stack, setStack] = useState<Route[]>(initial);
 
-  const push = useCallback((route: Route) => setStack((s) => [...s, route]), []);
+  // Each pushed screen gets a browser history entry, so the system back gesture (Android, browser
+  // back button) pops it like the in-app back button does.
+  const push = useCallback((route: Route) => {
+    window.history.pushState({ bazimoon: true }, "");
+    setStack((s) => [...s, route]);
+  }, []);
   const replace = useCallback((route: Route) => setStack((s) => [...s.slice(0, -1), route]), []);
   const reset = useCallback((route: Route) => setStack([route]), []);
-  const back = useCallback(() => setStack((s) => (s.length > 1 ? s.slice(0, -1) : [{ name: "home" }])), []);
+  const pop = useCallback(() => setStack((s) => (s.length > 1 ? s.slice(0, -1) : [{ name: "home" }])), []);
+  const back = useCallback(() => {
+    if (window.history.state?.bazimoon) window.history.back();
+    else pop();
+  }, [pop]);
+
+  useEffect(() => {
+    window.addEventListener("popstate", pop);
+    return () => window.removeEventListener("popstate", pop);
+  }, [pop]);
 
   // Dev-only hook so screenshot/e2e scripts can open any screen directly.
   useEffect(() => {
@@ -47,11 +60,6 @@ export function NavigationProvider({ initial, children }: { initial: Route[]; ch
   const route = stack[stack.length - 1];
   const depth = stack.length;
 
-  // Telegram's own BackButton is the back control on real devices (see the design's shell notes).
-  useEffect(() => {
-    if (depth <= 1) return;
-    return showBackButton(back);
-  }, [depth, back]);
 
   // Every navigation starts the new screen at the top.
   useEffect(() => {

@@ -1,11 +1,13 @@
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import type { PuzzleResult } from "../../api/hub";
 import { useLanguage } from "../../i18n/LanguageContext";
 import { useNavigation } from "../../app/router";
 import { Body, IconButton, IconDisc, Screen } from "../../ui/components";
 import type { IconName } from "../../ui/Icon";
-import { shareToTelegram } from "../../lib/telegram";
-import { botLink } from "../../lib/links";
+import { shareLink } from "../../lib/platform";
+import { appLink } from "../../lib/links";
+import { useSession } from "../../app/session";
+import { SaveProgressSheet, shouldPromptSave, useGoogleLink } from "../../hub/SaveProgress";
 
 export interface Metric {
   value: ReactNode;
@@ -41,6 +43,16 @@ export function ResultScreen({
 }) {
   const { t } = useLanguage();
   const { reset } = useNavigation();
+  const session = useSession();
+  const google = useGoogleLink();
+  const [askSave, setAskSave] = useState(false);
+  // A guest who just won something that counts is asked once a day to keep their progress.
+  useEffect(() => {
+    if (!win || !xp || !shouldPromptSave(session.isGuest)) return;
+    const timer = window.setTimeout(() => setAskSave(true), 1200);
+    return () => window.clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [win, Boolean(xp)]);
   const heroBg = win ? heroColors?.[0] ?? "#13302C" : "#2A1418";
   const heroFg = win ? heroColors?.[1] ?? "#5FD0BE" : "#F08A7A";
 
@@ -78,7 +90,7 @@ export function ResultScreen({
       <div className="screen__bar">
         <div className="row" style={{ gap: 8 }}>
           {share && (
-            <button type="button" className="btn btn--outline" style={{ flex: 1, fontSize: 15 }} onClick={() => shareToTelegram(botLink(), share.text)}>
+            <button type="button" className="btn btn--outline" style={{ flex: 1, fontSize: 15 }} onClick={() => void shareLink(appLink(), share.text)}>
               {t("shareToGroup")}
             </button>
           )}
@@ -93,6 +105,7 @@ export function ResultScreen({
           <button type="button" className="btn btn--ghost" onClick={secondary.onClick}>{secondary.label}</button>
         )}
       </div>
+      {askSave && <SaveProgressSheet link={google} onClose={() => setAskSave(false)} />}
     </Screen>
   );
 }

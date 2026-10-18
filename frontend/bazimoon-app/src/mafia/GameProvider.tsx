@@ -82,7 +82,7 @@ export function GameProvider({ gameId, children }: { gameId: string; children: R
   useEffect(() => {
     if (status !== "ready") return;
     let cancelled = false;
-    connectToGameHub(import.meta.env.VITE_API_BASE_URL, api.getToken() ?? "", gameId, () => void refresh(), (state) => {
+    connectToGameHub(import.meta.env.VITE_API_BASE_URL, () => api.getToken() ?? "", gameId, () => void refresh(), (state) => {
       if (!cancelled) setLink(state);
     })
       .then(async (hub) => {

@@ -4,7 +4,7 @@ import type {
   MyGameResult,
   NightActionType,
   NightResult,
-  TelegramAuthResponse,
+  AuthSession,
   VoiceTokenResponse,
   VotingResult,
 } from "./types";
@@ -22,6 +22,10 @@ export class ApiError extends Error {
 export class BazimoonApiClient {
   private readonly baseUrl: string;
   private token: string | null = null;
+  private refreshToken: string | null = null;
+  private refreshing: Promise<boolean> | null = null;
+  /** Called with every new token pair (or null when the session ended), so it can be saved. */
+  onSessionChange: ((session: AuthSession | null) => void) | null = null;
 
   constructor(baseUrl: string) {
     this.baseUrl = baseUrl;
@@ -29,6 +33,13 @@ export class BazimoonApiClient {
 
   setToken(token: string | null) {
     this.token = token;
+  }
+
+  /** Uses a token pair from sign-in or refresh for every later request. */
+  useSession(session: AuthSession | null) {
+    this.token = session?.accessToken ?? null;
+    this.refreshToken = session?.refreshToken ?? null;
+    this.onSessionChange?.(session);
   }
 
   getToken() {
@@ -40,6 +51,31 @@ export class BazimoonApiClient {
   }
 
   async request<T>(method: string, path: string, body?: unknown): Promise<T> {
+    try {
+      return await this.send<T>(method, path, body);
+    } catch (err) {
+      // An expired access token is replaced once with the refresh token, then the call is retried.
+      if (err instanceof ApiError && err.status === 401 && !path.startsWith("/api/auth/") && (await this.refresh())) {
+        return this.send<T>(method, path, body);
+      }
+      throw err;
+    }
+  }
+
+  /** Trades the refresh token for a new pair. Several 401s at once share one refresh. */
+  refresh(): Promise<boolean> {
+    if (!this.refreshToken) return Promise.resolve(false);
+    this.refreshing ??= this.send<AuthSession>("POST", "/api/auth/refresh", { refreshToken: this.refreshToken })
+      .then((session) => { this.useSession(session); return true; })
+      .catch((err) => {
+        if (err instanceof ApiError && err.status === 401) this.useSession(null);
+        return false;
+      })
+      .finally(() => { this.refreshing = null; });
+    return this.refreshing;
+  }
+
+  private async send<T>(method: string, path: string, body?: unknown): Promise<T> {
     const headers: Record<string, string> = {};
     if (this.token) {
       headers.Authorization = `Bearer ${this.token}`;
@@ -80,12 +116,22 @@ export class BazimoonApiClient {
     return text.length > 0 ? (JSON.parse(text) as T) : (undefined as T);
   }
 
-  authenticate(initData: string) {
-    return this.request<TelegramAuthResponse>("POST", "/api/auth/telegram", { initData });
+  signInAsGuest(language: string) {
+    return this.request<AuthSession>("POST", "/api/auth/guest", { language });
   }
 
-  createGame(telegramChatId: number) {
-    return this.request<CreateGameResponse>("POST", "/api/games", { telegramChatId });
+  signInWithGoogle(idToken: string, language: string) {
+    return this.request<AuthSession>("POST", "/api/auth/google", { idToken, language });
+  }
+
+  linkGoogle(idToken: string) {
+    return this.request<AuthSession>("POST", "/api/auth/link/google", { idToken });
+  }
+
+  logout() {
+    const refreshToken = this.refreshToken;
+    this.useSession(null);
+    return refreshToken ? this.request<void>("POST", "/api/auth/logout", { refreshToken }) : Promise.resolve();
   }
 
   joinGame(gameId: string) {
@@ -112,9 +158,6 @@ export class BazimoonApiClient {
     return this.request<GameView>("GET", `/api/games/${gameId}`);
   }
 
-  getActiveGameForChat(telegramChatId: number) {
-    return this.request<CreateGameResponse>("GET", `/api/games/by-chat/${telegramChatId}`);
-  }
 
   submitNightAction(gameId: string, targetPlayerId: string, actionType: NightActionType) {
     return this.request<void>("POST", `/api/games/${gameId}/night-actions`, { targetPlayerId, actionType });

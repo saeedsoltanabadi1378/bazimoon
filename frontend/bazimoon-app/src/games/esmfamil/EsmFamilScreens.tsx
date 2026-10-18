@@ -10,8 +10,8 @@ import { formatClock } from "../../lib/format";
 import { randomSeed, seeded, shuffle } from "../../lib/rng";
 import { writeLocal } from "../../lib/storage";
 import { haptic } from "../../lib/haptics";
-import { shareToTelegram } from "../../lib/telegram";
-import { botLink } from "../../lib/links";
+import { shareLink } from "../../lib/platform";
+import { appLink } from "../../lib/links";
 import { ResultScreen } from "../shared/ResultScreen";
 import { PassPhone, Stepper } from "../shared/party";
 import { readPartyStats } from "../shared/partyStats";
@@ -689,7 +689,7 @@ export function EsmFamilResult({ params }: { params?: ResultParams }) {
         ? { label: t("esmNewRoom"), onClick: intro }
         : { label: t("esmPlayAgain"), onClick: () => replace({ name: "game", game: "esmfamil", screen: "play", params: { at: Date.now() } }) }}
       secondary={online
-        ? { label: t("shareToGroup"), onClick: () => shareToTelegram(botLink(), t("esmOnlineShare", { place: myPlace, points: myTotal })) }
+        ? { label: t("shareToGroup"), onClick: () => void shareLink(appLink(), t("esmOnlineShare", { place: myPlace, points: myTotal })) }
         : { label: t("spyChangeSetup"), onClick: () => replace({ name: "game", game: "esmfamil", screen: "setup", params: { way: "phone" } }) }}
     >
       {online && <XpCardStatic xp={onlineXp} />}

@@ -217,7 +217,6 @@ export function useServiceText() {
       case "api": return t("apiUp");
       case "database":
       case "redis": return s.latencyMs != null ? t("latency", { ms: s.latencyMs }) : t("down");
-      case "bot": return s.secondsAgo != null ? t("heartbeat", { ago: agoSeconds(s.secondsAgo) }) : t("noHeartbeat");
       case "voice": return s.status === "healthy" ? t("voiceOn") : t("voiceOff");
       case "reminders": return s.secondsAgo != null ? t("remindersRun", { ago: agoSeconds(s.secondsAgo), sent: n(s.sent ?? 0), failed: n(s.failed ?? 0) }) : t("remindersNever");
     }

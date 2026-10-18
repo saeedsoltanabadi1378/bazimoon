@@ -7,8 +7,8 @@ import { Body, IconButton, Screen, TopBar } from "../../ui/components";
 import { Icon } from "../../ui/Icon";
 import { formatClock } from "../../lib/format";
 import { haptic } from "../../lib/haptics";
-import { shareToTelegram } from "../../lib/telegram";
-import { botLink } from "../../lib/links";
+import { shareLink } from "../../lib/platform";
+import { appLink } from "../../lib/links";
 import { categoryLabel, startsWithLetter } from "./logic";
 import { EsmLetterChip } from "./parts";
 
@@ -94,7 +94,7 @@ export function EsmFamilLobby({ code }: { code: string }) {
   const { back, push, replace } = useNavigation();
   const { room, error, act } = useRoom(code, 1500, (api) => api.join(code));
   const [copied, setCopied] = useState(false);
-  const link = botLink(`ef_${code.replace("EF-", "")}`);
+  const link = appLink(`ef_${code.replace("EF-", "")}`);
 
   useEffect(() => {
     if (room && room.phase !== "lobby") replace({ name: "game", game: "esmfamil", screen: "online", params: { code: room.code } });
@@ -132,7 +132,7 @@ export function EsmFamilLobby({ code }: { code: string }) {
                 <span className="display" dir="ltr" style={{ fontSize: 26, fontWeight: 800, letterSpacing: 3, color: ACCENT }}>{room.code}</span>
               </div>
               <div className="row" style={{ gap: 8 }}>
-                <button type="button" className="btn btn--md" style={{ flex: 1.4, background: ACCENT, color: INK }} onClick={() => shareToTelegram(link, t("esmInviteText", { code: room.code }))}>
+                <button type="button" className="btn btn--md" style={{ flex: 1.4, background: ACCENT, color: INK }} onClick={() => void shareLink(link, t("esmInviteText", { code: room.code }))}>
                   {t("esmInvite")}
                 </button>
                 <button type="button" className="btn btn--md btn--outline" style={{ flex: 1, borderColor: "#4A3A22" }} onClick={() => void copy()}>

@@ -1,4 +1,4 @@
-/* Bazimoon Mini App design system — tokens and shared components from the "Games Hub" canvas.
+/* Bazimoon app design system — tokens and shared components from the "Games Hub" canvas.
    Three fixed dark surfaces: night (Mafia nights, solo games), day (Mafia day/vote) and hub (home,
    league, profile, puzzles). Screens pick one with data-theme; components only read the variables. */
 

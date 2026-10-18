@@ -1,18 +1,14 @@
 import { useEffect, useState } from "react";
-import type { ActivityItem, ChatRow, Page, PlayerDetail, PlayerRow } from "../adminApi";
+import type { ActivityItem, Page, PlayerDetail, PlayerRow } from "../adminApi";
 import { useAdminI18n } from "../i18n";
-import { AVATAR_COLORS, divisionName, Header, PageState, PHASE_COLORS, Search, Svg, ICONS, formatDuration, gameName, initial, roleName, useAdminData, usePhaseLabel } from "../ui";
+import { AVATAR_COLORS, divisionName, Header, PageState, Search, Svg, ICONS, formatDuration, gameName, initial, roleName, useAdminData } from "../ui";
 
 export function PlayersPage() {
-  const { t, n, ago, date, lang } = useAdminI18n();
-  const [tab, setTab] = useState<0 | 1>(0);
+  const { t, n, ago, lang } = useAdminI18n();
   const [search, setSearch] = useState("");
   const [query, setQuery] = useState("");
-  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const players = useAdminData<Page<PlayerRow>>(`/players?pageSize=50&search=${encodeURIComponent(query)}`);
-  const chats = useAdminData<Page<ChatRow>>(`/chats?pageSize=50&search=${encodeURIComponent(query)}`);
-  const phaseLabel = usePhaseLabel();
-  const phaseShort = (phase: string) => (phase === "Night" || phase === "NightZero" ? t("phaseNightShort") : phase === "Day" ? t("phaseDayShort") : phaseLabel(phase, 0));
 
   useEffect(() => {
     const id = window.setTimeout(() => setQuery(search.trim()), 300);
@@ -22,7 +18,7 @@ export function PlayersPage() {
   const rows = players.data?.items ?? [];
   const selected = rows.find((r) => r.id === selectedId) ?? rows[0];
   const detail = useAdminData<PlayerDetail>(selected ? `/players/${selected.id}` : null);
-  const data = tab === 0 ? players : chats;
+  const data = players;
 
   return (
     <main className="adm-main">
@@ -30,12 +26,7 @@ export function PlayersPage() {
         <Search label={t("searchPlayers")} placeholder={t("searchPlayers")} value={search} onChange={setSearch} />
       </Header>
 
-      <div role="tablist" aria-label={t("playersTitle")} className="adm-tabs">
-        <button type="button" role="tab" aria-selected={tab === 0} onClick={() => setTab(0)}>{t("tabPlayers", { count: players.data?.total ?? 0 })}</button>
-        <button type="button" role="tab" aria-selected={tab === 1} onClick={() => setTab(1)}>{t("tabChats", { count: chats.data?.total ?? 0 })}</button>
-      </div>
-
-      {!data.data ? <PageState error={data.error} onRetry={data.reload} /> : tab === 0 ? (
+      {!data.data ? <PageState error={data.error} onRetry={data.reload} /> : (
         <div className="adm-split">
           <section className="adm-panel flush wide" aria-label={t("navPlayers")}>
             {rows.length === 0 ? <div className="adm-empty">{t("noPlayers")}</div> : (
@@ -85,43 +76,6 @@ export function PlayersPage() {
             )}
           </aside>
         </div>
-      ) : (
-        <section className="adm-panel flush" aria-label={t("tabChats", { count: chats.data?.total ?? 0 })}>
-          {(chats.data?.items.length ?? 0) === 0 ? <div className="adm-empty">{t("noChats")}</div> : (
-            <div className="adm-table-wrap">
-              <table className="adm-table" style={{ minWidth: 640 }}>
-                <thead>
-                  <tr>
-                    <th scope="col">{t("colChat")}</th>
-                    <th scope="col">{t("colMembers")}</th>
-                    <th scope="col">{t("colMafiaGames")}</th>
-                    <th scope="col">{t("colTableNow")}</th>
-                    <th scope="col">{t("colLastGame")}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {chats.data!.items.map((c) => {
-                    const [bg, fg] = c.livePhase ? PHASE_COLORS[c.livePhase] ?? PHASE_COLORS.Lobby : ["#1E2138", "#C9C8DC"];
-                    return (
-                      <tr key={c.id}>
-                        <td>
-                          <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                            <span style={{ fontWeight: 600 }}>{c.title ?? t("unnamedChat", { id: String(c.id) })}</span>
-                            <span className="tiny muted num" dir="ltr" style={{ textAlign: "start" }}>{c.id}</span>
-                          </div>
-                        </td>
-                        <td className="num">{n(c.members)}</td>
-                        <td className="num">{n(c.games)}</td>
-                        <td><span className="adm-pill" style={{ background: bg, color: fg }}>{c.livePhase ? phaseShort(c.livePhase) : t("noTable")}</span></td>
-                        <td className="text-2">{c.lastGame ? date(c.lastGame) : t("none")}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </section>
       )}
     </main>
   );
@@ -158,7 +112,7 @@ function PlayerPanel({ d, color }: { d: PlayerDetail; color: string }) {
         <span className="adm-avatar display" style={{ width: 52, height: 52, fontSize: 22, fontWeight: 800, background: color, color: "#0B0D1A" }}>{initial(d.name)}</span>
         <div style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 0 }}>
           <h2 id="player-title" className="display" style={{ fontSize: 22, fontWeight: 800 }}>{d.name}</h2>
-          <span className="small muted">{t("telegramId", { id: String(d.id), date: date(d.joined) })}</span>
+          <span className="small muted">{t("playerId", { id: d.id, date: date(d.joined) })}</span>
         </div>
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 8 }}>

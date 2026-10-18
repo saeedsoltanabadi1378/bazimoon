@@ -25,7 +25,7 @@ export function LastWordsScreen() {
   const name = (id: string | null | undefined) => {
     const p = findPlayer(view, id);
     if (!p) return t("unknown");
-    return p.playerId === view.yourPlayerId ? t("youName", { name: p.telegramUsername }) : p.telegramUsername;
+    return p.playerId === view.yourPlayerId ? t("youName", { name: p.displayName }) : p.displayName;
   };
 
   const lastWords = view.lastWords;
@@ -67,7 +67,7 @@ export function LastWordsScreen() {
                 aria-hidden="true"
                 style={{ position: "absolute", left: 19, top: 19, width: 112, height: 112, fontSize: 44, fontWeight: 800, background: playerColor(view, speaker.playerId), filter: "grayscale(0.5)" }}
               >
-                {Array.from(speaker.telegramUsername)[0]?.toUpperCase()}
+                {Array.from(speaker.displayName)[0]?.toUpperCase()}
               </span>
             </div>
             <div>

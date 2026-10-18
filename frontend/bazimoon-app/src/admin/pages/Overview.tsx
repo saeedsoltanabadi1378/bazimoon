@@ -13,16 +13,6 @@ export function OverviewPage({ go }: { go(p: AdminPage): void }) {
 
   const header = (
     <Header kicker={t("tehranTime", { date: new Date().toLocaleDateString(lang === "fa" ? "fa-IR" : "en-GB", { weekday: "long", day: "numeric", month: "long", timeZone: "Asia/Tehran" }) })} title={t("overviewTitle")}>
-      {data && (() => {
-        const bot = data.services.find((s) => s.key === "bot");
-        const up = bot?.status === "healthy";
-        return (
-          <span className="adm-pill" style={{ padding: "8px 12px", fontSize: 13, background: up ? "#13302C" : "#2A1418", color: up ? "#5FD0BE" : "#F08A7A" }}>
-            <span style={{ width: 8, height: 8, borderRadius: 999, background: "currentColor" }} />
-            {up ? t("botConnected") : t("botOffline")}
-          </span>
-        );
-      })()}
       <div role="radiogroup" aria-label={t("range")} className="adm-seg">
         {RANGES.map((r) => (
           <button key={r} type="button" role="radio" aria-checked={range === r} onClick={() => setRange(r)}>
@@ -115,7 +105,7 @@ export function OverviewPage({ go }: { go(p: AdminPage): void }) {
               <a key={g.id} href="/admin/games" className="adm-row" style={{ minHeight: 56, color: "#EDEBF5", textDecoration: "none" }} onClick={(e) => { e.preventDefault(); go("games"); }}>
                 <span style={{ width: 36, height: 36, flex: "none", borderRadius: 10, background: bg, color: fg, display: "flex", alignItems: "center", justifyContent: "center" }}><Svg d={icon} /></span>
                 <span style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
-                  <span style={{ fontWeight: 600 }}>{g.chatTitle ?? t("unnamedChat", { id: String(g.chatId) })}</span>
+                  <span style={{ fontWeight: 600 }}>{g.title ?? t("unnamedTable")}</span>
                   <span className="tiny muted">{liveDetail(g)}</span>
                 </span>
                 <span className="small text-2 num">{n(g.alive)}/{n(g.seated)}</span>

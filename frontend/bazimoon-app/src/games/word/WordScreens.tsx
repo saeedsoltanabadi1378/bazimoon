@@ -158,7 +158,7 @@ export function WordPlay({ lang }: { lang: WordLang }) {
     }
   }
 
-  // Physical keyboards (desktop Telegram, hardware keyboards).
+  // Physical keyboards (desktop, hardware keyboards).
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.metaKey || e.ctrlKey || e.altKey) return;
@@ -394,7 +394,7 @@ export function WordResult({ params }: { params?: ResultParams }) {
 function ShareButton({ text }: { text: string }) {
   const { t } = useLanguage();
   return (
-    <button type="button" className="btn btn--outline" style={{ flex: 1, fontSize: 15 }} onClick={() => import("../../lib/telegram").then(({ shareToTelegram }) => import("../../lib/links").then(({ botLink }) => shareToTelegram(botLink(), text)))}>
+    <button type="button" className="btn btn--outline" style={{ flex: 1, fontSize: 15 }} onClick={() => import("../../lib/platform").then(({ shareLink }) => import("../../lib/links").then(({ appLink }) => void shareLink(appLink(), text)))}>
       {t("shareToGroup")}
     </button>
   );

@@ -125,7 +125,6 @@ export interface DailyStatus {
 export interface Table {
   gameId: string;
   name: string | null;
-  chatTitle: string | null;
   host: string | null;
   isOpen: boolean;
   phase: GamePhase;
@@ -141,7 +140,6 @@ export interface Table {
 export interface TableInfo {
   gameId: string;
   name: string | null;
-  chatTitle: string | null;
   isOpen: boolean;
   isHost: boolean;
   /** Only the host gets the code. */

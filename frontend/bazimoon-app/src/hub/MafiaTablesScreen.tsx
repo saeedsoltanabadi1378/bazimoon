@@ -11,7 +11,7 @@ import type { Table } from "../api/hub";
 const faceColors = ["#F0A83A", "#5FD0BE", "#B79CF2", "#8FA8FF", "#E9D8A6", "#F08A7A"];
 
 /** Together tab: Couple Quiz, then Mafia tables (public ones, or the ones you host or sit at), a code box
- * and "Create a table". Opening an invite link (t_CODE) lands here with the code filled in. */
+ * and "Create a table". Opening an invite link (/t/CODE) lands here with the code filled in. */
 export function MafiaTablesScreen({ code }: { code?: string }) {
   const { t } = useLanguage();
   const { push, replace } = useNavigation();
@@ -139,14 +139,14 @@ function TableCard({ table, onOpen }: { table: Table; onOpen(): void }) {
   const seats = live
     ? table.round > 0 ? t("tableNightPlaying", { round: table.round, count: table.seated }) : t("tablePlaying", { count: table.seated })
     : t("seatedOf", { seated: table.seated, max: table.maxPlayers });
-  const title = table.name ?? table.chatTitle ?? t("mafiaTables");
+  const title = table.name ?? t("mafiaTables");
 
   return (
     <article className="stack" style={{ gap: 10, padding: 14, borderRadius: 18, background: "var(--surface)" }}>
       <div className="row" style={{ alignItems: "flex-start", gap: 10 }}>
         <div className="grow stack" style={{ gap: 2, minWidth: 0 }}>
           <span style={{ fontSize: 16, fontWeight: 600 }}>{title}</span>
-          <span className="small muted">{[table.name ? table.chatTitle : null, table.host ? t("tableBy", { name: table.host }) : null].filter(Boolean).join(" · ")}</span>
+          <span className="small muted">{table.host ? t("tableBy", { name: table.host }) : ""}</span>
         </div>
         <span className="row" style={{ gap: 5, padding: "3px 10px", borderRadius: 999, background: table.isOpen ? "#13302C" : "#1E2138", color: table.isOpen ? "#5FD0BE" : "#B79CF2", fontSize: 12, fontWeight: 600, whiteSpace: "nowrap" }}>
           <Icon name={table.isOpen ? "globe" : "lock"} size={12} strokeWidth={2.4} />

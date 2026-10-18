@@ -9,9 +9,12 @@ import { TabBar } from "../ui/TabBar";
 import { useHub } from "./HubData";
 import { roman } from "./HomeScreen";
 import { formatClock } from "../lib/format";
-import { shareToTelegram } from "../lib/telegram";
-import { botLink } from "../lib/links";
+import { shareLink } from "../lib/platform";
+import { appLink } from "../lib/links";
 import { haptic } from "../lib/haptics";
+import { forgetGoogleChoice } from "../lib/google";
+import { GoogleButton } from "../ui/GoogleButton";
+import { SaveProgressSheet, useGoogleLink } from "./SaveProgress";
 
 
 export function ProfileScreen() {
@@ -20,6 +23,7 @@ export function ProfileScreen() {
   const { profile, saveSettings } = useHub();
   const { push } = useNavigation();
   const [editingTime, setEditingTime] = useState(false);
+  const google = useGoogleLink();
 
   if (!profile) {
     return (
@@ -36,7 +40,7 @@ export function ProfileScreen() {
 
   const p = profile;
   const s = p.settings;
-  const name = session.firstName || p.name;
+  const name = session.displayName || p.name;
   const badges = [...p.badges].sort((a, b) => Number(b.earned) - Number(a.earned));
   const sides = [
     { label: t("asTown"), pct: p.mafia.asTown.winRate, games: p.mafia.asTown.games, color: "#5FD0BE" },
@@ -59,6 +63,24 @@ export function ProfileScreen() {
             <div className="tiny muted">{t("xpToLevel", { xp: n(p.xpIntoLevel), next: n(p.xpForNext), level: p.level + 1 })}</div>
           </div>
         </header>
+
+        {session.isGuest ? (
+          <section className="stack" style={{ gap: 12, padding: 16, borderRadius: 18, background: "#2A2113", border: "1px solid #5A4120" }}>
+            <div className="row" style={{ gap: 8 }}>
+              <span style={{ padding: "3px 10px", borderRadius: 999, background: "#3A2A16", color: "#F6C377", fontSize: 12, fontWeight: 700 }}>{t("guestBadge")}</span>
+              <h2 style={{ fontSize: 15, fontWeight: 600 }}>{t("guestCardTitle")}</h2>
+            </div>
+            <p style={{ margin: 0, fontSize: 13, lineHeight: 1.45, color: "#E3D3B8" }}>{t("guestCardBody")}</p>
+            <GoogleButton onCredential={(token) => void google.onCredential(token)} />
+          </section>
+        ) : (
+          <section className="row" style={{ gap: 12, padding: "14px 16px", borderRadius: 18, background: "var(--surface)" }}>
+            <span style={{ width: 36, height: 36, borderRadius: 999, background: "#13302C", color: "#5FD0BE", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <Icon name="check" size={18} />
+            </span>
+            <span style={{ fontSize: 14, fontWeight: 600 }}>{t("signedInWithGoogle")}</span>
+          </section>
+        )}
 
         <section className="stack" style={{ gap: 12, padding: 16, borderRadius: 18, background: "var(--surface)" }}>
           <h2 style={{ fontSize: 16, fontWeight: 600 }}>{t("sectionPuzzles")}</h2>
@@ -141,9 +163,15 @@ export function ProfileScreen() {
             void saveSettings({ haptics: !s.haptics });
             haptic.tap();
           }} />
-          <SettingRow label={t("inviteFriends")} value={t("share")} onClick={() => shareToTelegram(botLink(), t("inviteText"))} />
+          <SettingRow label={t("inviteFriends")} value={t("share")} onClick={() => void shareLink(appLink(), t("inviteText"))} />
+          {!session.isGuest && (
+            <button type="button" onClick={() => { forgetGoogleChoice(); void session.logout(); }} style={{ width: "100%", minHeight: 52, padding: "0 16px", border: 0, borderTop: "1px solid #232734", background: "transparent", color: "#F08A7A", fontSize: 15, fontWeight: 600, textAlign: "start", cursor: "pointer" }}>
+              {t("logOut")}
+            </button>
+          )}
         </section>
       </Body>
+      {google.stage && google.stage !== "prompt" && <SaveProgressSheet link={google} onClose={() => google.setStage(null)} />}
       <TabBar />
     </Screen>
   );

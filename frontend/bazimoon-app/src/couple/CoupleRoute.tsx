@@ -8,8 +8,8 @@ import { coupleApi, type CoupleDay, type CoupleState } from "../api/couple";
 import { ApiError } from "../api/client";
 import { Body, IconButton, Screen, Toast } from "../ui/components";
 import { LoadingScreen, StateScreen } from "../app/StateScreen";
-import { botLink } from "../lib/links";
-import { openTelegramLink, shareToTelegram } from "../lib/telegram";
+import { appLink } from "../lib/links";
+import { shareLink } from "../lib/platform";
 import { formatShortDate } from "../lib/format";
 import { readLocal, removeLocal, writeLocal } from "../lib/storage";
 import { haptic } from "../lib/haptics";
@@ -27,8 +27,6 @@ export function useCoupleApi() {
 }
 
 const initial = (name: string | null | undefined) => (name ? Array.from(name)[0]!.toUpperCase() : "?");
-const isHandle = (name: string) => /^[A-Za-z][A-Za-z0-9_]{4,31}$/.test(name);
-
 function Pair({ me, partner, size = 64, partnerStyle }: { me: string; partner: ReactNode; size?: number; partnerStyle?: React.CSSProperties }) {
   const font = { fontFamily: "var(--font-display)", fontSize: size * 0.4, fontWeight: 800 } as const;
   return (
@@ -87,14 +85,14 @@ function CoupleInvite({ state, onChange }: { state: CoupleState; onChange: () =>
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const pending = state.status === "pending" && state.invite;
-  const link = pending ? botLink(`couple_${state.invite!.token}`) : "";
+  const link = pending ? appLink(`couple_${state.invite!.token}`) : "";
   const hoursLeft = pending ? Math.max(1, Math.round((new Date(state.invite!.expiresAt).getTime() - Date.now()) / 3_600_000)) : 0;
 
   async function invite() {
     setBusy(true);
     try {
       const next = await capi.invite();
-      if (next.invite) shareToTelegram(botLink(`couple_${next.invite.token}`), t("coupleShareText"));
+      if (next.invite) void shareLink(appLink(`couple_${next.invite.token}`), t("coupleShareText"));
       onChange();
     } catch {
       setToast(t("coupleSomethingWrong"));
@@ -182,7 +180,7 @@ function CoupleInvite({ state, onChange }: { state: CoupleState; onChange: () =>
       </Body>
       <div className="screen__bar">
         {pending ? (
-          <button type="button" className="btn btn--outline" style={{ minHeight: 54, borderStyle: "dashed", borderColor: "#5A3448" }} onClick={() => shareToTelegram(link, t("coupleShareText"))}>
+          <button type="button" className="btn btn--outline" style={{ minHeight: 54, borderStyle: "dashed", borderColor: "#5A3448" }} onClick={() => void shareLink(link, t("coupleShareText"))}>
             {t("coupleShareAgain")}
           </button>
         ) : (
@@ -699,7 +697,6 @@ function CoupleRevealView({ number }: { number: number }) {
   const ok = "m5 12 5 5 9-10";
   const no = "M6 6l12 12M18 6 6 18";
   const option = (q: number, a: number) => (a < 0 ? t("coupleSkipped") : set.questions[q].options[a]);
-  const handle = isHandle(partner);
   const isToday = state?.couple?.today.number === day.number;
 
   const chip = (hit: boolean, text: string) => (
@@ -761,9 +758,9 @@ function CoupleRevealView({ number }: { number: number }) {
           type="button"
           className="btn"
           style={{ flex: 1.4, background: PINK, color: PINK_INK }}
-          onClick={() => (handle ? openTelegramLink(`https://t.me/${partner}`) : shareToTelegram(botLink("couple"), t("coupleShareResult", { score, day: day.number })))}
+          onClick={() => void shareLink(appLink("couple"), t("coupleShareResult", { score, day: day.number }))}
         >
-          {handle ? t("coupleChatWith", { name: partner }) : t("coupleShareResultCta")}
+          {t("coupleShareResultCta")}
         </button>
       </div>
     </Screen>

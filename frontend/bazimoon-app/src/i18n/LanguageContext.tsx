@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
-import { telegram } from "../lib/telegram";
+import { deviceLanguage } from "../lib/platform";
 import { readLocal, writeLocal } from "../lib/storage";
 import { en } from "./en";
 import { fa } from "./fa";
@@ -24,7 +24,7 @@ interface LanguageContextValue {
 const LanguageContext = createContext<LanguageContextValue | null>(null);
 
 function detect(): Language {
-  return telegram.initDataUnsafe.user?.language_code?.toLowerCase().startsWith("fa") ? "fa" : "en";
+  return deviceLanguage();
 }
 
 export function LanguageProvider({ children }: { children: ReactNode }) {

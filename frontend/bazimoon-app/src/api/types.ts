@@ -29,7 +29,7 @@ export type EliminationCause = "Night" | "Vote" | "Left";
 
 export interface PlayerView {
   playerId: string;
-  telegramUsername: string;
+  displayName: string;
   isAlive: boolean;
   revealedRole: Role | null;
   eliminatedBy: EliminationCause | null;
@@ -223,8 +223,15 @@ export interface VoiceTokenResponse {
   role: string;
 }
 
-export interface TelegramAuthResponse {
-  token: string;
-  telegramUserId: number;
-  username: string;
+export interface AuthUser {
+  id: string;
+  displayName: string;
+  isGuest: boolean;
+  language: "en" | "fa";
+}
+
+export interface AuthSession {
+  accessToken: string;
+  refreshToken: string;
+  user: AuthUser;
 }

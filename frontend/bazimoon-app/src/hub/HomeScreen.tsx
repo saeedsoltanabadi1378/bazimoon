@@ -51,7 +51,7 @@ export function HomeScreen() {
               onClick={() => push({ name: "profile" })}
               style={{ width: 44, height: 44, borderRadius: 999, border: 0, background: "#2B3042", color: "var(--text)", fontWeight: 600, cursor: "pointer" }}
             >
-              {Array.from(session.firstName || session.username || "?")[0]?.toUpperCase()}
+              {Array.from(session.displayName || "?")[0]?.toUpperCase()}
             </button>
           </div>
         </header>
@@ -206,7 +206,7 @@ function PlayTogether({ data }: { data: Home | null }) {
   const coupleOn = isGameOn("couple");
   const table = data?.table ?? null;
   const open = data?.openTables ?? 0;
-  const tableName = table?.name ?? table?.chatTitle;
+  const tableName = table?.name;
   const mafiaSub = table && table.phase === "Lobby" && tableName
     ? t("mafiaTileYourTable", { name: tableName })
     : open === 1 ? t("mafiaTileOneOpen") : open > 1 ? t("mafiaTileOpen", { count: open }) : t("mafiaTileNone");

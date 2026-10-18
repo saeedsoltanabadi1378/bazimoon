@@ -272,7 +272,7 @@ export const party: Record<keyof typeof en, string> = {
   esmRoomSub: "آنلاین · تا ۸ نفر",
   esmRoomMissing: "این اتاق وجود ندارد، پر است یا بازی‌اش شروع شده.",
   esmRoomCode: "کد اتاق",
-  esmInvite: "دعوت در تلگرام",
+  esmInvite: "دعوت دوستان",
   esmInviteText: "بیا به اتاق اسم فامیل من در نایت‌فال · کد {code}",
   esmReadyCount: "{n} از {total} آماده",
   esmHost: "میزبان",

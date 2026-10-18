@@ -8,8 +8,8 @@ import { formatClock, puzzleToday } from "../../lib/format";
 import { dailyNumber } from "../../lib/rng";
 import { readLocal, writeLocal } from "../../lib/storage";
 import { haptic } from "../../lib/haptics";
-import { shareToTelegram } from "../../lib/telegram";
-import { botLink } from "../../lib/links";
+import { shareLink } from "../../lib/platform";
+import { appLink } from "../../lib/links";
 import { roman } from "../../hub/HomeScreen";
 import { IntroScreen } from "../shared/IntroScreen";
 import { XpCard } from "../shared/ResultScreen";
@@ -496,7 +496,7 @@ export function StackResult({ params }: { params?: ResultParams }) {
         </div>
       </Body>
       <div className="screen__bar screen__bar--row" style={{ gap: 8 }}>
-        <button type="button" className="btn btn--outline" style={{ flex: 1, fontSize: 15 }} onClick={() => shareToTelegram(botLink(), t("stackShare", { count: floors }))}>
+        <button type="button" className="btn btn--outline" style={{ flex: 1, fontSize: 15 }} onClick={() => void shareLink(appLink(), t("stackShare", { count: floors }))}>
           {t("share")}
         </button>
         {mode !== "daily" && (

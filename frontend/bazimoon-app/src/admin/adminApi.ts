@@ -47,8 +47,8 @@ export interface PlayerInGame {
 
 export interface LiveGame {
   id: string;
-  chatId: number;
-  chatTitle: string | null;
+  /** The table's name, when the host gave it one. */
+  title: string | null;
   phase: string;
   round: number;
   alive: number;
@@ -65,8 +65,7 @@ export interface LiveGame {
 
 export interface PastGame {
   id: string;
-  chatId: number;
-  chatTitle: string | null;
+  title: string | null;
   status: string;
   result: string;
   startedAt: string;
@@ -77,7 +76,7 @@ export interface PastGame {
 }
 
 export interface ServiceStatus {
-  key: "api" | "database" | "redis" | "bot" | "voice" | "reminders";
+  key: "api" | "database" | "redis" | "voice" | "reminders";
   status: "healthy" | "degraded" | "down";
   latencyMs: number | null;
   secondsAgo: number | null;
@@ -115,7 +114,7 @@ export interface Overview {
 }
 
 export interface PlayerRow {
-  id: number;
+  id: string;
   name: string;
   level: number;
   rating: number;
@@ -139,7 +138,7 @@ export interface ActivityItem {
 }
 
 export interface PlayerDetail {
-  id: number;
+  id: string;
   name: string;
   joined: string;
   level: number;
@@ -159,15 +158,6 @@ export interface PlayerDetail {
   mafiaByRole: { role: string; games: number; winRate: number }[] | null;
   /** Totals over the games that have a log; older games are left out. */
   mafiaSkills: { trackedGames: number; checksMade: number; mafiaFound: number; killsBlocked: number; votesCast: number; votesOnMafia: number } | null;
-}
-
-export interface ChatRow {
-  id: number;
-  title: string | null;
-  members: number;
-  games: number;
-  livePhase: string | null;
-  lastGame: string | null;
 }
 
 export interface Daily {
@@ -190,28 +180,20 @@ export interface Puzzles {
   couples: { active: number; bothToday: number; averageMatch: number; invitesWaiting: number; skipped: { setId: number; question: number; rate: number }[] };
 }
 
-export interface BotSettings {
+export interface AppSettings {
   version: number;
   minPlayers: number;
   maxPlayers: number;
   maintenanceMode: boolean;
   maintenanceMessage: string;
-  enabledCommands: string[];
-  soloTestEnabled: boolean;
-  miniAppBaseUrl: string;
-  helpMessage: string;
-  welcomeMessage: string;
-  updatedAt: string;
   maintenanceMessageFa: string;
-  helpMessageFa: string;
-  welcomeMessageFa: string;
   reminderMessage: string;
   reminderMessageFa: string;
-  /** Games switched off for everyone (missing on servers older than the game switches). */
+  updatedAt?: string;
+  /** Games switched off for everyone. */
   disabledGames?: string[];
 }
 
 /** Every game an admin can switch off, in the order the Games section lists them. */
 export const ALL_GAMES = ["mafia", "couple", "zip", "queens", "sudoku", "word", "ladder", "mines", "merge", "blocks", "stack", "memory", "nard", "snake", "dooz", "spy", "esmfamil"] as const;
 
-export const ALL_COMMANDS = ["newgame", "join", "startgame", "myrole", "startnight", "resolvenight", "startvoting", "resolvevoting", "help", "start", "solotest", "solonext"] as const;

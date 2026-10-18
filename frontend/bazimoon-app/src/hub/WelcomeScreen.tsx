@@ -7,6 +7,8 @@ import { useHub } from "./HubData";
 import { LogoTiles } from "../ui/LogoTiles";
 import { writeLocal } from "../lib/storage";
 import { haptic } from "../lib/haptics";
+import { GoogleButton } from "../ui/GoogleButton";
+import { SaveProgressSheet, useGoogleLink } from "./SaveProgress";
 
 export const WELCOMED_KEY = "bazimoon-welcomed";
 
@@ -26,6 +28,7 @@ export function WelcomeScreen() {
   const { saveSettings } = useHub();
   const [step, setStep] = useState(0);
   const [remind, setRemind] = useState(true);
+  const google = useGoogleLink();
 
   function finish() {
     writeLocal(WELCOMED_KEY, true);
@@ -120,9 +123,16 @@ export function WelcomeScreen() {
         {step < 2 ? (
           <button type="button" className="btn" style={{ minHeight: 54, background: AMBER, color: "#1A1206" }} onClick={() => setStep((s) => s + 1)}>{t("continue")}</button>
         ) : (
-          <button type="button" className="btn" style={{ minHeight: 54, background: AMBER, color: "#1A1206" }} onClick={finish}>{t("startPlaying")}</button>
+          <div className="stack" style={{ gap: 10 }}>
+            <button type="button" className="btn" style={{ minHeight: 54, background: AMBER, color: "#1A1206" }} onClick={finish}>{t("startPlaying")}</button>
+            <GoogleButton onCredential={(token) => void google.onCredential(token).then(() => undefined)} />
+            <p style={{ margin: 0, textAlign: "center", fontSize: 13, lineHeight: 1.45, color: "var(--muted)" }}>{t("guestNote")}</p>
+          </div>
         )}
       </div>
+      {google.stage && google.stage !== "prompt" && (
+        <SaveProgressSheet link={google} onClose={() => (google.stage === "linked" ? finish() : google.setStage(null))} />
+      )}
     </Screen>
   );
 }

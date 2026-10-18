@@ -279,7 +279,7 @@ export const party = {
   esmRoomSub: "Online · up to 8 players",
   esmRoomMissing: "That room doesn't exist, is full or has already started.",
   esmRoomCode: "Room code",
-  esmInvite: "Invite on Telegram",
+  esmInvite: "Invite friends",
   esmInviteText: "Join my Esm-Famil room on Bazimoon · code {code}",
   esmReadyCount: "{n} of {total} ready",
   esmHost: "Host",

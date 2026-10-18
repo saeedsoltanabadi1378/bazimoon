@@ -36,7 +36,7 @@ export function FirstNightScreen() {
                 const player = findPlayer(view, member.playerId);
                 const you = member.playerId === view.yourPlayerId;
                 const live = you && voice.channel === "mafia" && !voice.muted;
-                const name = player?.telegramUsername ?? "";
+                const name = player?.displayName ?? "";
                 return (
                   <div key={member.playerId} className="stack center" style={{ gap: 8, padding: "16px 8px", borderRadius: 18, background: "#2A1820", textAlign: "center" }}>
                     <span
@@ -80,7 +80,7 @@ export function FirstNightScreen() {
               const you = p.playerId === view.yourPlayerId;
               return (
                 <span key={p.playerId} className="chip" style={{ borderColor: mate ? "#5A3439" : undefined, color: mate ? "#F08A7A" : undefined }}>
-                  {you ? t("youName", { name: p.telegramUsername }) : p.telegramUsername}
+                  {you ? t("youName", { name: p.displayName }) : p.displayName}
                 </span>
               );
             })}
