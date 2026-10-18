@@ -1,20 +1,10 @@
-import { useEffect, useMemo } from "react";
+import { lazy, Suspense, useEffect, useMemo } from "react";
 import { LanguageProvider, useLanguage } from "./i18n/LanguageContext";
 import { SessionProvider, useSession } from "./app/session";
 import { NavigationProvider, useNavigation, type GameKey, type Route } from "./app/router";
 import { LoadingScreen, StateScreen } from "./app/StateScreen";
-import { MafiaRoute } from "./mafia/MafiaRoute";
-import { MafiaTablesScreen } from "./hub/MafiaTablesScreen";
-import { CreateTableScreen } from "./hub/CreateTableScreen";
 import { HomeScreen } from "./hub/HomeScreen";
 import { WelcomeScreen, WELCOMED_KEY } from "./hub/WelcomeScreen";
-import { SoloScreen } from "./hub/SoloScreen";
-import { LeagueScreen } from "./hub/LeagueScreen";
-import { ProfileScreen } from "./hub/ProfileScreen";
-import { MafiaStatsScreen } from "./hub/MafiaStatsScreen";
-import { RecapScreen } from "./mafia/RecapScreen";
-import { GameRoute } from "./games/GameRoute";
-import { CoupleRoute } from "./couple/CoupleRoute";
 import { HubDataProvider } from "./hub/HubData";
 import { initAppShell } from "./lib/platform";
 import { readLocal } from "./lib/storage";
@@ -22,6 +12,18 @@ import { readDeepLink } from "./lib/links";
 import { GoogleButton } from "./ui/GoogleButton";
 import { UpdatePrompt } from "./app/UpdatePrompt";
 import { GoogleResultSheet } from "./hub/SaveProgress";
+
+// Screens past Home load on demand so the first paint only needs the hub.
+const MafiaRoute = lazy(() => import("./mafia/MafiaRoute").then((m) => ({ default: m.MafiaRoute })));
+const MafiaTablesScreen = lazy(() => import("./hub/MafiaTablesScreen").then((m) => ({ default: m.MafiaTablesScreen })));
+const CreateTableScreen = lazy(() => import("./hub/CreateTableScreen").then((m) => ({ default: m.CreateTableScreen })));
+const SoloScreen = lazy(() => import("./hub/SoloScreen").then((m) => ({ default: m.SoloScreen })));
+const LeagueScreen = lazy(() => import("./hub/LeagueScreen").then((m) => ({ default: m.LeagueScreen })));
+const ProfileScreen = lazy(() => import("./hub/ProfileScreen").then((m) => ({ default: m.ProfileScreen })));
+const MafiaStatsScreen = lazy(() => import("./hub/MafiaStatsScreen").then((m) => ({ default: m.MafiaStatsScreen })));
+const RecapScreen = lazy(() => import("./mafia/RecapScreen").then((m) => ({ default: m.RecapScreen })));
+const GameRoute = lazy(() => import("./games/GameRoute").then((m) => ({ default: m.GameRoute })));
+const CoupleRoute = lazy(() => import("./couple/CoupleRoute").then((m) => ({ default: m.CoupleRoute })));
 
 const gameKeys: GameKey[] = ["zip", "queens", "merge", "mines", "memory", "nard", "word", "ladder", "stack", "blocks", "sudoku", "snake", "dooz", "spy", "esmfamil"];
 const isGameKey = (key: string): key is GameKey => (gameKeys as string[]).includes(key);
@@ -104,7 +106,9 @@ function SessionGate() {
       return (
         <HubDataProvider>
           <NavigationProvider initial={routes}>
-            <CurrentScreen />
+            <Suspense fallback={<LoadingScreen />}>
+              <CurrentScreen />
+            </Suspense>
           </NavigationProvider>
           <GoogleResultSheet />
         </HubDataProvider>

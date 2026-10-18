@@ -1,7 +1,7 @@
 import { useNavigation } from "../app/router";
 import { useLanguage } from "../i18n/LanguageContext";
 import { useHub, useLoad } from "../hub/HubData";
-import { useCoupleApi } from "./CoupleRoute";
+import { useCoupleApi } from "./useCoupleApi";
 
 const PINK = "#F2A7C3";
 

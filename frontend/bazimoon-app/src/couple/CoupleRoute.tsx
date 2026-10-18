@@ -1,10 +1,10 @@
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import type { Route } from "../app/router";
 import { useNavigation } from "../app/router";
-import { useSession } from "../app/session";
 import { useLanguage } from "../i18n/LanguageContext";
 import { useHub, useLoad } from "../hub/HubData";
-import { coupleApi, type CoupleDay, type CoupleState } from "../api/couple";
+import { useCoupleApi } from "./useCoupleApi";
+import { type CoupleDay, type CoupleState } from "../api/couple";
 import { ApiError } from "../api/client";
 import { Body, IconButton, Screen, Toast } from "../ui/components";
 import { LoadingScreen, StateScreen } from "../app/StateScreen";
@@ -20,11 +20,6 @@ const PINK = "#F2A7C3";
 const PINK_INK = "#2A0F1C";
 const ROSE_BG = "#24121C";
 const BLUE = "#8FA8FF";
-
-export function useCoupleApi() {
-  const session = useSession();
-  return useMemo(() => coupleApi(session.api), [session.api]);
-}
 
 const initial = (name: string | null | undefined) => (name ? Array.from(name)[0]!.toUpperCase() : "?");
 function Pair({ me, partner, size = 64, partnerStyle }: { me: string; partner: ReactNode; size?: number; partnerStyle?: React.CSSProperties }) {
