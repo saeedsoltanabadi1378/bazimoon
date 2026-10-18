@@ -48,11 +48,18 @@ public sealed record GameView(
     SniperShotView? YourShot = null,
     Guid? MafiaSilenceTargetId = null,
     Guid? JokerWinnerId = null,
-    SetupView? Setup = null)
+    SetupView? Setup = null,
+    bool YouAreSpectator = false,
+    int SpectatorCount = 0,
+    IReadOnlyList<SpectatorView>? Spectators = null,
+    bool YouCanUseGraveyard = false,
+    bool YouAreMutedInGraveyard = false)
 {
     public static GameView For(GameState game, Guid viewerId)
     {
         var viewer = game.GetPlayer(viewerId);
+        // A spectator has no seat: with no viewer they get only what's public.
+        var spectator = viewer is null ? game.GetSpectator(viewerId) : null;
         bool revealAll = game.CurrentPhase == GamePhase.Ended;
         bool hideDead = !game.Config.RevealRolesOnDeath && !revealAll;
         // At tables that hide roles, a player who is out sees no roles at all, their own included, so they can't leak them.
@@ -194,7 +201,13 @@ public sealed record GameView(
             viewerIsMafia && game.CurrentPhase == GamePhase.Night
                 ? game.PendingNightActions.FirstOrDefault(a => a.ActionType == NightActionType.Silence)?.TargetId : null,
             game.JokerWinnerId,
-            SetupView.For(game));
+            SetupView.For(game),
+            spectator is not null,
+            game.Spectators.Count,
+            // The creator manages who is watching, even while still alive and unable to read the graveyard.
+            isController ? game.Spectators.Select(x => new SpectatorView(x.Id, x.Username, x.Muted)).ToList() : null,
+            game.CanUseGraveyard(viewerId),
+            spectator?.Muted ?? false);
     }
 }
 
@@ -225,6 +238,9 @@ public sealed record PlayerView(
     int? EliminatedRound = null,
     bool WasPromoted = false,
     bool Revealed = false);
+
+/// <summary>Someone watching the table, as the creator sees them.</summary>
+public sealed record SpectatorView(Guid Id, string Username, bool Muted);
 
 /// <summary>The Sniper's own shot last night and what it did.</summary>
 public sealed record SniperShotView(Guid TargetPlayerId, SniperOutcome Outcome);
@@ -259,12 +275,12 @@ public sealed record LastWordsView(Guid PlayerId, EliminationCause Cause, DateTi
 public sealed record RulesView(
     int SpeakerSeconds, int ChallengeSeconds, int DefenceSeconds, int LastWordsSeconds,
     int? NightSeconds, int? VotingSeconds, bool LastWordsForNightKills,
-    RolePreset Preset = RolePreset.Classic, bool GodfatherAppearsInnocent = false, bool JokerWinEndsGame = true, bool RevealRolesOnDeath = true)
+    RolePreset Preset = RolePreset.Classic, bool GodfatherAppearsInnocent = false, bool JokerWinEndsGame = true, bool RevealRolesOnDeath = true, bool AllowSpectators = false)
 {
     public static RulesView From(GameConfig c) => new(
         c.SpeakerSeconds, c.ChallengeSeconds, c.DefenceSeconds, c.LastWordsSeconds,
         c.NightSeconds, c.VotingSeconds, c.LastWordsForNightKills,
-        c.Roles.Preset, c.GodfatherAppearsInnocent, c.JokerWinEndsGame, c.RevealRolesOnDeath);
+        c.Roles.Preset, c.GodfatherAppearsInnocent, c.JokerWinEndsGame, c.RevealRolesOnDeath, c.AllowSpectators);
 }
 
 public sealed record VoteView(Guid VoterPlayerId, Guid? TargetPlayerId);

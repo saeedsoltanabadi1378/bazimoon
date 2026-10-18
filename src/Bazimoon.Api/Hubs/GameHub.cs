@@ -17,20 +17,38 @@ public sealed class GameHub : Hub
     }
 
     /// <summary>Joins the caller's connection to a game's broadcast group, after verifying they're
-    /// actually a player in that game (derived from their authenticated user id).</summary>
+    /// actually a player or a spectator in that game (derived from their authenticated user id).</summary>
     public async Task JoinGame(Guid gameId)
     {
         var game = await _sessionStore.GetAsync(gameId) ?? throw new HubException("Game not found.");
         Guid userId = Context.User!.GetUserId();
         var playerId = PlayerIdentity.DeriveId(gameId, userId);
 
-        if (game.GetPlayer(playerId) is null)
+        if (game.GetPlayer(playerId) is null && game.GetSpectator(playerId) is null)
             throw new HubException("You are not a player in this game.");
 
         await Groups.AddToGroupAsync(Context.ConnectionId, GroupName(gameId));
+        if (game.CanUseGraveyard(playerId))
+            await Groups.AddToGroupAsync(Context.ConnectionId, GraveyardGroupName(gameId));
     }
 
-    public Task LeaveGame(Guid gameId) => Groups.RemoveFromGroupAsync(Context.ConnectionId, GroupName(gameId));
+    /// <summary>Adds the connection to the graveyard chat once the caller is out or watching. The living are refused.</summary>
+    public async Task JoinGraveyard(Guid gameId)
+    {
+        var game = await _sessionStore.GetAsync(gameId) ?? throw new HubException("Game not found.");
+        var id = PlayerIdentity.DeriveId(gameId, Context.User!.GetUserId());
+        if (!game.CanUseGraveyard(id))
+            throw new HubException("Only players who are out and spectators can use the graveyard.");
+        await Groups.AddToGroupAsync(Context.ConnectionId, GraveyardGroupName(gameId));
+    }
+
+    public async Task LeaveGame(Guid gameId)
+    {
+        await Groups.RemoveFromGroupAsync(Context.ConnectionId, GroupName(gameId));
+        await Groups.RemoveFromGroupAsync(Context.ConnectionId, GraveyardGroupName(gameId));
+    }
 
     internal static string GroupName(Guid gameId) => $"game:{gameId}";
+
+    internal static string GraveyardGroupName(Guid gameId) => $"graveyard:{gameId}";
 }

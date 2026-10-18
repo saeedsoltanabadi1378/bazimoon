@@ -1,4 +1,5 @@
 import * as signalR from "@microsoft/signalr";
+import type { GraveyardMessage } from "./types";
 
 /**
  * Connects to Bazimoon.Api's GameHub and joins a single game's broadcast group. The hub only
@@ -13,6 +14,7 @@ export async function connectToGameHub(
   gameId: string,
   onGameUpdated: () => void,
   onConnectionChange?: (state: "connected" | "reconnecting" | "closed") => void,
+  onGraveyardMessage?: (message: GraveyardMessage) => void,
 ): Promise<signalR.HubConnection> {
   const connection = new signalR.HubConnectionBuilder()
     .withUrl(`${baseUrl}/hubs/game`, {
@@ -22,6 +24,10 @@ export async function connectToGameHub(
     .build();
 
   connection.on("GameUpdated", onGameUpdated);
+  // Graveyard chat is the one payload pushed directly: the server sends it only to players who are out and spectators.
+  connection.on("GraveyardMessage", (event: { gameId: string; message: GraveyardMessage }) => {
+    if (event.gameId === gameId) onGraveyardMessage?.(event.message);
+  });
 
   connection.onreconnecting(() => onConnectionChange?.("reconnecting"));
   connection.onclose(() => onConnectionChange?.("closed"));

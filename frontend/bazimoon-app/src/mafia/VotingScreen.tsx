@@ -6,6 +6,7 @@ import { Bar, Body, PhaseHeader, Screen } from "../ui/components";
 import { Icon } from "../ui/Icon";
 import { voteWeight, findPlayer, playerColor } from "./roles";
 import { ActionError, LeaveGameButton, PhaseTimer, ReconnectingBanner, VoiceStatusLine, TableNotices } from "./parts";
+import { GraveyardBar, SpectatorBanner, SpectatorList } from "./Graveyard";
 import { haptic } from "../lib/haptics";
 
 export function VotingScreen() {
@@ -43,7 +44,8 @@ export function VotingScreen() {
   const outWatching = view.players.filter((p) => !p.isAlive).map((p) => p.displayName);
 
   let doneText = "";
-  if (!alive) doneText = t("voteDeadNote");
+  if (view.youAreSpectator) doneText = t("voteSpectatorNote");
+  else if (!alive) doneText = t("voteDeadNote");
   else if (mine?.targetPlayerId) doneText = t("youVotedFor", { name: name(mine.targetPlayerId) });
   else if (mine) doneText = t("youAbstained");
 
@@ -67,6 +69,7 @@ export function VotingScreen() {
 
       <Body tight>
         <ReconnectingBanner />
+        <SpectatorBanner />
         <TableNotices />
         <PhaseTimer deadline={view.phaseDeadline} total={view.rules.votingSeconds} label={(seconds) => t("votingSecondsLeft", { seconds })} />
         {revote && <p style={{ margin: 0, fontSize: 14, lineHeight: 1.5, color: "var(--text-2)" }}>{t("revoteRule")}</p>}
@@ -136,9 +139,11 @@ export function VotingScreen() {
         )}
         <ActionError />
         <LeaveGameButton />
+        <SpectatorList />
       </Body>
 
       <Bar>
+        <GraveyardBar />
         {open ? (
           <div className="row" style={{ gap: 8 }}>
             <button type="button" className="btn btn--outline btn--auto" style={{ fontSize: 15, padding: "0 18px" }} disabled={busy} onClick={() => void cast(null)}>

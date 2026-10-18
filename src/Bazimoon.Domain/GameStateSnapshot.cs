@@ -35,7 +35,10 @@ public sealed record GameStateSnapshot(
     Guid? SilencedPlayerId = null,
     Guid? LastSilencedTarget = null,
     Guid? JokerWinnerId = null,
-    IReadOnlyCollection<Guid>? InquiryRevealed = null);
+    IReadOnlyCollection<Guid>? InquiryRevealed = null,
+    IReadOnlyList<SpectatorSnapshot>? Spectators = null);
+
+public sealed record SpectatorSnapshot(Guid Id, string Username, bool Muted = false);
 
 public sealed record PlayerSnapshot(
     Guid Id,

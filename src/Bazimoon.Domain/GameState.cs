@@ -18,12 +18,16 @@ public sealed class GameState
     private readonly List<GameEvent> _events = new();
     private readonly HashSet<Guid> _inquiryRevealed = new();
     private Guid? _lastSilencedTarget;
+    private readonly List<Spectator> _spectators = new();
 
     /// <summary>Seconds between everyone being ready at a full table and the game starting by itself.</summary>
     public const int AutoStartSeconds = 5;
 
     /// <summary>Two timed turns missed in a row remove a player.</summary>
     public const int StrikesToRemove = 2;
+
+    /// <summary>Most people who can watch one table.</summary>
+    public const int MaxSpectators = 30;
 
     public Guid GameId { get; private init; }
     public DateTimeOffset CreatedAt { get; private init; }
@@ -78,6 +82,9 @@ public sealed class GameState
     /// <summary>Players whose roles the Die Hard's Inquiry announced.</summary>
     public IReadOnlyCollection<Guid> InquiryRevealed => _inquiryRevealed;
 
+    /// <summary>People watching the game who don't have a seat.</summary>
+    public IReadOnlyList<Spectator> Spectators => _spectators;
+
     /// <summary>What happened so far, for the recap, stats and MVP once the game ends.</summary>
     public IReadOnlyList<GameEvent> Events => _events;
 
@@ -126,7 +133,8 @@ public sealed class GameState
         SilencedPlayerId,
         _lastSilencedTarget,
         JokerWinnerId,
-        _inquiryRevealed.ToList());
+        _inquiryRevealed.ToList(),
+        _spectators.Select(x => new SpectatorSnapshot(x.Id, x.Username, x.Muted)).ToList());
 
     /// <summary>Reconstructs a GameState (including in-flight submissions) from a snapshot, bypassing normal transition guards.</summary>
     public static GameState FromSnapshot(GameStateSnapshot snapshot)
@@ -148,6 +156,8 @@ public sealed class GameState
             JokerWinnerId = snapshot.JokerWinnerId,
             _lastSilencedTarget = snapshot.LastSilencedTarget
         };
+        if (snapshot.Spectators is { } spectators)
+            game._spectators.AddRange(spectators.Select(x => new Spectator(x.Id, x.Username) { Muted = x.Muted }));
         if (snapshot.InquiryRevealed is { } inquiry) game._inquiryRevealed.UnionWith(inquiry);
         if (snapshot.ReadyPlayers is { } ready) game._ready.UnionWith(ready);
         if (snapshot.Strikes is { } strikes) foreach (var (id, n) in strikes) game._strikes[id] = n;
@@ -557,6 +567,42 @@ public sealed class GameState
         _lastSilencedTarget = target;
         return target;
     }
+
+    public Spectator? GetSpectator(Guid id) => _spectators.FirstOrDefault(x => x.Id == id);
+
+    /// <summary>Lets someone without a seat watch a game in progress, at a table that allows it.</summary>
+    public Spectator AddSpectator(Guid id, string username)
+    {
+        if (!Config.AllowSpectators)
+            throw new GameException("This table doesn't allow spectators.");
+        if (CurrentPhase is GamePhase.Lobby or GamePhase.Ended)
+            throw new GameException("Only a game in progress can be watched.");
+        if (GetPlayer(id) is not null)
+            throw new GameException("You have a seat at this table.");
+        if (GetSpectator(id) is { } existing)
+            return existing;
+        if (_spectators.Count >= MaxSpectators)
+            throw new GameException($"This table already has {MaxSpectators} spectators.");
+        var spectator = new Spectator(id, username);
+        _spectators.Add(spectator);
+        return spectator;
+    }
+
+    public void RemoveSpectator(Guid id) => _spectators.RemoveAll(x => x.Id == id);
+
+    /// <summary>The table creator mutes or unmutes a spectator in the graveyard chat.</summary>
+    public void SetSpectatorMuted(Guid callerId, Guid spectatorId, bool muted)
+    {
+        if (Controller?.Id != callerId)
+            throw new GameException("Only the table creator can mute spectators.");
+        var spectator = GetSpectator(spectatorId) ?? throw new GameException("That spectator isn't watching this game.");
+        spectator.Muted = muted;
+    }
+
+    /// <summary>The graveyard is for players who are out (but haven't left) and spectators, while the game runs.</summary>
+    public bool CanUseGraveyard(Guid id) =>
+        CurrentPhase != GamePhase.Ended &&
+        (GetSpectator(id) is not null || GetPlayer(id) is { IsAlive: false, EliminatedBy: not EliminationCause.Left });
 
     /// <summary>The Mayor reveals themselves during their own speaking turn. From then on their vote counts twice.</summary>
     public void RevealMayor(Guid playerId)

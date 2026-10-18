@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.SignalR;
 using Bazimoon.Api.Games;
 using Bazimoon.Domain;
+using Bazimoon.Infrastructure.Sessions;
 
 namespace Bazimoon.Api.Hubs;
 
@@ -16,4 +17,7 @@ public sealed class SignalRGameNotifier : IGameNotifier
     public Task NotifyGameUpdatedAsync(GameState game) =>
         _hubContext.Clients.Group(GameHub.GroupName(game.GameId))
             .SendAsync("GameUpdated", new { gameId = game.GameId, phase = game.CurrentPhase.ToString() });
+
+    public Task NotifyGraveyardMessageAsync(Guid gameId, GraveyardMessage message) =>
+        _hubContext.Clients.Group(GameHub.GraveyardGroupName(gameId)).SendAsync("GraveyardMessage", new { gameId, message });
 }

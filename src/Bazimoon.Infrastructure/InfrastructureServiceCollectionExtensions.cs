@@ -42,6 +42,7 @@ public static class InfrastructureServiceCollectionExtensions
         services.AddSingleton<IKeyValueCache, RedisKeyValueCache>();
         services.AddSingleton<IGameSessionStore, GameSessionStore>();
         services.AddSingleton<IGameRosterStore, GameRosterStore>();
+        services.AddSingleton<IGraveyardStore, GraveyardStore>();
 
         services.AddOptions<AgoraOptions>()
             .Bind(configuration.GetSection(AgoraOptions.SectionName))

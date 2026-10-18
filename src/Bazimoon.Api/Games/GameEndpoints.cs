@@ -139,17 +139,55 @@ public static class GameEndpoints
             return Results.Ok();
         }).WithName("CallInquiry");
 
+        group.MapPost("/{gameId:guid}/spectate", async (Guid gameId, GameService games, HttpContext http) =>
+        {
+            await games.SpectateAsync(gameId, http.User.GetUserId(), http.User.GetDisplayName());
+            return Results.Ok();
+        }).WithName("Spectate");
+
+        group.MapDelete("/{gameId:guid}/spectate", async (Guid gameId, GameService games, HttpContext http) =>
+        {
+            await games.StopSpectatingAsync(gameId, http.User.GetUserId());
+            return Results.Ok();
+        }).WithName("StopSpectating");
+
+        group.MapPut("/{gameId:guid}/spectators/{spectatorId:guid}/muted", async (Guid gameId, Guid spectatorId, SetMutedRequest request, GameService games, HttpContext http) =>
+        {
+            await games.SetSpectatorMutedAsync(gameId, http.User.GetUserId(), spectatorId, request.Muted);
+            return Results.Ok();
+        }).WithName("SetSpectatorMuted");
+
+        group.MapGet("/{gameId:guid}/graveyard/messages", async (Guid gameId, GameService games, HttpContext http) =>
+            Results.Ok(await games.GetGraveyardAsync(gameId, http.User.GetUserId()))).WithName("GetGraveyardMessages");
+
+        group.MapPost("/{gameId:guid}/graveyard/messages", async (Guid gameId, SendGraveyardMessageRequest request, GameService games, HttpContext http) =>
+            Results.Ok(await games.SendGraveyardMessageAsync(gameId, http.User.GetUserId(), request.Text))).WithName("SendGraveyardMessage");
+
         group.MapGet("/{gameId:guid}/voice-token", async (Guid gameId, string channel, GameService games, IAgoraTokenService agoraTokens, HttpContext http) =>
         {
             var game = await games.LoadOrThrowAsync(gameId);
             Guid userId = http.User.GetUserId();
             var playerId = PlayerIdentity.DeriveId(gameId, userId);
-            var player = game.GetPlayer(playerId) ?? throw new ForbiddenGameActionException("You are not a player in this game.");
+            var player = game.GetPlayer(playerId);
+            if (player is null && game.GetSpectator(playerId) is null)
+                throw new ForbiddenGameActionException("You are not a player in this game.");
 
             string channelName;
             AgoraRtcRole role;
             switch (channel)
             {
+                case "graveyard":
+                    // Players who are out and spectators talk freely here; the living never get in.
+                    if (!game.CanUseGraveyard(playerId))
+                        throw new ForbiddenGameActionException("Only players who are out and spectators may join the graveyard.");
+                    channelName = $"bazimoon-{gameId}-graveyard";
+                    role = AgoraRtcRole.Publisher;
+                    break;
+                case "main" when player is null:
+                    // Spectators only listen to the room.
+                    channelName = $"bazimoon-{gameId}";
+                    role = AgoraRtcRole.Subscriber;
+                    break;
                 case "main":
                     channelName = $"bazimoon-{gameId}";
                     // During the timed day discussion and a defence only the active speaker (or accepted challenger)
@@ -158,7 +196,7 @@ public static class GameEndpoints
                     bool mayTalk = game.CurrentPhase switch
                     {
                         // A silenced player only listens all day.
-                        GamePhase.Day => player.IsAlive && player.Id != game.SilencedPlayerId && (game.Discussion is null || game.Discussion.ActivePlayerId == player.Id),
+                        GamePhase.Day => player!.IsAlive && player.Id != game.SilencedPlayerId && (game.Discussion is null || game.Discussion.ActivePlayerId == player.Id),
                         GamePhase.Defence => player.IsAlive && game.Discussion?.ActivePlayerId == player.Id,
                         GamePhase.LastWords => game.LastWordsPlayerId == player.Id,
                         GamePhase.Voting or GamePhase.Results => player.IsAlive && player.Id != game.SilencedPlayerId,
@@ -167,7 +205,7 @@ public static class GameEndpoints
                     role = mayTalk ? AgoraRtcRole.Publisher : AgoraRtcRole.Subscriber;
                     break;
                 case "mafia":
-                    if (!player.IsAlive || !player.IsMafiaAligned)
+                    if (player is null || !player.IsAlive || !player.IsMafiaAligned)
                         throw new ForbiddenGameActionException("Only living Mafia-aligned players may join the Mafia voice channel.");
                     if (game.CurrentPhase is not (GamePhase.NightZero or GamePhase.Night))
                         throw new ForbiddenGameActionException("The Mafia voice channel is only available at night.");
@@ -175,7 +213,7 @@ public static class GameEndpoints
                     role = AgoraRtcRole.Publisher;
                     break;
                 default:
-                    return Results.BadRequest(new { detail = "channel must be 'main' or 'mafia'." });
+                    return Results.BadRequest(new { detail = "channel must be 'main', 'mafia' or 'graveyard'." });
             }
 
             // Agora wants a non-zero 32-bit id; take it from the user id so a player keeps one id per channel.
@@ -197,3 +235,7 @@ public sealed record SubmitVoteRequest(Guid? TargetPlayerId);
 public sealed record VoiceTokenResponse(string Token, string Channel, uint Uid, string Role);
 
 public sealed record SetReadyRequest(bool Ready);
+
+public sealed record SetMutedRequest(bool Muted);
+
+public sealed record SendGraveyardMessageRequest(string? Text);

@@ -17,13 +17,15 @@ public sealed class GameService
     private readonly BazimoonDbContext _db;
     private readonly GameMutationLock _mutationLock;
     private readonly Lounge.IPushNotifier _push;
+    private readonly IGraveyardStore _graveyard;
+    private readonly TimeProvider _clock;
 
     public GameService(
         IGameSessionStore sessionStore,
         IGameHistoryRepository historyRepository,
         IGameNotifier notifier,
         IGameRosterStore rosterStore, IAppSettingsService settings, BazimoonDbContext db, GameMutationLock mutationLock,
-        Lounge.IPushNotifier push)
+        Lounge.IPushNotifier push, IGraveyardStore graveyard, TimeProvider clock)
     {
         _push = push;
         _sessionStore = sessionStore;
@@ -33,6 +35,8 @@ public sealed class GameService
         _settings = settings;
         _db = db;
         _mutationLock = mutationLock;
+        _graveyard = graveyard;
+        _clock = clock;
     }
 
     /// <summary>Creates a lobby, shared by its table's invite link.</summary>
@@ -41,7 +45,7 @@ public sealed class GameService
         var settings = await _settings.GetAsync();
         if (!settings.IsGameOn("mafia")) throw new GameException(AppSettingsDefaults.MafiaOff);
         int seats = Math.Clamp(table?.Seats ?? settings.MaxPlayers, settings.MinPlayers, settings.MaxPlayers);
-        var game = new GameState(BuildConfig(settings.MinPlayers, seats, table?.Rules));
+        var game = new GameState(BuildConfig(settings.MinPlayers, seats, table?.Rules, table?.IsOpen ?? false));
         var creatorId = PlayerIdentity.DeriveId(game.GameId, creatorUserId);
         game.AddPlayer(new Player(creatorId, creatorUsername));
 
@@ -257,6 +261,71 @@ public sealed class GameService
         await SaveAndNotifyAsync(game);
     }
 
+    /// <summary>Starts watching a game in progress. Players with a seat just open their game.</summary>
+    public async Task SpectateAsync(Guid gameId, Guid userId, string username)
+    {
+        using var held = await _mutationLock.EnterAsync(gameId);
+        var game = await LoadOrThrowAsync(gameId);
+        var id = PlayerIdentity.DeriveId(gameId, userId);
+        if (game.GetPlayer(id) is not null) return;
+        game.AddSpectator(id, username);
+        await SaveAndNotifyAsync(game);
+    }
+
+    public async Task StopSpectatingAsync(Guid gameId, Guid userId)
+    {
+        using var held = await _mutationLock.EnterAsync(gameId);
+        var game = await LoadOrThrowAsync(gameId);
+        game.RemoveSpectator(PlayerIdentity.DeriveId(gameId, userId));
+        await SaveAndNotifyAsync(game);
+    }
+
+    public async Task SetSpectatorMutedAsync(Guid gameId, Guid userId, Guid spectatorId, bool muted)
+    {
+        using var held = await _mutationLock.EnterAsync(gameId);
+        var game = await LoadOrThrowAsync(gameId);
+        game.SetSpectatorMuted(PlayerIdentity.DeriveId(gameId, userId), spectatorId, muted);
+        await SaveAndNotifyAsync(game);
+    }
+
+    /// <summary>Longest graveyard message, in characters.</summary>
+    public const int GraveyardMaxLength = 300;
+
+    /// <summary>Shortest gap between two graveyard messages from the same person.</summary>
+    public static readonly TimeSpan GraveyardCooldown = TimeSpan.FromSeconds(2);
+
+    public async Task<IReadOnlyList<GraveyardMessage>> GetGraveyardAsync(Guid gameId, Guid userId)
+    {
+        var game = await LoadOrThrowAsync(gameId);
+        if (!game.CanUseGraveyard(PlayerIdentity.DeriveId(gameId, userId)))
+            throw new ForbiddenGameActionException("Only players who are out and spectators can read the graveyard.");
+        return await _graveyard.GetAsync(gameId);
+    }
+
+    public async Task<GraveyardMessage> SendGraveyardMessageAsync(Guid gameId, Guid userId, string? text)
+    {
+        var game = await LoadOrThrowAsync(gameId);
+        var id = PlayerIdentity.DeriveId(gameId, userId);
+        if (!game.CanUseGraveyard(id))
+            throw new ForbiddenGameActionException("Only players who are out and spectators can talk in the graveyard.");
+        var spectator = game.GetSpectator(id);
+        if (spectator is { Muted: true })
+            throw new ForbiddenGameActionException("The table creator muted you in the graveyard chat.");
+        var body = text?.Trim() ?? "";
+        if (body.Length == 0) throw new GameException("Write a message first.");
+        if (body.Length > GraveyardMaxLength) throw new GameException($"Messages can be at most {GraveyardMaxLength} characters.");
+
+        var now = _clock.GetUtcNow();
+        var history = await _graveyard.GetAsync(gameId);
+        if (history.LastOrDefault(m => m.SenderId == id) is { } last && now - last.SentAt < GraveyardCooldown)
+            throw new GameException("You're sending messages too fast. Wait a moment.");
+
+        var message = new GraveyardMessage(Guid.NewGuid(), id, spectator?.Username ?? game.GetPlayer(id)!.DisplayName, spectator is not null, body, now);
+        await _graveyard.AppendAsync(gameId, message);
+        await _notifier.NotifyGraveyardMessageAsync(gameId, message);
+        return message;
+    }
+
     /// <summary>Moves a game on when its current turn or phase timer has run out. Called every second
     /// by <see cref="PhaseDeadlineService"/>; finished games are written to history like any other end.</summary>
     public async Task AdvanceExpiredAsync(Guid gameId, DateTimeOffset now, CancellationToken cancellationToken = default)
@@ -283,6 +352,7 @@ public sealed class GameService
         {
             await _historyRepository.SaveCompletedGameAsync(game);
             await _rosterStore.RemoveAsync(game.GameId);
+            await _graveyard.RemoveAsync(game.GameId);
         }
 
         await _notifier.NotifyGameUpdatedAsync(game);
@@ -305,7 +375,7 @@ public sealed class GameService
         _db.Games.Add(new GameRecord { Id=game.GameId, CreatedAt=game.CreatedAt.UtcDateTime, EndedAt=DateTime.UtcNow, Result=WinCondition.None, Status="Cancelled", CancellationReason=reason, Players=game.Players.Select(p => new GamePlayerRecord { Id=Guid.NewGuid(), PlayerId=p.Id, UserId=roster.FirstOrDefault(r=>r.Username==p.DisplayName)?.UserId, DisplayName=p.DisplayName, Role=p.Role, SurvivedToEnd=p.IsAlive, GodfatherRank=p.GodfatherRank }).ToList() });
         _db.OperationalEvents.Add(new() { Category="AdminAudit", Message="Game cancelled", IsAdminAudit=true, TargetType="Game", TargetId=gameId.ToString(), MetadataJson=System.Text.Json.JsonSerializer.Serialize(new { reason, actor }) });
         await _db.SaveChangesAsync();
-        await _sessionStore.RemoveAsync(gameId); await _rosterStore.RemoveAsync(gameId); await _notifier.NotifyGameUpdatedAsync(game); return true;
+        await _sessionStore.RemoveAsync(gameId); await _rosterStore.RemoveAsync(gameId); await _graveyard.RemoveAsync(gameId); await _notifier.NotifyGameUpdatedAsync(game); return true;
     }
 
     private const string CodeAlphabet = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
@@ -329,10 +399,11 @@ public sealed class GameService
     }
 
     /// <summary>The table's rules, with each timer the creator picked checked against the allowed choices.</summary>
-    internal static GameConfig BuildConfig(int minPlayers, int maxPlayers, TableRules? rules)
+    /// <paramref name="isOpen"/>: public tables allow spectators unless the creator turns it off; private ones don't unless turned on.
+    internal static GameConfig BuildConfig(int minPlayers, int maxPlayers, TableRules? rules, bool isOpen = false)
     {
         var d = GameConfig.Default;
-        if (rules is null) return new GameConfig { MinPlayers = minPlayers, MaxPlayers = maxPlayers };
+        if (rules is null) return new GameConfig { MinPlayers = minPlayers, MaxPlayers = maxPlayers, AllowSpectators = isOpen };
         return new GameConfig
         {
             MinPlayers = minPlayers,
@@ -349,6 +420,7 @@ public sealed class GameService
             GodfatherAppearsInnocent = rules.GodfatherAppearsInnocent ?? rules.Preset == RolePreset.Iranian,
             JokerWinEndsGame = rules.JokerWinEndsGame ?? true,
             RevealRolesOnDeath = rules.RevealRolesOnDeath ?? true,
+            AllowSpectators = rules.AllowSpectators ?? isOpen,
         };
     }
 
@@ -398,11 +470,12 @@ public sealed record TableRules(
     IReadOnlyList<Role>? OptionalRoles = null,
     bool? GodfatherAppearsInnocent = null,
     bool? JokerWinEndsGame = null,
-    bool? RevealRolesOnDeath = null)
+    bool? RevealRolesOnDeath = null,
+    bool? AllowSpectators = null)
 {
     public static TableRules From(GameConfig config) => new(
         config.SpeakerSeconds, config.ChallengeSeconds, config.DefenceSeconds, config.LastWordsSeconds,
         config.NightSeconds, config.VotingSeconds, config.LastWordsForNightKills,
         config.Roles.Preset, config.Roles.MafiaCount, config.Roles.Optional,
-        config.GodfatherAppearsInnocent, config.JokerWinEndsGame, config.RevealRolesOnDeath);
+        config.GodfatherAppearsInnocent, config.JokerWinEndsGame, config.RevealRolesOnDeath, config.AllowSpectators);
 }

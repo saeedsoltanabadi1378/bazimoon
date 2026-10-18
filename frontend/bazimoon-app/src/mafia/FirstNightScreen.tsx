@@ -4,6 +4,7 @@ import { useLanguage } from "../i18n/LanguageContext";
 import { Bar, Body, IconDisc, PhaseHeader, Screen } from "../ui/components";
 import { findPlayer, isMafiaRole, playerColor } from "./roles";
 import { ActionError, CreatorBox, MicButton, ReconnectingBanner, RolePeek, useRoleName } from "./parts";
+import { GraveyardBar, SpectatorBanner } from "./Graveyard";
 
 export function FirstNightScreen() {
   const { view, busy, resolveNight } = useGame();
@@ -21,6 +22,7 @@ export function FirstNightScreen() {
 
       <Body>
         <ReconnectingBanner />
+        <SpectatorBanner />
         <div className="card" style={{ fontSize: 14, lineHeight: 1.5, color: "var(--text-2)", padding: "12px 14px", borderRadius: 14 }}>
           {t("firstNightInfo")}
         </div>
@@ -97,6 +99,9 @@ export function FirstNightScreen() {
         <ActionError />
       </Body>
 
+      {view.youCanUseGraveyard ? (
+        <Bar><GraveyardBar /></Bar>
+      ) : (
       <Bar row>
         <div className="grow">
           <div style={{ fontSize: 14, fontWeight: 600 }}>{mafia ? t("mafiaVoice") : t("roomVoice")}</div>
@@ -107,6 +112,7 @@ export function FirstNightScreen() {
         {voice.failed && <button type="button" className="btn btn--outline btn--pill" onClick={voice.retry}>{t("tryAgain")}</button>}
         <MicButton />
       </Bar>
+      )}
     </Screen>
   );
 }

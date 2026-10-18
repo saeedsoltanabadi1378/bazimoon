@@ -1,4 +1,5 @@
 using Bazimoon.Domain;
+using Bazimoon.Infrastructure.Sessions;
 
 namespace Bazimoon.Api.Games;
 
@@ -10,4 +11,7 @@ namespace Bazimoon.Api.Games;
 public interface IGameNotifier
 {
     Task NotifyGameUpdatedAsync(GameState game);
+
+    /// <summary>Sends a graveyard chat message to the game's graveyard group only (players who are out and spectators).</summary>
+    Task NotifyGraveyardMessageAsync(Guid gameId, GraveyardMessage message);
 }

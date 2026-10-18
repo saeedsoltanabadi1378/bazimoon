@@ -108,6 +108,8 @@ export function VoiceStatusLine() {
   let text: string;
   if (voice.failed) text = t("voiceFailed");
   else if (voice.connecting && !voice.channel) text = t("voiceConnecting");
+  else if (voice.channel === "graveyard") text = t("voiceGraveyard");
+  else if (view.youAreSpectator) text = t("voiceSpectator");
   else if (!view.youAreAlive) text = t("voiceEliminated");
   else if (mafia) text = t("voiceMafiaTalk");
   else if (voice.publishing) text = voice.muted ? t("voiceRoomMuted") : t("voiceRoomLive");

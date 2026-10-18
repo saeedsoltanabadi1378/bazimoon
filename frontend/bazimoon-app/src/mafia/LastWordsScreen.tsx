@@ -5,6 +5,7 @@ import { Bar, Body, Screen } from "../ui/components";
 import { Icon } from "../ui/Icon";
 import { findPlayer, playerColor } from "./roles";
 import { ActionError, ReconnectingBanner } from "./parts";
+import { GraveyardBar, SpectatorBanner } from "./Graveyard";
 import { useClock, useSecondsLeft } from "./timers";
 import { MicState } from "./DefenceScreen";
 
@@ -48,6 +49,7 @@ export function LastWordsScreen() {
 
       <Body tight>
         <ReconnectingBanner />
+        <SpectatorBanner />
         {speaker && (
           <section className="stack center" style={{ gap: 14, padding: "26px 16px", borderRadius: 24, background: "var(--surface)", textAlign: "center" }} aria-live="polite">
             <span style={{ padding: "4px 10px", borderRadius: 999, background: night ? "#3A1C1A" : "#3A2A16", color: accent, fontSize: 12, fontWeight: 700, letterSpacing: 0.8 }}>
@@ -94,6 +96,9 @@ export function LastWordsScreen() {
         <ActionError />
       </Body>
 
+      {view.youCanUseGraveyard && !view.lastWords?.youAreSpeaking ? (
+        <Bar><GraveyardBar /></Bar>
+      ) : (
       <Bar row>
         {speaking ? (
           <button type="button" className="btn btn--primary grow" style={{ fontSize: 15 }} disabled={busy} onClick={() => void finishLastWords()}>
@@ -106,6 +111,7 @@ export function LastWordsScreen() {
         )}
         <MicState live={live} />
       </Bar>
+      )}
     </Screen>
   );
 }

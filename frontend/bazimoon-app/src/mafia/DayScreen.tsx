@@ -6,6 +6,7 @@ import { Bar, Body, PhaseHeader, Screen } from "../ui/components";
 import { Icon, type IconName } from "../ui/Icon";
 import { findPlayer, playerColor } from "./roles";
 import { ActionError, LeaveGameButton, ReconnectingBanner, RolePeek, useRoleName, TableNotices } from "./parts";
+import { GraveyardBar, SpectatorBanner, SpectatorList } from "./Graveyard";
 import { haptic } from "../lib/haptics";
 
 const RING = 2 * Math.PI * 60;
@@ -103,6 +104,7 @@ export function DayScreen() {
 
       <Body tight>
         <ReconnectingBanner />
+        <SpectatorBanner />
         <TableNotices />
         <section className="row" style={{ gap: 12, padding: 14, borderRadius: 18, background: report.bg, border: `1px solid ${report.edge}` }}>
           <span style={{ width: 44, height: 44, flex: "none", borderRadius: 999, background: report.ibg, color: report.fg, display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -227,12 +229,16 @@ export function DayScreen() {
         )}
         <ActionError />
         <LeaveGameButton />
+        <SpectatorList />
       </Body>
 
+      {view.youCanUseGraveyard ? (
+        <Bar><GraveyardBar /></Bar>
+      ) : (
       <Bar row>
         {!view.youAreAlive ? (
           <div className="grow" style={{ minHeight: 52, padding: "8px 14px", borderRadius: 16, border: "1.5px dashed var(--edge)", color: "var(--text-2)", fontSize: 14, display: "flex", alignItems: "center" }}>
-            {t("dayDeadNote")}
+            {view.youAreSpectator ? t("daySpectatorNote") : t("dayDeadNote")}
           </div>
         ) : youActive ? (
           <div className="grow stack" style={{ gap: 8 }}>
@@ -281,6 +287,7 @@ export function DayScreen() {
           </span>
         </div>
       </Bar>
+      )}
     </Screen>
   );
 }

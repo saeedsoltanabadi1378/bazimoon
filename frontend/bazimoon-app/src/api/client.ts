@@ -1,4 +1,5 @@
 import type {
+  GraveyardMessage,
   CreateGameResponse,
   GameView,
   MyGameResult,
@@ -205,7 +206,21 @@ export class BazimoonApiClient {
   revealMayor(gameId: string) { return this.request<void>("POST", `/api/games/${gameId}/mayor/reveal`); }
   callInquiry(gameId: string) { return this.request<void>("POST", `/api/games/${gameId}/inquiry`); }
 
-  getVoiceToken(gameId: string, channel: "main" | "mafia") {
+  spectate(gameId: string) { return this.request<void>("POST", `/api/games/${gameId}/spectate`); }
+
+  stopSpectating(gameId: string) { return this.request<void>("DELETE", `/api/games/${gameId}/spectate`); }
+
+  setSpectatorMuted(gameId: string, spectatorId: string, muted: boolean) {
+    return this.request<void>("PUT", `/api/games/${gameId}/spectators/${spectatorId}/muted`, { muted });
+  }
+
+  getGraveyard(gameId: string) { return this.request<GraveyardMessage[]>("GET", `/api/games/${gameId}/graveyard/messages`); }
+
+  sendGraveyard(gameId: string, text: string) {
+    return this.request<GraveyardMessage>("POST", `/api/games/${gameId}/graveyard/messages`, { text });
+  }
+
+  getVoiceToken(gameId: string, channel: "main" | "mafia" | "graveyard") {
     return this.request<VoiceTokenResponse>("GET", `/api/games/${gameId}/voice-token?channel=${channel}`);
   }
 }

@@ -81,6 +81,7 @@ export interface RulesView {
   godfatherAppearsInnocent: boolean;
   jokerWinEndsGame: boolean;
   revealRolesOnDeath: boolean;
+  allowSpectators: boolean;
 }
 
 export interface MafiaMemberView {
@@ -158,6 +159,29 @@ export interface GameView {
   jokerWinnerId: string | null;
   /** The roles the table's setup deals for the players now seated, or why it can't start. */
   setup: { preset: RolePreset; roles: Role[] | null; minimumPlayers: number; problem: "TooFewPlayers" | "TooManyMafia" | null } | null;
+  /** You're watching without a seat: only the public board. */
+  youAreSpectator: boolean;
+  spectatorCount: number;
+  /** Only the table creator gets the list, to mute people in the graveyard chat. */
+  spectators: SpectatorView[] | null;
+  /** You're out (or watching), so you can use the graveyard voice and chat. */
+  youCanUseGraveyard: boolean;
+  youAreMutedInGraveyard: boolean;
+}
+
+export interface SpectatorView {
+  id: string;
+  username: string;
+  muted: boolean;
+}
+
+export interface GraveyardMessage {
+  id: string;
+  senderId: string;
+  senderName: string;
+  fromSpectator: boolean;
+  text: string;
+  sentAt: string;
 }
 
 export type MvpPointsKind = "teamWon" | "mafiaFound" | "killBlocked" | "killMade" | "voteOnMafiaOut" | "nightSurvived";
