@@ -1,11 +1,11 @@
-import type { GameView, PlayerView, Role } from "../api/types";
+import type { GameView, PlayerView, Role, RolePreset } from "../api/types";
 import type { IconName } from "../ui/Icon";
 
 export interface RoleMeta {
   icon: IconName;
   bg: string;
   fg: string;
-  team: "town" | "mafia";
+  team: "town" | "mafia" | "independent";
 }
 
 export const roleMeta: Record<Role, RoleMeta> = {
@@ -14,6 +14,11 @@ export const roleMeta: Record<Role, RoleMeta> = {
   Doctor: { icon: "doctor", bg: "#13302C", fg: "#5FD0BE", team: "town" },
   Mafia: { icon: "mafia", bg: "#3A1C1A", fg: "#F08A7A", team: "mafia" },
   Godfather: { icon: "godfather", bg: "#3A1C1A", fg: "#F08A7A", team: "mafia" },
+  Sniper: { icon: "target", bg: "#1B2A44", fg: "#8FA8FF", team: "town" },
+  DieHard: { icon: "shield", bg: "#13302C", fg: "#5FD0BE", team: "town" },
+  Silencer: { icon: "mute", bg: "#3A1C1A", fg: "#F08A7A", team: "mafia" },
+  Joker: { icon: "star", bg: "#2A1F33", fg: "#B79CF2", team: "independent" },
+  Mayor: { icon: "townHall", bg: "#2A2113", fg: "#F0A83A", team: "town" },
 };
 
 export const eliminatedMeta: RoleMeta = { icon: "eliminated", bg: "#1E2138", fg: "#9A9CB8", team: "town" };
@@ -29,21 +34,55 @@ export function playerColor(view: GameView, playerId: string) {
   return palette[(index < 0 ? 0 : index) % palette.length];
 }
 
+/** A revealed Mayor's vote counts twice. */
+export function voteWeight(view: GameView, voterId: string) {
+  return findPlayer(view, voterId)?.revealed ? 2 : 1;
+}
+
 export function findPlayer(view: GameView, playerId: string | null | undefined): PlayerView | undefined {
   return playerId ? view.players.find((p) => p.playerId === playerId) : undefined;
 }
 
-/** Mirrors the Domain's mafia count: one Mafia per three players, Godfather first. */
-export function rolesFor(count: number): { role: Role; n: number }[] {
-  if (count < 3) return [];
-  const mafia = Math.floor(count / 3);
-  const special = count === 3 ? 0 : 2;
-  const roles: { role: Role; n: number }[] = [{ role: "Godfather", n: 1 }];
-  if (mafia > 1) roles.push({ role: "Mafia", n: mafia - 1 });
-  if (special) {
-    roles.push({ role: "Detective", n: 1 }, { role: "Doctor", n: 1 });
+/** Roles a custom setup can switch on. */
+export const OPTIONAL_ROLES: Role[] = ["Silencer", "Detective", "Doctor", "Sniper", "DieHard", "Mayor", "Joker"];
+
+/** Mirrors the Domain's RoleSetup.RolesFor: the special roles for this many players, or null when the setup doesn't fit. */
+export function dealRoles(preset: RolePreset, mafiaCount: number, optional: Role[], players: number): Role[] | null {
+  let roles: Role[];
+  if (preset === "Classic") {
+    const mafia = Math.floor(players / 3);
+    roles = ["Godfather", ...Array<Role>(Math.max(0, mafia - 1)).fill("Mafia")];
+    if (players > 3) roles.push("Detective", "Doctor");
+  } else if (preset === "Iranian") {
+    roles = ["Godfather", "Silencer", "Detective", "Doctor", "Sniper", "DieHard"];
+  } else {
+    const mafia = Math.max(1, mafiaCount);
+    roles = ["Godfather"];
+    if (optional.includes("Silencer") && mafia > 1) roles.push("Silencer");
+    while (roles.length < mafia) roles.push("Mafia");
+    roles.push(...OPTIONAL_ROLES.filter((r) => r !== "Silencer" && optional.includes(r)));
   }
-  const villagers = count - mafia - special;
+  const mafiaTeam = roles.filter((r) => roleMeta[r].team === "mafia").length;
+  if (roles.length > players || mafiaTeam * 2 >= players) return null;
+  return roles;
+}
+
+/** The fewest players a setup can start with. */
+export function minimumPlayers(preset: RolePreset, mafiaCount: number, optional: Role[]) {
+  for (let n = 3; n <= 30; n++) if (dealRoles(preset, mafiaCount, optional, n)) return n;
+  return Infinity;
+}
+
+/** Groups the setup's dealt roles (from the server) for the lobby list, Villagers filling the other seats. */
+export function rolesFor(count: number, setup: Role[] | null | undefined): { role: Role; n: number }[] {
+  if (!setup) return [];
+  const roles: { role: Role; n: number }[] = [];
+  for (const role of setup) {
+    const found = roles.find((r) => r.role === role);
+    if (found) found.n++;
+    else roles.push({ role, n: 1 });
+  }
+  const villagers = count - setup.length;
   if (villagers > 0) roles.push({ role: "Villager", n: villagers });
   return roles;
 }
@@ -57,4 +96,4 @@ export function nightLabelNumber(view: GameView) {
   return view.phase === "Night" ? view.nightNumber + 1 : view.nightNumber;
 }
 
-export const isMafiaRole = (role: Role | null | undefined) => role === "Mafia" || role === "Godfather";
+export const isMafiaRole = (role: Role | null | undefined) => role === "Mafia" || role === "Godfather" || role === "Silencer";

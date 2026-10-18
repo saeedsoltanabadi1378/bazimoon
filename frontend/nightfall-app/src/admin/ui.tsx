@@ -148,6 +148,11 @@ const ROLES: Record<string, [string, string]> = {
   Detective: ["Detective", "کارآگاه"],
   Doctor: ["Doctor", "دکتر"],
   Villager: ["Villager", "شهروند"],
+  Sniper: ["Sniper", "تک‌تیرانداز"],
+  DieHard: ["Die Hard", "جان‌سخت"],
+  Silencer: ["Silencer", "ناتو"],
+  Joker: ["Joker", "جوکر"],
+  Mayor: ["Mayor", "شهردار"],
 };
 
 export function roleName(role: string | null, lang: AdminLang) {

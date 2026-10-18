@@ -2,7 +2,7 @@ import { useGame } from "./GameProvider";
 import { useLanguage } from "../i18n/LanguageContext";
 import { Bar, Body, IconDisc, RoleTag, Screen } from "../ui/components";
 import { Icon } from "../ui/Icon";
-import { findPlayer, isMafiaRole, playerColor, roleMeta } from "./roles";
+import { findPlayer, isMafiaRole, playerColor, roleMeta, voteWeight } from "./roles";
 import { ActionError, LeaveGameButton, ReconnectingBanner, useRoleName, TableNotices } from "./parts";
 import { BallotRows } from "./VotingScreen";
 
@@ -29,7 +29,7 @@ export function ResultsScreen({ onSeeFinal }: { onSeeFinal?: () => void }) {
   const rows = new Map<string, number>();
   let abstained = 0;
   for (const b of ballots) {
-    if (b.targetPlayerId) rows.set(b.targetPlayerId, (rows.get(b.targetPlayerId) ?? 0) + 1);
+    if (b.targetPlayerId) rows.set(b.targetPlayerId, (rows.get(b.targetPlayerId) ?? 0) + voteWeight(view, b.voterPlayerId));
     else abstained++;
   }
   const tally = [...rows.entries()].map(([id, n]) => ({ label: name(id), n })).sort((a, b) => b.n - a.n);
@@ -62,6 +62,13 @@ export function ResultsScreen({ onSeeFinal }: { onSeeFinal?: () => void }) {
             <div style={{ fontSize: 15, color: "var(--text-2)" }}>{revote ? t("roundTwoVotedOut") : t("townVotedOut")}</div>
             <div className="display" style={{ fontSize: 30, lineHeight: 1 }}>{name(out.playerId)}</div>
             {meta && out.revealedRole && <RoleTag icon={meta.icon} bg={meta.bg} fg={meta.fg} label={t("theyWereThe", { role: roleName(out.revealedRole) })} />}
+            {!out.revealedRole && !view.rules.revealRolesOnDeath && <div className="small muted">{t("roleHidden")}</div>}
+            {view.jokerWinnerId === out.playerId && view.winCondition === "None" && (
+              <div className="stack" style={{ gap: 4, padding: "12px 14px", borderRadius: 14, background: "#1C1428", border: "1px solid #3D2E55", fontSize: 14, lineHeight: 1.5 }}>
+                <b>{t("jokerWonTitle", { name: name(out.playerId) })}</b>
+                <span style={{ color: "var(--text-2)" }}>{t("jokerGoesOnText")}</span>
+              </div>
+            )}
           </section>
         ) : (
           <section className="stack center" style={{ gap: 10, padding: "28px 16px", borderRadius: 24, background: "var(--surface)", textAlign: "center" }}>
@@ -95,7 +102,7 @@ export function ResultsScreen({ onSeeFinal }: { onSeeFinal?: () => void }) {
             ].map((round) => (
               <section key={round.title} className="stack" style={{ gap: 8, padding: 12, borderRadius: 16, background: "#1A1611", border: "1px solid #2B241B" }}>
                 <h2 style={{ fontSize: 13, fontWeight: 600, color: "var(--muted)" }}>{round.title}</h2>
-                <BallotRows ballots={round.ballots} name={name} highlightTop />
+                <BallotRows ballots={round.ballots} name={name} highlightTop weight={(id) => voteWeight(view, id)} />
               </section>
             ))}
           </div>

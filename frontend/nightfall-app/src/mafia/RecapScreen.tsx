@@ -36,8 +36,8 @@ export function RecapScreen({ gameId }: { gameId: string }) {
           <h1 className="display" style={{ fontSize: 22 }}>{t("recapTitle")}</h1>
         </div>
         {data && data.result !== "None" && (
-          <span className="tiny strong" style={{ padding: "4px 10px", borderRadius: 999, background: data.result === "VillagersWin" ? "#13302C" : "#3A1C1A", color: data.result === "VillagersWin" ? "#5FD0BE" : "#F08A7A" }}>
-            {data.result === "VillagersWin" ? t("recapTownWon") : t("recapMafiaWon")}
+          <span className="tiny strong" style={{ padding: "4px 10px", borderRadius: 999, background: data.result === "VillagersWin" ? "#13302C" : data.result === "JokerWins" ? "#2A1F33" : "#3A1C1A", color: data.result === "VillagersWin" ? "#5FD0BE" : data.result === "JokerWins" ? "#B79CF2" : "#F08A7A" }}>
+            {data.result === "VillagersWin" ? t("recapTownWon") : data.result === "JokerWins" ? t("recapJokerWon") : t("recapMafiaWon")}
           </span>
         )}
       </header>
@@ -62,8 +62,8 @@ function Timeline({ recap }: { recap: GameRecap }) {
   if (recap.result !== "None") {
     cards.push({
       key: "end",
-      title: recap.result === "VillagersWin" ? t("townWins") : t("mafiaWins"),
-      icon: recap.result === "VillagersWin" ? "villager" : "godfather",
+      title: recap.result === "VillagersWin" ? t("townWins") : recap.result === "JokerWins" ? t("jokerWins") : t("mafiaWins"),
+      icon: recap.result === "VillagersWin" ? "villager" : recap.result === "JokerWins" ? "star" : "godfather",
       tone: "end",
       lines: mvps.length > 0 ? [{ dot: SAVE, text: t("recapMvp", { names: mvps.map((m) => m.name).join(t("listAnd")), count: mvps[0].points ?? 0 }) }] : [],
     });
@@ -144,6 +144,12 @@ function Timeline({ recap }: { recap: GameRecap }) {
           if (e.killTarget) lines.push({ dot: MAFIA, text: t(e.killed ? "recapMafiaKilled" : "recapMafiaBlocked", { name: name(e.killTarget) }) });
           else lines.push({ dot: MAFIA, text: t("recapMafiaNobody") });
           if (e.saved) lines.push({ dot: SAVE, text: t("recapDoctorSaved", { name: name(e.saved) }) });
+          if (e.dieHardSurvived) lines.push({ dot: SAVE, text: t("recapDieHard", { name: name(e.dieHardSurvived) }) });
+          if (e.shotTarget && e.shotOutcome) {
+            const key = e.shotOutcome === "Hit" ? "recapShotHit" : e.shotOutcome === "Saved" ? "recapShotSaved" : "recapShotBackfired";
+            lines.push({ dot: CHECK, text: t(key, { name: name(e.shotTarget) }) });
+          }
+          if (e.silenced) lines.push({ dot: MAFIA, text: t("recapSilenced", { name: name(e.silenced) }) });
           if (e.checked) lines.push({ dot: CHECK, text: t(e.checkedIsMafia ? "recapDetectiveMafia" : "recapDetectiveTown", { name: name(e.checked) }) });
           out.push({ key: `night-${e.round}`, title: t("nightN", { number: e.round }), icon: "moon", tone: "night", lines });
           break;
@@ -178,6 +184,12 @@ function Timeline({ recap }: { recap: GameRecap }) {
         }
         case "Promoted":
           (out[out.length - 1] ?? day(e.round)).lines.push({ dot: MAFIA, text: t("recapPromoted", { name: name(e.playerId) }) });
+          break;
+        case "MayorRevealed":
+          day(e.round).lines.push({ dot: VOTE, text: t("recapMayor", { name: name(e.playerId) }) });
+          break;
+        case "Inquiry":
+          day(e.round).lines.push({ dot: SAVE, text: t("recapInquiry", { name: name(e.playerId) }) });
           break;
         case "Left":
         case "Removed":

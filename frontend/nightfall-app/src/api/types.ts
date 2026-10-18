@@ -15,11 +15,14 @@ export type GamePhase =
   | "Defence"
   | "LastWords";
 
-export type Role = "Villager" | "Detective" | "Doctor" | "Mafia" | "Godfather";
+export type Role = "Villager" | "Detective" | "Doctor" | "Mafia" | "Godfather" | "Sniper" | "DieHard" | "Silencer" | "Joker" | "Mayor";
 
-export type NightActionType = "Investigate" | "Heal" | "Kill";
+export type RolePreset = "Classic" | "Iranian" | "Custom";
+export type SniperOutcome = "Hit" | "Saved" | "Backfired";
 
-export type WinCondition = "None" | "VillagersWin" | "MafiaWin";
+export type NightActionType = "Investigate" | "Heal" | "Kill" | "Shoot" | "Silence";
+
+export type WinCondition = "None" | "VillagersWin" | "MafiaWin" | "JokerWins";
 export type DiscussionSegmentType = "Speaker" | "Challenge";
 
 export type EliminationCause = "Night" | "Vote" | "Left";
@@ -33,6 +36,8 @@ export interface PlayerView {
   eliminatedRound: number | null;
   /** Only true for viewers allowed to know (Mafia, or everyone once the game has ended). */
   wasPromoted: boolean;
+  /** A Mayor who revealed: everyone knows, and their vote counts twice. */
+  revealed: boolean;
 }
 
 export interface DetectiveResultView {
@@ -51,6 +56,8 @@ export interface EliminationView {
   round: number;
   /** Round 1's ballots, when this result is round 2. */
   previousBallots: VoteView[] | null;
+  /** Night only: who died to the Sniper's shot (the target, or the Sniper when it backfired). */
+  shotPlayerId: string | null;
 }
 
 /** The player saying their last words, why they are out, and when their time is up. */
@@ -70,6 +77,10 @@ export interface RulesView {
   nightSeconds: number | null;
   votingSeconds: number | null;
   lastWordsForNightKills: boolean;
+  preset: RolePreset;
+  godfatherAppearsInnocent: boolean;
+  jokerWinEndsGame: boolean;
+  revealRolesOnDeath: boolean;
 }
 
 export interface MafiaMemberView {
@@ -133,6 +144,20 @@ export interface GameView {
   removedForInactivity: string[] | null;
   /** Once the game has ended: the MVPs the game worked out (several on a tie). */
   mvps: MvpView[] | null;
+  /** Who the Silencer silenced for today: their turn is skipped and they can only listen. */
+  silencedPlayerId: string | null;
+  /** Sniper: shot spent. Die Hard: extra life spent. */
+  yourAbilityUsed: boolean;
+  yourInquiryUsed: boolean;
+  /** Die Hard: the Mafia came for you last night and you survived (only you are told). */
+  youSurvivedTheNight: boolean;
+  yourShot: { targetPlayerId: string; outcome: SniperOutcome } | null;
+  /** Mafia only, at night: who the Silencer is silencing. */
+  mafiaSilenceTargetId: string | null;
+  /** The Joker who was voted out, and so won. */
+  jokerWinnerId: string | null;
+  /** The roles the table's setup deals for the players now seated, or why it can't start. */
+  setup: { preset: RolePreset; roles: Role[] | null; minimumPlayers: number; problem: "TooFewPlayers" | "TooManyMafia" | null } | null;
 }
 
 export type MvpPointsKind = "teamWon" | "mafiaFound" | "killBlocked" | "killMade" | "voteOnMafiaOut" | "nightSurvived";

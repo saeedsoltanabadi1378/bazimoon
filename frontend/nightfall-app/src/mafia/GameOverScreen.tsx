@@ -43,8 +43,15 @@ export function GameOverScreen() {
   if (!view) return null;
 
   const town = view.winCondition === "VillagersWin";
-  const accent = town ? "#5FD0BE" : "#F08A7A";
-  const youWon = mine ? mine.won : view.yourRole ? (isMafiaRole(view.yourRole) ? !town : town) : null;
+  const joker = view.winCondition === "JokerWins";
+  const youJoker = joker && view.jokerWinnerId === view.yourPlayerId;
+  const jokerName = view.players.find((p) => p.playerId === view.jokerWinnerId)?.telegramUsername ?? "";
+  const accent = joker ? "#B79CF2" : town ? "#5FD0BE" : "#F08A7A";
+  const youWon = mine ? mine.won
+    : joker ? youJoker
+    : view.yourRole ? (view.yourRole === "Joker" ? view.jokerWinnerId === view.yourPlayerId : isMafiaRole(view.yourRole) ? !town : town) : null;
+  const title = joker ? (youJoker ? t("youWinJoker") : t("jokerWins")) : town ? t("townWins") : t("mafiaWins");
+  const subtitle = joker ? (youJoker ? t("youWinJokerSub") : t("jokerWinsSub", { name: jokerName })) : town ? t("townWinsSub") : t("mafiaWinsSub");
   const resultColor = youWon ? "#5FD0BE" : "#F08A7A";
 
   // Survivors first, then the fallen in the order they fell.
@@ -85,19 +92,19 @@ export function GameOverScreen() {
   }
 
   function share() {
-    const text = town ? t("shareTownWon", { nights: view!.nightNumber }) : t("shareMafiaWon", { nights: view!.nightNumber });
+    const text = joker ? t("shareJokerWon") : town ? t("shareTownWon", { nights: view!.nightNumber }) : t("shareMafiaWon", { nights: view!.nightNumber });
     shareToTelegram(botLink(), text);
   }
 
   return (
     <Screen theme="night">
       <Body style={{ paddingTop: 22 }}>
-        <section className="row" style={{ gap: 14, padding: 16, borderRadius: 22, background: town ? "#0F2420" : "#24121A", border: `1px solid ${town ? "#1E4A40" : "#4A2620"}` }}>
-          <IconDisc icon={town ? "villager" : "godfather"} size={52} iconSize={26} bg={town ? "#13302C" : "#3A1C1A"} fg={accent} />
+        <section className="row" style={{ gap: 14, padding: 16, borderRadius: 22, background: joker ? "#1C1428" : town ? "#0F2420" : "#24121A", border: `1px solid ${joker ? "#3D2E55" : town ? "#1E4A40" : "#4A2620"}` }}>
+          <IconDisc icon={joker ? "star" : town ? "villager" : "godfather"} size={52} iconSize={26} bg={joker ? "#2A1F33" : town ? "#13302C" : "#3A1C1A"} fg={accent} />
           <div className="grow">
             <div className="kicker" style={{ color: accent }}>{t("gameOverNights", { nights: view.nightNumber })}</div>
-            <h1 className="display" style={{ fontSize: 24, lineHeight: 1.1 }}>{town ? t("townWins") : t("mafiaWins")}</h1>
-            <p className="small" style={{ color: "var(--text-2)" }}>{town ? t("townWinsSub") : t("mafiaWinsSub")}</p>
+            <h1 className="display" style={{ fontSize: 24, lineHeight: 1.1 }}>{title}</h1>
+            <p className="small" style={{ color: "var(--text-2)" }}>{subtitle}</p>
           </div>
         </section>
 

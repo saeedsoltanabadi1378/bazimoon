@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using Nightfall.Api.Games;
 using Nightfall.Api.Lounge;
+using Nightfall.Domain;
 
 namespace Nightfall.Tests;
 
@@ -96,5 +97,27 @@ public class TableEndpointsTests : IClassFixture<NightfallApiFactory>, IAsyncLif
 
         var view = await host.GetFromJsonAsync<GameView>($"/api/games/{gameId}");
         Assert.Equal(new RulesView(45, 40, 30, 20, 60, null, true), view!.Rules);
+    }
+
+    [Fact]
+    public async Task RoleSetup_IsStored_AndTheLobbyReportsWhyItCantStart()
+    {
+        var host = await AuthTestHelper.CreateAuthenticatedClientAsync(_factory, 890102, "setup_host");
+
+        var bad = await host.PostAsJsonAsync("/api/tables",
+            new CreateTableRequest(null, false, 8, new TableRules(Preset: RolePreset.Custom, MafiaCount: 2, OptionalRoles: [Role.Villager])));
+        Assert.Equal(HttpStatusCode.BadRequest, bad.StatusCode);
+
+        var response = await host.PostAsJsonAsync("/api/tables",
+            new CreateTableRequest(null, false, 8, new TableRules(Preset: RolePreset.Iranian, RevealRolesOnDeath: false)));
+        response.EnsureSuccessStatusCode();
+        var gameId = (await response.Content.ReadFromJsonAsync<CreateGameResponse>())!.GameId;
+
+        var view = await host.GetFromJsonAsync<GameView>($"/api/games/{gameId}");
+        Assert.Equal(RolePreset.Iranian, view!.Rules!.Preset);
+        Assert.True(view.Rules.GodfatherAppearsInnocent);
+        Assert.False(view.Rules.RevealRolesOnDeath);
+        Assert.Equal(SetupProblem.TooFewPlayers, view.Setup!.Problem);
+        Assert.Equal(6, view.Setup.MinimumPlayers);
     }
 }

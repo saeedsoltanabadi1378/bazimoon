@@ -40,6 +40,7 @@ export function GamesPage() {
     g.status === "Cancelled" ? [t("outcomeCancelled"), "#1E2138", "#C9C8DC"]
       : g.result === "VillagersWin" ? [t("outcomeTown"), "#13302C", "#5FD0BE"]
         : g.result === "MafiaWin" ? [t("outcomeMafia"), "#2A1418", "#F08A7A"]
+        : g.result === "JokerWins" ? [t("outcomeJoker"), "#2A1F33", "#B79CF2"]
           : [t("outcomeOther"), "#1E2138", "#C9C8DC"];
 
   const data = tab === 0 ? live : past;

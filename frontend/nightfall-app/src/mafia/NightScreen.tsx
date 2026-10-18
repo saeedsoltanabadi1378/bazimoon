@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Icon } from "../ui/Icon";
 import type { NightActionType, Role } from "../api/types";
 import { useGame } from "./GameProvider";
 import { useLanguage, type TranslationKey } from "../i18n/LanguageContext";
@@ -12,26 +13,36 @@ const actions: Partial<Record<Role, { type: NightActionType; verb: TranslationKe
   Doctor: { type: "Heal", verb: "heal", prompt: "promptHeal", includeSelf: true },
   Godfather: { type: "Kill", verb: "kill", prompt: "promptKill", includeSelf: false },
   Mafia: { type: "Kill", verb: "suggestKill", prompt: "promptSuggest", includeSelf: false },
+  Sniper: { type: "Shoot", verb: "shoot", prompt: "sniperTitle", includeSelf: false },
+  Silencer: { type: "Silence", verb: "silence", prompt: "silenceTitle", includeSelf: false },
 };
 
 export function NightScreen() {
   const { view, busy, submitNightAction, resolveNight } = useGame();
   const { t } = useLanguage();
   const [picked, setPicked] = useState<string | null>(null);
+  const [confirmShot, setConfirmShot] = useState(false);
+  const [holding, setHolding] = useState(false);
   const nightKey = `${view?.gameId}-${view?.nightNumber}`;
 
   // A new night starts with a clean pick.
-  useEffect(() => setPicked(null), [nightKey]);
+  useEffect(() => {
+    setPicked(null);
+    setHolding(false);
+    setConfirmShot(false);
+  }, [nightKey]);
 
   if (!view) return null;
 
   const role = view.yourRole;
   const alive = view.youAreAlive;
-  const action = alive && role ? actions[role] : undefined;
+  // The Sniper has one shot for the whole game.
+  const shotUsed = role === "Sniper" && view.yourAbilityUsed;
+  const action = alive && role && !shotUsed ? actions[role] : undefined;
   const meta = role ? roleMeta[role] : roleMeta.Villager;
   const lockedTarget = view.yourNightActionTargetId;
   const submitted = Boolean(lockedTarget);
-  const canAct = Boolean(action) && !submitted;
+  const canAct = Boolean(action) && !submitted && !holding;
   const mafiaSide = isMafiaRole(role);
   const teamIds = new Set((view.mafiaTeam ?? []).map((m) => m.playerId));
   const checked = new Map((view.yourInvestigations ?? []).map((r) => [r.targetPlayerId, r.isMafiaAligned]));
@@ -47,6 +58,15 @@ export function NightScreen() {
   if (role === "Detective" && view.yourLastInvestigationResult) {
     info = t(view.yourLastInvestigationResult.isMafiaAligned ? "lastNightMafia" : "lastNightTown", { name: name(view.yourLastInvestigationResult.targetPlayerId) });
     infoBg = "#141F33";
+  } else if (role === "Sniper" && view.yourShot?.outcome === "Saved") {
+    info = t("shotSavedText", { name: name(view.yourShot.targetPlayerId) });
+    infoBg = "#141F33";
+  } else if (role === "Silencer") {
+    info = t("silencePrompt");
+    infoBg = "#2A1418";
+  } else if (role === "Sniper") {
+    info = t("sniperPrompt");
+    infoBg = "#141F33";
   } else if (role === "Doctor" && view.youCannotHealSelf) {
     info = t("doctorSelfBlocked");
     infoBg = "#10251F";
@@ -57,6 +77,7 @@ export function NightScreen() {
       info = suggestions.length
         ? suggestions.map((s) => t("suggests", { name: name(s.actorPlayerId), target: name(s.targetPlayerId) })).join(" ") + " " + t("yourCallFinal")
         : t("youMakeTheCall");
+      if (view.mafiaSilenceTargetId) info += " " + t("mafiaSilencing", { name: name(view.mafiaSilenceTargetId) }) + ".";
     } else if (godfather) {
       info = t("godfatherDecides", { name: name(godfather.playerId) });
     }
@@ -105,6 +126,12 @@ export function NightScreen() {
   if (!alive) {
     waitTitle = t("outOfGame");
     waitText = t("outOfGameText");
+  } else if (shotUsed) {
+    waitTitle = t("shotUsedTitle");
+    waitText = t("shotUsedText");
+  } else if (holding && !submitted) {
+    waitTitle = t("holdingFire");
+    waitText = t("noActionText");
   } else if (action) {
     waitTitle = role === "Mafia" ? t("suggestionSent") : t("lockedIn", { action: t(action.verb) });
     waitText = t("youChoseWaiting", { name: name(lockedTarget) });
@@ -115,6 +142,11 @@ export function NightScreen() {
 
   async function submit() {
     if (!action || !picked) return;
+    if (action.type === "Shoot" && !confirmShot) {
+      setConfirmShot(true);
+      return;
+    }
+    setConfirmShot(false);
     const ok = await submitNightAction(picked, action.type);
     if (ok) haptic.success();
   }
@@ -205,11 +237,27 @@ export function NightScreen() {
             onClick={() => void submit()}
             style={{ background: picked ? meta.fg : "var(--surface-2)", color: picked ? "#0B0D1A" : "var(--faint)" }}
           >
-            {picked ? t("actOn", { action: t(action.verb), name: name(picked) }) : t("pickAPlayer")}
+            {!picked ? t("pickAPlayer")
+              : action.type === "Shoot" ? t("shootName", { name: name(picked) })
+              : action.type === "Silence" ? t("silenceName", { name: name(picked) })
+              : t("actOn", { action: t(action.verb), name: name(picked) })}
           </button>
+        )}
+        {canAct && action?.type === "Shoot" && (
+          <button type="button" className="btn btn--outline" onClick={() => setHolding(true)}>{t("holdFire")}</button>
         )}
         <VoiceStatusLine />
       </Bar>
+      {confirmShot && picked && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 20, background: "rgba(5,6,14,0.72)", display: "flex", alignItems: "flex-end" }}>
+          <div role="dialog" aria-modal="true" aria-labelledby="shot-title" className="stack" style={{ width: "100%", boxSizing: "border-box", gap: 12, padding: "22px 16px 26px", borderRadius: "24px 24px 0 0", background: "var(--surface)" }}>
+            <h2 id="shot-title" className="row" style={{ gap: 8, fontSize: 20, fontWeight: 700 }}><Icon name="target" color="#8FA8FF" />{t("shootConfirmTitle", { name: name(picked) })}</h2>
+            <p style={{ fontSize: 14, lineHeight: 1.5, color: "var(--text-2)" }}>{t("shootConfirmText", { name: name(picked) })}</p>
+            <button type="button" className="btn" style={{ background: "#E5604D", color: "#1C0905" }} disabled={busy} onClick={() => void submit()}>{t("shootConfirmYes")}</button>
+            <button type="button" className="btn btn--outline" autoFocus onClick={() => setConfirmShot(false)}>{t("shootConfirmNo")}</button>
+          </div>
+        </div>
+      )}
     </Screen>
   );
 }

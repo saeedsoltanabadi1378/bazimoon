@@ -11,7 +11,7 @@ import { haptic } from "../lib/haptics";
 const RING = 2 * Math.PI * 60;
 
 export function DayScreen() {
-  const { view, busy, requestChallenge, cancelChallenge, acceptChallenge, rejectChallenge, finishDiscussion, startVoting } = useGame();
+  const { view, busy, requestChallenge, cancelChallenge, acceptChallenge, rejectChallenge, finishDiscussion, startVoting, revealMayor, callInquiry } = useGame();
   const voice = useVoice();
   const { t } = useLanguage();
   const roleName = useRoleName();
@@ -38,7 +38,7 @@ export function DayScreen() {
   if (dead) {
     report = {
       title: t("foundDead", { name: name(dead.playerId) }),
-      text: dead.revealedRole ? t("theyWereThe", { role: roleName(dead.revealedRole) }) : "",
+      text: dead.revealedRole ? t("theyWereThe", { role: roleName(dead.revealedRole) }) : view.rules.revealRolesOnDeath ? "" : t("roleHidden"),
       icon: "coffin", bg: "#2A1612", edge: "#4A2620", fg: "#F08A7A", ibg: "#3A1C1A",
     };
   } else if (night?.wasSaved) {
@@ -46,6 +46,35 @@ export function DayScreen() {
   } else {
     report = { title: t("quietNight"), text: t("nobodyDied"), icon: "sun", bg: "#241D12", edge: "#4A3A22", fg: "#F0A83A", ibg: "#3A2A16" };
   }
+
+  // Notices for the new roles, below the morning report.
+  type Notice = { key: string; title: string; text: string; icon: IconName; bg: string; edge: string; fg: string; ibg: string };
+  const notices: Notice[] = [];
+  const shot = findPlayer(view, night?.shotPlayerId);
+  if (shot) {
+    notices.push({ key: "shot", title: t("shotDead", { name: name(shot.playerId) }),
+      text: shot.revealedRole ? t("theyWereThe", { role: roleName(shot.revealedRole) }) : view.rules.revealRolesOnDeath ? "" : t("roleHidden"),
+      icon: "target", bg: "#2A1612", edge: "#4A2620", fg: "#F08A7A", ibg: "#3A1C1A" });
+  }
+  if (view.youSurvivedTheNight) {
+    notices.push({ key: "diehard", title: t("dieHardSurvivedTitle"), text: t("dieHardSurvivedText"), icon: "shield", bg: "#10251F", edge: "#1E4A40", fg: "#5FD0BE", ibg: "#13302C" });
+  }
+  const silenced = findPlayer(view, view.silencedPlayerId);
+  const youSilenced = view.silencedPlayerId === view.yourPlayerId;
+  if (silenced) {
+    notices.push(youSilenced
+      ? { key: "silenced", title: t("silencedYouTitle"), text: t("silencedYouText"), icon: "mute", bg: "#2A1612", edge: "#4A2620", fg: "#F08A7A", ibg: "#3A1C1A" }
+      : { key: "silenced", title: t("silencedOtherTitle", { name: name(silenced.playerId) }), text: t("silencedOtherText"), icon: "mute", bg: "#2A1612", edge: "#4A2620", fg: "#F08A7A", ibg: "#3A1C1A" });
+  }
+  for (const mayor of view.players.filter((p) => p.revealed && p.isAlive)) {
+    notices.push({ key: `mayor-${mayor.playerId}`, title: t("mayorRevealedTitle", { name: name(mayor.playerId) }), text: t("mayorRevealedText"), icon: "townHall", bg: "#241D12", edge: "#4A3A22", fg: "#F0A83A", ibg: "#3A2A16" });
+  }
+  if (view.yourRole === "Mayor" && view.discussion?.activePlayerId === view.yourPlayerId && view.discussion.segmentType === "Speaker" && !findPlayer(view, view.yourPlayerId)?.revealed) {
+    notices.push({ key: "mayorTurn", title: t("mayorTurnTitle"), text: t("mayorTurnText"), icon: "townHall", bg: "#241D12", edge: "#4A3A22", fg: "#F0A83A", ibg: "#3A2A16" });
+  }
+  // At tables that hide roles, out players with a role shown were announced by the Die Hard's Inquiry.
+  const inquiry = view.rules.revealRolesOnDeath ? [] : view.players.filter((p) => !p.isAlive && p.revealedRole);
+  const canInquire = view.youAreAlive && view.yourRole === "DieHard" && !view.rules.revealRolesOnDeath && !view.yourInquiryUsed;
 
   const discussion = view.discussion;
   const active = findPlayer(view, discussion?.activePlayerId);
@@ -84,6 +113,37 @@ export function DayScreen() {
             {report.text && <div style={{ color: "var(--text-2)" }}>{report.text}</div>}
           </div>
         </section>
+
+        {notices.map((n) => (
+          <section key={n.key} role="status" className="row" style={{ gap: 12, padding: 14, borderRadius: 18, background: n.bg, border: `1px solid ${n.edge}` }}>
+            <span style={{ width: 44, height: 44, flex: "none", borderRadius: 999, background: n.ibg, color: n.fg, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <Icon name={n.icon} />
+            </span>
+            <div style={{ fontSize: 14, lineHeight: 1.45 }}>
+              <div style={{ fontWeight: 600, fontSize: 15 }}>{n.title}</div>
+              <div style={{ color: "var(--text-2)" }}>{n.text}</div>
+            </div>
+          </section>
+        ))}
+
+        {inquiry.length > 0 && (
+          <section className="list" aria-label={t("inquiryTitle")}>
+            <h2 className="list__head">{t("inquiryTitle")}</h2>
+            {inquiry.map((p) => (
+              <div key={p.playerId} className="list__row row--between" style={{ fontSize: 14 }}>
+                <span>{name(p.playerId)}</span>
+                <span className="strong" style={{ color: p.revealedRole ? undefined : "var(--muted)" }}>{p.revealedRole ? roleName(p.revealedRole) : ""}</span>
+              </div>
+            ))}
+          </section>
+        )}
+
+        {canInquire && (
+          <div className="stack" style={{ gap: 6 }}>
+            <button type="button" className="btn btn--outline" style={{ color: "#5FD0BE", borderColor: "#1E4A40" }} disabled={busy} onClick={() => void callInquiry()}>{t("inquiryButton")}</button>
+            <span className="tiny muted">{t("inquiryNote")}</span>
+          </div>
+        )}
 
         {discussion && active && (
           <section className="stack center" style={{ gap: 12, padding: "20px 16px", borderRadius: 24, background: "var(--surface)" }} aria-live="polite">
@@ -175,9 +235,20 @@ export function DayScreen() {
             {t("dayDeadNote")}
           </div>
         ) : youActive ? (
-          <button type="button" className="btn btn--primary grow" style={{ fontSize: 15 }} disabled={busy} onClick={() => void finishDiscussion()}>
-            {t("finishEarly")}
-          </button>
+          <div className="grow stack" style={{ gap: 8 }}>
+            {youSpeaker && view.yourRole === "Mayor" && !findPlayer(view, view.yourPlayerId)?.revealed && (
+              <button type="button" className="btn btn--primary" style={{ fontSize: 15 }} disabled={busy} onClick={() => { haptic.success(); void revealMayor(); }}>
+                {t("revealAsMayor")}
+              </button>
+            )}
+            <button type="button" className={`btn ${view.yourRole === "Mayor" && youSpeaker && !findPlayer(view, view.yourPlayerId)?.revealed ? "btn--outline" : "btn--primary"}`} style={{ fontSize: 15 }} disabled={busy} onClick={() => void finishDiscussion()}>
+              {t("finishEarly")}
+            </button>
+          </div>
+        ) : youSilenced ? (
+          <div className="grow" style={{ minHeight: 52, padding: "8px 14px", borderRadius: 16, border: "1.5px dashed var(--edge)", color: "var(--text-2)", fontSize: 14, display: "flex", alignItems: "center" }}>
+            {t("silencedNote")}
+          </div>
         ) : (
           <button
             type="button"

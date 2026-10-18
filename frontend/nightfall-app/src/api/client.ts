@@ -147,6 +147,8 @@ export class NightfallApiClient {
   finishDiscussion(gameId: string) { return this.request<void>("POST", `/api/games/${gameId}/discussion/finish`); }
   setReady(gameId: string, ready: boolean) { return this.request<void>("PUT", `/api/games/${gameId}/ready`, { ready }); }
   finishLastWords(gameId: string) { return this.request<void>("POST", `/api/games/${gameId}/last-words/finish`); }
+  revealMayor(gameId: string) { return this.request<void>("POST", `/api/games/${gameId}/mayor/reveal`); }
+  callInquiry(gameId: string) { return this.request<void>("POST", `/api/games/${gameId}/inquiry`); }
 
   getVoiceToken(gameId: string, channel: "main" | "mafia") {
     return this.request<VoiceTokenResponse>("GET", `/api/games/${gameId}/voice-token?channel=${channel}`);

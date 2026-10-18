@@ -19,6 +19,8 @@ export const badgeMeta: Record<string, BadgeMeta> = {
   kingslayer: { icon: "crown", bg: "#2A2113", fg: "#F0A83A", name: "badgeKingslayer", how: "howKingslayer" },
   silverTongue: { icon: "scales", bg: "#232734", fg: "#C9C8DC", name: "badgeSilverTongue", how: "howSilverTongue" },
   survivor: { icon: "heart", bg: "#2A1F33", fg: "#B79CF2", name: "badgeSurvivor", how: "howSurvivor" },
+  clutchShot: { icon: "target", bg: "#1B2A44", fg: "#8FA8FF", name: "badgeClutchShot", how: "howClutchShot" },
+  jester: { icon: "star", bg: "#2A1F33", fg: "#B79CF2", name: "badgeJester", how: "howJester" },
   streak7: { icon: "flame", bg: "#2A2113", fg: "#F0A83A", name: "badgeStreak7" },
   streak30: { icon: "flame", bg: "#3A2A16", fg: "#F6C377", name: "badgeStreak30" },
   solved100: { icon: "zip", bg: "#13302C", fg: "#5FD0BE", name: "badgeSolved100" },

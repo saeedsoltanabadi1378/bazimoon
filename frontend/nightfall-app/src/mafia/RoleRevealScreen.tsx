@@ -16,6 +16,12 @@ export function RoleRevealScreen({ onReady }: { onReady: () => void }) {
 
   const role = view.yourRole;
   const meta = roleMeta[role];
+  const tip = role === "Sniper" ? t("tipSniper")
+    : role === "DieHard" ? (view.rules.revealRolesOnDeath ? null : t("tipDieHard"))
+    : role === "Silencer" ? t("tipSilencer")
+    : role === "Joker" ? (view.rules.jokerWinEndsGame ? t("tipJokerEnds") : t("tipJokerGoesOn"))
+    : role === "Mayor" ? t("tipMayor")
+    : null;
   const team = view.mafiaTeam ?? [];
 
   return (
@@ -54,8 +60,9 @@ export function RoleRevealScreen({ onReady }: { onReady: () => void }) {
                 {t(`reveal${role}`)}
               </span>
               <span style={{ padding: "6px 12px", borderRadius: 999, background: "#1E2138", fontSize: 13, color: "var(--text-2)" }}>
-                {t("teamLabel", { team: meta.team === "mafia" ? t("teamMafia") : t("teamTown") })}
+                {t("teamLabel", { team: meta.team === "mafia" ? t("teamMafia") : meta.team === "independent" ? t("teamIndependent") : t("teamTown") })}
               </span>
+              {tip && <span style={{ fontSize: 13, lineHeight: 1.5, color: "var(--text-2)", maxWidth: 290 }}>{tip}</span>}
             </span>
           )}
         </button>

@@ -26,12 +26,16 @@ export function LobbyScreen() {
   const count = view.players.length;
   const max = view.maxPlayers || 12;
   const full = count >= max;
-  const startable = count >= view.minPlayers;
+  const setup = view.setup;
+  const setupFits = !setup || setup.problem === null;
+  const startable = count >= view.minPlayers && setupFits;
   const controllerId = view.controllerPlayerId ?? view.players[0]?.playerId;
   const ready = new Set(view.readyPlayerIds ?? []);
   const youReady = ready.has(view.yourPlayerId);
-  const roles = rolesFor(count);
-  const note = !startable
+  const roles = rolesFor(count, setup?.roles);
+  const note = !setupFits
+    ? setup!.problem === "TooManyMafia" ? t("setupTooManyMafia", { count }) : t("setupNeeds", { min: setup!.minimumPlayers, count })
+    : count < view.minPlayers
     ? t("rolesNoteWaiting", { min: view.minPlayers })
     : count === 3
       ? t("rolesNoteThree")
@@ -107,7 +111,12 @@ export function LobbyScreen() {
               })}
             </div>
           )}
-          <p className="small muted">{note}</p>
+          {setup && setup.preset !== "Classic" && <p className="tiny strong" style={{ color: "#9C8CFF" }}>{t("setupLabel", { preset: t(`preset${setup.preset}`) })}</p>}
+          {setupFits ? (
+            <p className="small muted">{note}</p>
+          ) : (
+            <p role="alert" className="small" style={{ padding: "10px 12px", borderRadius: 12, background: "#2A1612", border: "1px solid #4A2620", color: "#F4D2CC" }}>{note}</p>
+          )}
         </section>
 
         <section className="stack stack--sm" aria-labelledby="table-rules">
@@ -123,6 +132,8 @@ export function LobbyScreen() {
             ].join(" · ")}
           </p>
           {view.rules.lastWordsForNightKills && <p className="small muted" style={{ margin: 0 }}>{t("ruleNightLastWords")}</p>}
+          {view.rules.godfatherAppearsInnocent && <p className="small muted" style={{ margin: 0 }}>{t("optInnocent")}</p>}
+          {!view.rules.revealRolesOnDeath && <p className="small muted" style={{ margin: 0 }}>{t("hiddenRolesNote")}</p>}
         </section>
 
         <ul className="list" style={{ listStyle: "none", margin: 0, padding: 0 }} aria-label={t("playersInLobby")}>

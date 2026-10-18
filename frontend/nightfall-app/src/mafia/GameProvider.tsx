@@ -35,6 +35,8 @@ export interface GameContextValue {
   rejectChallenge(challengerId: string): Promise<boolean>;
   finishDiscussion(): Promise<boolean>;
   finishLastWords(): Promise<boolean>;
+  revealMayor(): Promise<boolean>;
+  callInquiry(): Promise<boolean>;
   setReady(ready: boolean): Promise<boolean>;
 }
 
@@ -151,6 +153,8 @@ export function GameProvider({ gameId, children }: { gameId: string; children: R
     rejectChallenge: (id) => run(() => api.rejectChallenge(gameId, id)),
     finishDiscussion: () => run(() => api.finishDiscussion(gameId)),
     finishLastWords: () => run(() => api.finishLastWords(gameId)),
+    revealMayor: () => run(() => api.revealMayor(gameId)),
+    callInquiry: () => run(() => api.callInquiry(gameId)),
     setReady: (ready) => run(() => api.setReady(gameId, ready)),
   };
 

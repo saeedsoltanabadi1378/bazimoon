@@ -5,6 +5,9 @@ import { Body, Screen, TopBar } from "../ui/components";
 import { Icon } from "../ui/Icon";
 import { useHub } from "./HubData";
 import type { TableRules } from "../api/hub";
+import type { Role, RolePreset } from "../api/types";
+import { OPTIONAL_ROLES, dealRoles, minimumPlayers, roleMeta, rolesFor } from "../mafia/roles";
+import { useRoleName } from "../mafia/parts";
 import { haptic } from "../lib/haptics";
 
 const MIN_SEATS = 3;
@@ -36,6 +39,13 @@ export function CreateTableScreen() {
     () => Object.fromEntries(TIMERS.map((tm) => [tm.key, tm.initial])) as Record<TimerKey, number>,
   );
   const [nightLastWords, setNightLastWords] = useState(false);
+  const [preset, setPreset] = useState<RolePreset>("Classic");
+  const [mafiaCount, setMafiaCount] = useState(2);
+  const [optional, setOptional] = useState<Role[]>(["Detective", "Doctor"]);
+  const [innocent, setInnocent] = useState<boolean | null>(null);
+  const [jokerEnds, setJokerEnds] = useState(true);
+  const [revealRoles, setRevealRoles] = useState(true);
+  const roleName = useRoleName();
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
 
@@ -43,7 +53,10 @@ export function CreateTableScreen() {
     setBusy(true);
     setFailed(false);
     try {
-      const rules: TableRules = { ...timers, lastWordsForNightKills: nightLastWords };
+      const rules: TableRules = {
+        ...timers, lastWordsForNightKills: nightLastWords, preset, mafiaCount, optionalRoles: optional,
+        godfatherAppearsInnocent: innocent ?? preset === "Iranian", jokerWinEndsGame: jokerEnds, revealRolesOnDeath: revealRoles,
+      };
       const { gameId } = await api.createTable({ name: name.trim() || null, isOpen, seats, rules });
       haptic.success();
       replace({ name: "mafia", gameId });
@@ -58,6 +71,25 @@ export function CreateTableScreen() {
     { open: true, title: t("publicTable"), desc: t("publicTableDesc"), icon: "globe" as const, bg: "#13302C", fg: "#5FD0BE" },
     { open: false, title: t("privateTable"), desc: t("privateTableDesc"), icon: "lock" as const, bg: "#1E2138", fg: "#B79CF2" },
   ];
+  // The setup shown for a full table; the lobby shows it again for the players who actually join.
+  const dealt = dealRoles(preset, mafiaCount, optional, seats);
+  const minPlayers = minimumPlayers(preset, mafiaCount, optional);
+  const fits = dealt !== null && minPlayers <= seats;
+  const chips = rolesFor(seats, dealt);
+  const innocentOn = innocent ?? preset === "Iranian";
+  const toggle = (on: boolean, label: string, flip: () => void) => (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={on}
+      aria-label={label}
+      onClick={flip}
+      style={{ width: 52, height: 30, flex: "none", padding: 3, borderRadius: 999, border: 0, background: on ? "#9C8CFF" : "#3A3F5E", display: "flex", justifyContent: on ? "flex-end" : "flex-start", cursor: "pointer" }}
+    >
+      <span style={{ width: 24, height: 24, borderRadius: 999, background: "#EDEBF5" }} />
+    </button>
+  );
+  const teamShort = (r: Role) => (roleMeta[r].team === "mafia" ? t("teamMafiaShort") : roleMeta[r].team === "independent" ? t("teamOwnShort") : t("teamTownShort"));
   const sec = (v: number) => (v === 0 ? t("timerOff") : t("secondsShort", { count: v }));
   const selected = (on: boolean) => ({ border: `2px solid ${on ? "#9C8CFF" : "#262A44"}`, background: on ? "#1A1836" : "var(--surface)" });
 
@@ -107,6 +139,79 @@ export function CreateTableScreen() {
             <button type="button" className="btn btn--outline" aria-label={t("moreSeats")} disabled={seats >= MAX_SEATS} onClick={() => setSeats((s) => s + 1)} style={{ width: 44, minHeight: 44, padding: 0, fontSize: 18 }}>+</button>
           </div>
         </div>
+        <section className="stack" aria-labelledby="roles-h" style={{ gap: 12, padding: 14, borderRadius: 18, background: "var(--surface)" }}>
+          <h2 id="roles-h" style={{ fontSize: 15, fontWeight: 600 }}>{t("rolesSetupTitle")}</h2>
+          <div role="radiogroup" aria-labelledby="roles-h" style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 6 }}>
+            {(["Classic", "Iranian", "Custom"] as RolePreset[]).map((p) => {
+              const on = preset === p;
+              return (
+                <button key={p} type="button" role="radio" aria-checked={on} onClick={() => setPreset(p)} style={{ minHeight: 44, borderRadius: 12, border: `1.5px solid ${on ? "#9C8CFF" : "#262A44"}`, background: on ? "#1A1836" : "transparent", color: on ? "var(--text)" : "var(--text-2)", font: "inherit", fontSize: 14, fontWeight: 600, cursor: "pointer" }}>
+                  {t(`preset${p}`)}
+                </button>
+              );
+            })}
+          </div>
+          <span className="small muted" style={{ lineHeight: 1.45 }}>{t(`preset${preset}Text`)}</span>
+          {preset === "Custom" && (
+            <div className="stack" style={{ gap: 0 }}>
+              <div className="row" style={{ gap: 12, paddingBottom: 8 }}>
+                <span className="grow stack" style={{ gap: 0 }}>
+                  <span style={{ fontSize: 14, fontWeight: 600 }}>{t("mafiaPlayers")}</span>
+                  <span className="tiny muted">{t("mafiaPlayersHint")}</span>
+                </span>
+                <button type="button" className="btn btn--outline" aria-label={t("fewerMafia")} disabled={mafiaCount <= 1} onClick={() => setMafiaCount((m) => m - 1)} style={{ width: 44, minHeight: 44, padding: 0, fontSize: 18 }}>−</button>
+                <output aria-live="polite" className="num" style={{ minWidth: 28, textAlign: "center", fontSize: 20, fontWeight: 700 }}>{n(mafiaCount)}</output>
+                <button type="button" className="btn btn--outline" aria-label={t("moreMafia")} disabled={mafiaCount >= 5} onClick={() => setMafiaCount((m) => m + 1)} style={{ width: 44, minHeight: 44, padding: 0, fontSize: 18 }}>+</button>
+              </div>
+              {OPTIONAL_ROLES.map((r) => {
+                const meta = roleMeta[r];
+                const on = optional.includes(r);
+                return (
+                  <div key={r} className="row" style={{ gap: 10, minHeight: 50, borderTop: "1px solid #1E2138" }}>
+                    <span style={{ width: 30, height: 30, flex: "none", borderRadius: 999, background: meta.bg, color: meta.fg, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <Icon name={meta.icon} size={15} />
+                    </span>
+                    <span className="grow stack" style={{ gap: 0 }}>
+                      <span style={{ fontSize: 14, fontWeight: 600 }}>{roleName(r)}</span>
+                      <span className="tiny muted">{teamShort(r)}</span>
+                    </span>
+                    {toggle(on, roleName(r), () => setOptional((cur) => (on ? cur.filter((x) => x !== r) : [...cur, r])))}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+          <div className="row row--wrap" style={{ gap: 6 }}>
+            {chips.map(({ role, n: count }) => (
+              <span key={role} className="tiny strong" style={{ padding: "5px 10px", borderRadius: 999, background: roleMeta[role].bg, color: roleMeta[role].fg }}>
+                {count > 1 ? `${n(count)} × ` : ""}{role === "Villager" && count > 1 ? t("villagersPlural") : roleName(role)}
+              </span>
+            ))}
+          </div>
+          {!fits && (
+            <p role="alert" className="small" style={{ padding: "10px 12px", borderRadius: 12, background: "#2A1612", border: "1px solid #4A2620", color: "#F4D2CC" }}>
+              {t("setupDoesntFit", { seats, min: Number.isFinite(minPlayers) ? minPlayers : seats + 1 })}
+            </p>
+          )}
+        </section>
+
+        <section className="stack" style={{ gap: 4, padding: 14, borderRadius: 18, background: "var(--surface)" }}>
+          <h2 style={{ margin: "0 0 6px", fontSize: 15, fontWeight: 600 }}>{t("roleRulesTitle")}</h2>
+          {[
+            { on: innocentOn, title: t("optInnocent"), text: t("optInnocentText"), flip: () => setInnocent(!innocentOn) },
+            { on: jokerEnds, title: t("optJokerEnds"), text: t("optJokerEndsText"), flip: () => setJokerEnds((v) => !v) },
+            { on: revealRoles, title: t("optRevealRoles"), text: t("optRevealRolesText"), flip: () => setRevealRoles((v) => !v) },
+          ].map((o, i) => (
+            <div key={o.title} className="row" style={{ gap: 12, minHeight: 56, borderTop: i ? "1px solid #1E2138" : 0 }}>
+              <span className="grow stack" style={{ gap: 2 }}>
+                <span style={{ fontSize: 14, fontWeight: 600 }}>{o.title}</span>
+                <span className="tiny muted" style={{ lineHeight: 1.4 }}>{o.text}</span>
+              </span>
+              {toggle(o.on, o.title, o.flip)}
+            </div>
+          ))}
+        </section>
+
         <section className="stack" aria-labelledby="timers-h" style={{ gap: 12, padding: 14, borderRadius: 18, background: "var(--surface)" }}>
           <button
             type="button"
@@ -187,7 +292,7 @@ export function CreateTableScreen() {
       </Body>
 
       <div className="stack" style={{ gap: 8, padding: "12px 16px 22px", background: "#10122A", borderTop: "1px solid #1E2138" }}>
-        <button type="button" className="btn" disabled={busy} onClick={() => void create()} style={{ background: "#E5604D", color: "#1C0905" }}>
+        <button type="button" className="btn" disabled={busy || !fits} onClick={() => void create()} style={{ background: "#E5604D", color: "#1C0905" }}>
           {busy ? t("creating") : t("createAndOpen")}
         </button>
         <span className="tiny muted" style={{ textAlign: "center" }}>{t("createFootnote")}</span>

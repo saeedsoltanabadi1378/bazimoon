@@ -17,7 +17,8 @@ are reflected in each section.
 | M1 | Built: tie-break defence and re-vote, last words (with the night-kill option), adjustable timers, the lobby rules line, and night and vote countdowns. |
 | M2 | Built: ready check and auto-start, strikes and removal for missed timed turns, the Godfather fallback to the Mafia's suggestion, leaving mid-game as a loss, and the creator hand-off. Day speaking turns never give strikes. |
 | M3 | Built: game event log (moved here from M0), game recap, stats per role, MVP and achievements. Changes from the plan: the MVP is worked out by the game from a points system instead of a vote (team won +3, each Mafia found +3, each kill blocked +3, each Mafia kill +2, each vote on a Mafia who went out +2, each night survived +1; most points on the winning team, ties share it, +50 XP); achievements are computed from per-game stats columns instead of a separate table, and join the Profile badges. Recap is `GET /api/hub/games/{id}/recap`. |
-| M4–M5 | Not started. |
+| M4 | Built: Sniper, Die Hard, Silencer, Joker and Mayor; Classic, Iranian and Custom role setups; Godfather-looks-innocent, Joker-ends-game and hide-roles-on-death options; Clutch shot and Jester achievements. Changes from the plan: the Silencer's action is optional (like the Sniper's) and can't target the same player two nights running; a plain Mafia member is promoted to Godfather before the Silencer; at hidden-role tables a player who is out sees no roles, their own included. |
+| M5 | Not started. |
 
 ## Where Mafia stands today
 

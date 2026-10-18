@@ -4,6 +4,9 @@ import type { ReactNode } from "react";
 const paths = {
   back: <path d="m15 5-7 7 7 7" />,
   forward: <path d="m9 6 6 6-6 6" />,
+  target: <path d="M12 3v4M12 17v4M3 12h4M17 12h4M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z" />,
+  mute: <path d="M11 5 6 9H2v6h4l5 4zM22 9l-6 6M16 9l6 6" />,
+  townHall: <path d="M4 21h16M6 21V10l6-5 6 5v11M10 21v-5h4v5" />,
   prev: <path d="m15 6-6 6 6 6" />,
   close: <path d="M6 6l12 12M18 6 6 18" />,
   check: <path d="m5 12 5 5 9-10" />,

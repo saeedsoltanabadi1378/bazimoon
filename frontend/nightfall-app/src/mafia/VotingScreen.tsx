@@ -4,7 +4,7 @@ import { useGame } from "./GameProvider";
 import { useLanguage } from "../i18n/LanguageContext";
 import { Bar, Body, PhaseHeader, Screen } from "../ui/components";
 import { Icon } from "../ui/Icon";
-import { findPlayer, playerColor } from "./roles";
+import { voteWeight, findPlayer, playerColor } from "./roles";
 import { ActionError, LeaveGameButton, PhaseTimer, ReconnectingBanner, VoiceStatusLine, TableNotices } from "./parts";
 import { haptic } from "../lib/haptics";
 
@@ -34,8 +34,9 @@ export function VotingScreen() {
 
   const tally = candidates
     .map((p) => {
-      const by = votes.filter((v) => v.targetPlayerId === p.playerId).map((v) => name(v.voterPlayerId));
-      return { p, by, count: by.length };
+      const ballots = votes.filter((v) => v.targetPlayerId === p.playerId);
+      const by = ballots.map((v) => name(v.voterPlayerId));
+      return { p, by, count: ballots.reduce((sum, v) => sum + voteWeight(view, v.voterPlayerId), 0) };
     })
     .sort((a, b) => b.count - a.count);
 
@@ -101,6 +102,7 @@ export function VotingScreen() {
                   <span style={{ display: "block", fontSize: 12, color: "var(--text-2)" }}>
                     {by.length ? t("byVoters", { names: by.join(", ") }) : you ? t("you") : t("noVotesYet")}
                   </span>
+                  {p.revealed && <span style={{ display: "block", fontSize: 11, fontWeight: 700, color: "#F0A83A" }}>{t("mayorTag")}</span>}
                 </span>
                 <span className="num" style={{ position: "relative", fontSize: 20, fontWeight: 700 }}>{count}</span>
               </button>
@@ -111,7 +113,7 @@ export function VotingScreen() {
         {revote && roundOne.length > 0 && (
           <section className="stack" style={{ gap: 8, padding: 14, borderRadius: 18, background: "#1A1611" }}>
             <h2 style={{ fontSize: 14, fontWeight: 600 }}>{t("roundOne")}</h2>
-            <BallotRows ballots={roundOne} name={name} />
+            <BallotRows ballots={roundOne} name={name} weight={(id) => voteWeight(view, id)} />
           </section>
         )}
 
@@ -159,12 +161,12 @@ export function VotingScreen() {
 }
 
 /** A finished round's count per player, most votes first, with abstentions last. */
-export function BallotRows({ ballots, name, highlightTop = false }: { ballots: VoteView[]; name: (id: string) => string; highlightTop?: boolean }) {
+export function BallotRows({ ballots, name, highlightTop = false, weight = () => 1 }: { ballots: VoteView[]; name: (id: string) => string; highlightTop?: boolean; weight?: (voterId: string) => number }) {
   const { t, n } = useLanguage();
   const counts = new Map<string, number>();
   let abstained = 0;
   for (const b of ballots) {
-    if (b.targetPlayerId) counts.set(b.targetPlayerId, (counts.get(b.targetPlayerId) ?? 0) + 1);
+    if (b.targetPlayerId) counts.set(b.targetPlayerId, (counts.get(b.targetPlayerId) ?? 0) + weight(b.voterPlayerId));
     else abstained++;
   }
   const rows = [...counts.entries()].map(([id, count]) => ({ key: id, label: name(id), count })).sort((a, b) => b.count - a.count);

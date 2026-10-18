@@ -1,6 +1,6 @@
 // Mirrors Nightfall.Api.Lounge DTOs (camelCase JSON).
 import type { NightfallApiClient } from "./client";
-import type { GamePhase, Role } from "./types";
+import type { GamePhase, Role, RolePreset } from "./types";
 
 export interface Settings {
   language: "en" | "fa";
@@ -70,7 +70,7 @@ export interface MafiaStats {
   }[];
 }
 
-export type GameEventKind = "Night" | "Vote" | "LastWords" | "Promoted" | "Left" | "Removed";
+export type GameEventKind = "Night" | "Vote" | "LastWords" | "Promoted" | "Left" | "Removed" | "MayorRevealed" | "Inquiry";
 
 export interface GameEvent {
   kind: GameEventKind;
@@ -88,13 +88,18 @@ export interface GameEvent {
   ballots: Record<string, string | null> | null;
   votedOut: string | null;
   tied: string[] | null;
+  sniperId: string | null;
+  shotTarget: string | null;
+  shotOutcome: "Hit" | "Saved" | "Backfired" | null;
+  silenced: string | null;
+  dieHardSurvived: string | null;
 }
 
 export interface GameRecap {
   gameId: string;
   tableName: string | null;
   endedAt: string;
-  result: "None" | "VillagersWin" | "MafiaWin";
+  result: "None" | "VillagersWin" | "MafiaWin" | "JokerWins";
   players: {
     playerId: string;
     name: string;
@@ -281,6 +286,14 @@ export interface TableRules {
   nightSeconds: number;
   votingSeconds: number;
   lastWordsForNightKills: boolean;
+  preset?: RolePreset;
+  /** Custom only: Mafia-team players, including the Godfather and the Silencer. */
+  mafiaCount?: number;
+  /** Custom only: the optional roles that are on. */
+  optionalRoles?: Role[];
+  godfatherAppearsInnocent?: boolean;
+  jokerWinEndsGame?: boolean;
+  revealRolesOnDeath?: boolean;
 }
 
 export const hubApi = (api: NightfallApiClient) => ({
