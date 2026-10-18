@@ -121,6 +121,12 @@ public static class GameEndpoints
             return Results.Ok();
         }).WithName("FinishDiscussionSegment");
 
+        group.MapPost("/{gameId:guid}/last-words/finish", async (Guid gameId, GameService games, HttpContext http) =>
+        {
+            await games.FinishLastWordsAsync(gameId, http.User.GetTelegramUserId());
+            return Results.Ok();
+        }).WithName("FinishLastWords");
+
         group.MapGet("/{gameId:guid}/voice-token", async (Guid gameId, string channel, GameService games, IAgoraTokenService agoraTokens, HttpContext http) =>
         {
             var game = await games.LoadOrThrowAsync(gameId);
@@ -134,15 +140,18 @@ public static class GameEndpoints
             {
                 case "main":
                     channelName = $"nightfall-{gameId}";
-                    // During the timed day discussion only the active speaker (or accepted challenger) holds
-                    // the floor; everyone else listens until their turn. Clients rejoin on every turn change.
+                    // During the timed day discussion and a defence only the active speaker (or accepted challenger)
+                    // holds the floor; everyone else listens until their turn. Clients rejoin on every turn change.
+                    // Last words are the one time a player who is out may speak.
                     bool mayTalk = game.CurrentPhase switch
                     {
-                        GamePhase.Day => game.Discussion is null || game.Discussion.ActivePlayerId == player.Id,
-                        GamePhase.Voting or GamePhase.Results => true,
+                        GamePhase.Day => player.IsAlive && (game.Discussion is null || game.Discussion.ActivePlayerId == player.Id),
+                        GamePhase.Defence => player.IsAlive && game.Discussion?.ActivePlayerId == player.Id,
+                        GamePhase.LastWords => game.LastWordsPlayerId == player.Id,
+                        GamePhase.Voting or GamePhase.Results => player.IsAlive,
                         _ => false
                     };
-                    role = player.IsAlive && mayTalk ? AgoraRtcRole.Publisher : AgoraRtcRole.Subscriber;
+                    role = mayTalk ? AgoraRtcRole.Publisher : AgoraRtcRole.Subscriber;
                     break;
                 case "mafia":
                     if (!player.IsAlive || !player.IsMafiaAligned)

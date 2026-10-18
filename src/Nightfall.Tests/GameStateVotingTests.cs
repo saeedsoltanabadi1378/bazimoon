@@ -76,11 +76,15 @@ public class GameStateVotingTests
         Assert.Equal(target.Id, result.Eliminated);
         Assert.False(result.WasTie);
         Assert.False(target.IsAlive);
+        Assert.Equal(GamePhase.LastWords, game.CurrentPhase);
+        Assert.Equal(target.Id, game.LastWordsPlayerId);
+
+        game.FinishLastWords();
         Assert.Equal(GamePhase.Results, game.CurrentPhase);
     }
 
     [Fact]
-    public void ResolveVoting_TiedVotes_NoOneIsEliminated()
+    public void ResolveVoting_TiedVotes_NoOneIsEliminated_AndTheTiedPlayersDefend()
     {
         var (game, players) = CreateGameInVoting(9);
         var villagers = players.Villagers();
@@ -100,7 +104,8 @@ public class GameStateVotingTests
         Assert.Equal(new[] { candidateA.Id, candidateB.Id }.OrderBy(id => id), result.TiedPlayers.OrderBy(id => id));
         Assert.True(candidateA.IsAlive);
         Assert.True(candidateB.IsAlive);
-        Assert.Equal(GamePhase.Results, game.CurrentPhase);
+        Assert.Equal(GamePhase.Defence, game.CurrentPhase);
+        Assert.Equal(2, game.VotingRound);
     }
 
     [Fact]

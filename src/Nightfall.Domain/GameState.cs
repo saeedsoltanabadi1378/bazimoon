@@ -10,6 +10,8 @@ public sealed class GameState
     private readonly List<Guid> _discussionSpeakerOrder = new();
     private readonly HashSet<Guid> _completedSpeakers = new();
     private readonly HashSet<Guid> _pendingChallengeRequests = new();
+    private readonly List<Guid> _runoffCandidates = new();
+    private GamePhase _afterLastWords = GamePhase.Results;
 
     public Guid GameId { get; private init; }
     public DateTimeOffset CreatedAt { get; private init; }
@@ -33,6 +35,22 @@ public sealed class GameState
 
     /// <summary>The follow-up game started from this one's Game over screen, if any.</summary>
     public Guid? RematchGameId { get; private set; }
+
+    /// <summary>1 for the day's vote; 2 for the re-vote between the players tied in round 1.</summary>
+    public int VotingRound { get; private set; } = 1;
+
+    /// <summary>The players tied in round 1: they defend themselves, and round 2 is between them only.</summary>
+    public IReadOnlyList<Guid> RunoffCandidates => _runoffCandidates;
+
+    /// <summary>When the current Night, Voting or LastWords phase moves on by itself. Null when the
+    /// creator moves it on by hand (or the phase has no timer). Day turns keep their own deadline in Discussion.</summary>
+    public DateTimeOffset? PhaseDeadline { get; private set; }
+
+    /// <summary>Who is saying their last words, during LastWords.</summary>
+    public Guid? LastWordsPlayerId { get; private set; }
+
+    /// <summary>The phase LastWords leads to: Results after a vote, Day after a night kill (or Ended if the game is won).</summary>
+    public GamePhase AfterLastWords => _afterLastWords;
 
     public GameState(GameConfig? config = null, Guid? gameId = null, long? telegramChatId = null)
     {
@@ -60,7 +78,12 @@ public sealed class GameState
         LastNightResult,
         LastVotingResult,
         Discussion,
-        RematchGameId);
+        RematchGameId,
+        VotingRound,
+        _runoffCandidates.ToList(),
+        PhaseDeadline,
+        LastWordsPlayerId,
+        _afterLastWords);
 
     /// <summary>Reconstructs a GameState (including in-flight submissions) from a snapshot, bypassing normal transition guards.</summary>
     public static GameState FromSnapshot(GameStateSnapshot snapshot)
@@ -72,8 +95,14 @@ public sealed class GameState
             NightNumber = snapshot.NightNumber,
             LastNightResult = snapshot.LastNightResult,
             LastVotingResult = snapshot.LastVotingResult,
-            RematchGameId = snapshot.RematchGameId
+            RematchGameId = snapshot.RematchGameId,
+            VotingRound = snapshot.VotingRound,
+            PhaseDeadline = snapshot.PhaseDeadline,
+            LastWordsPlayerId = snapshot.LastWordsPlayerId,
+            _afterLastWords = snapshot.AfterLastWords
         };
+        if (snapshot.RunoffCandidates is { } runoff)
+            game._runoffCandidates.AddRange(runoff);
 
         foreach (var ps in snapshot.Players)
         {
@@ -274,10 +303,12 @@ public sealed class GameState
         _nightActions[playerId] = new NightAction(playerId, targetId, actionType);
     }
 
-    public NightResult ResolveNight()
+    public NightResult ResolveNight(DateTimeOffset? now = null)
     {
         if (CurrentPhase is not (GamePhase.Night or GamePhase.NightZero))
             throw new GameException("ResolveNight can only be called during Night or NightZero.");
+        var at = now ?? DateTimeOffset.UtcNow;
+        PhaseDeadline = null;
 
         NightNumber++;
 
@@ -298,9 +329,16 @@ public sealed class GameState
 
         Guid? promotedId = eliminated.HasValue ? HandlePotentialGodfatherDeath(eliminated.Value) : null;
 
-        AdvancePhaseAfterResolution(GamePhase.Day);
-        if (CurrentPhase == GamePhase.Day)
-            StartDiscussion(DateTimeOffset.UtcNow);
+        if (eliminated.HasValue && Config.LastWordsForNightKills)
+        {
+            EnterLastWords(eliminated.Value, GamePhase.Day, at);
+        }
+        else
+        {
+            AdvancePhaseAfterResolution(GamePhase.Day);
+            if (CurrentPhase == GamePhase.Day)
+                StartDiscussion(at);
+        }
 
         var result = new NightResult(NightNumber, eliminated, wasSaved, investigateTarget, investigateResult, promotedId);
         LastNightResult = result;
@@ -363,15 +401,23 @@ public sealed class GameState
 
         GetAliveOrThrow(playerId, "Voter");
         if (targetId.HasValue)
+        {
             GetAliveOrThrow(targetId.Value, "Vote target");
+            if (VotingRound == 2 && !_runoffCandidates.Contains(targetId.Value))
+                throw new GameException("In the re-vote you can only vote for one of the tied players.");
+        }
 
         _votes[playerId] = targetId;
     }
 
-    public VotingResult ResolveVoting()
+    /// <summary>Counts the vote. Round 1: a single top player is out (after their last words), a tie
+    /// sends the tied players to Defence and then a round 2 between them only. Round 2: a tie again
+    /// means nobody is out.</summary>
+    public VotingResult ResolveVoting(DateTimeOffset? now = null)
     {
         if (CurrentPhase != GamePhase.Voting)
             throw new GameException("ResolveVoting can only be called during Voting.");
+        var at = now ?? DateTimeOffset.UtcNow;
 
         var ballots = new Dictionary<Guid, Guid?>(_votes);
         var tally = _votes.Values
@@ -381,42 +427,135 @@ public sealed class GameState
             .ToList();
 
         _votes.Clear();
+        PhaseDeadline = null;
+        int round = VotingRound;
+        var previous = round == 2 ? LastVotingResult : null;
 
         if (tally.Count == 0)
         {
-            AdvancePhaseAfterResolution(GamePhase.Results);
-            var noVotesResult = new VotingResult(null, false, Array.Empty<Guid>(), null, ballots);
+            var noVotesResult = new VotingResult(null, false, Array.Empty<Guid>(), null, ballots, round, previous);
             LastVotingResult = noVotesResult;
+            EndRunoff();
+            AdvancePhaseAfterResolution(GamePhase.Results);
             return noVotesResult;
         }
 
         int maxVotes = tally.Max(t => t.Count);
         var topVoted = tally.Where(t => t.Count == maxVotes).Select(t => t.PlayerId).ToList();
-        bool isTie = topVoted.Count > 1;
 
-        Guid? eliminated = null;
-        Guid? promotedId = null;
-        if (!isTie)
+        if (topVoted.Count > 1)
         {
-            var victim = GetPlayer(topVoted[0])!;
-            victim.Eliminate(EliminationCause.Vote, NightNumber);
-            eliminated = victim.Id;
-            promotedId = HandlePotentialGodfatherDeath(victim.Id);
+            var tieResult = new VotingResult(null, true, topVoted, null, ballots, round, previous);
+            LastVotingResult = tieResult;
+            if (round == 1)
+            {
+                StartRunoff(topVoted, at);
+            }
+            else
+            {
+                EndRunoff();
+                AdvancePhaseAfterResolution(GamePhase.Results);
+            }
+            return tieResult;
         }
 
-        AdvancePhaseAfterResolution(GamePhase.Results);
+        var victim = GetPlayer(topVoted[0])!;
+        victim.Eliminate(EliminationCause.Vote, NightNumber);
+        Guid? promotedId = HandlePotentialGodfatherDeath(victim.Id);
 
-        var result = new VotingResult(eliminated, isTie, topVoted, promotedId, ballots);
+        var result = new VotingResult(victim.Id, false, topVoted, promotedId, ballots, round, previous);
         LastVotingResult = result;
+        EndRunoff();
+        EnterLastWords(victim.Id, GamePhase.Results, at);
         return result;
     }
 
-    public void StartVoting()
+    private void StartRunoff(IReadOnlyCollection<Guid> tied, DateTimeOffset now)
+    {
+        VotingRound = 2;
+        _runoffCandidates.Clear();
+        _runoffCandidates.AddRange(_players.Where(p => tied.Contains(p.Id)).Select(p => p.Id));
+        CurrentPhase = GamePhase.Defence;
+        _discussionSpeakerOrder.Clear();
+        _discussionSpeakerOrder.AddRange(_runoffCandidates);
+        _completedSpeakers.Clear();
+        _pendingChallengeRequests.Clear();
+        StartNextSpeaker(now);
+    }
+
+    private void EndRunoff()
+    {
+        VotingRound = 1;
+        _runoffCandidates.Clear();
+    }
+
+    private void EnterLastWords(Guid playerId, GamePhase next, DateTimeOffset now)
+    {
+        CurrentPhase = GamePhase.LastWords;
+        Discussion = null;
+        LastWordsPlayerId = playerId;
+        _afterLastWords = next;
+        PhaseDeadline = now.AddSeconds(Config.LastWordsSeconds);
+    }
+
+    /// <summary>The player saying their last words ends them early.</summary>
+    public void FinishLastWords(Guid playerId, DateTimeOffset now)
+    {
+        if (CurrentPhase != GamePhase.LastWords)
+            throw new GameException("Nobody is saying their last words.");
+        if (LastWordsPlayerId != playerId)
+            throw new GameException("Only the player saying their last words can finish them.");
+        CompleteLastWords(now);
+    }
+
+    private void CompleteLastWords(DateTimeOffset now)
+    {
+        LastWordsPlayerId = null;
+        PhaseDeadline = null;
+        AdvancePhaseAfterResolution(_afterLastWords);
+        if (CurrentPhase == GamePhase.Day)
+            StartDiscussion(now);
+    }
+
+    /// <summary>Moves on any phase whose timer has run out: a day or defence turn, last words, a timed
+    /// night (night roles that have not acted do nothing) or a timed vote (missing votes abstain).
+    /// Returns true when something changed.</summary>
+    public bool AdvanceExpiredPhase(DateTimeOffset now)
+    {
+        switch (CurrentPhase)
+        {
+            case GamePhase.Day:
+            {
+                bool started = Discussion is null;
+                bool advanced = AdvanceExpiredDiscussion(now);
+                return started || advanced;
+            }
+            case GamePhase.Defence:
+                return AdvanceExpiredDiscussion(now);
+            case GamePhase.LastWords when PhaseDeadline <= now:
+                CompleteLastWords(now);
+                return true;
+            case GamePhase.Night when PhaseDeadline <= now:
+                ResolveNight(now);
+                return true;
+            case GamePhase.Voting when PhaseDeadline <= now:
+                ResolveVoting(now);
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    public void StartVoting(DateTimeOffset? now = null)
     {
         if (CurrentPhase != GamePhase.Day)
             throw new GameException("Voting can only start from the Day phase.");
         CurrentPhase = GamePhase.Voting;
+        SetVotingDeadline(now ?? DateTimeOffset.UtcNow);
     }
+
+    private void SetVotingDeadline(DateTimeOffset now) =>
+        PhaseDeadline = Config.VotingSeconds is { } seconds ? now.AddSeconds(seconds) : null;
 
     public void EnsureDiscussionStarted(DateTimeOffset now)
     {
@@ -476,7 +615,7 @@ public sealed class GameState
             throw new GameException("That challenge request is no longer pending.");
         GetAliveOrThrow(challengerId, "Challenger");
         _pendingChallengeRequests.Clear();
-        RefreshDiscussion(challengerId, discussion.OriginalSpeakerId, DiscussionSegmentType.Challenge, now.AddSeconds(40));
+        RefreshDiscussion(challengerId, discussion.OriginalSpeakerId, DiscussionSegmentType.Challenge, now.AddSeconds(Config.ChallengeSeconds));
     }
 
     public void FinishDiscussionSegment(Guid playerId, DateTimeOffset now)
@@ -511,9 +650,11 @@ public sealed class GameState
         {
             Discussion = null;
             CurrentPhase = GamePhase.Voting;
+            SetVotingDeadline(now);
             return;
         }
-        RefreshDiscussion(next, next, DiscussionSegmentType.Speaker, now.AddSeconds(60));
+        int seconds = CurrentPhase == GamePhase.Defence ? Config.DefenceSeconds : Config.SpeakerSeconds;
+        RefreshDiscussion(next, next, DiscussionSegmentType.Speaker, now.AddSeconds(seconds));
     }
 
     private DiscussionStateSnapshot RequireSpeakerSegment()
@@ -534,11 +675,12 @@ public sealed class GameState
             _discussionSpeakerOrder.ToList(), _completedSpeakers.ToList(), activePlayerId, originalSpeakerId,
             segmentType, deadline, _pendingChallengeRequests.ToList());
 
-    public void StartNight()
+    public void StartNight(DateTimeOffset? now = null)
     {
         if (CurrentPhase != GamePhase.Results)
             throw new GameException("Night can only start from the Results phase.");
         CurrentPhase = GamePhase.Night;
+        PhaseDeadline = Config.NightSeconds is { } seconds ? (now ?? DateTimeOffset.UtcNow).AddSeconds(seconds) : null;
     }
 
     /// <summary>Promotes the alive Mafia player with the lowest pre-assigned rank to Godfather. Returns null if no successor is available.</summary>

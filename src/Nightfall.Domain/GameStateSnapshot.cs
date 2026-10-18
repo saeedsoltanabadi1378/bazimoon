@@ -22,7 +22,12 @@ public sealed record GameStateSnapshot(
     NightResult? LastNightResult,
     VotingResult? LastVotingResult,
     DiscussionStateSnapshot? Discussion = null,
-    Guid? RematchGameId = null);
+    Guid? RematchGameId = null,
+    int VotingRound = 1,
+    IReadOnlyList<Guid>? RunoffCandidates = null,
+    DateTimeOffset? PhaseDeadline = null,
+    Guid? LastWordsPlayerId = null,
+    GamePhase AfterLastWords = GamePhase.Results);
 
 public sealed record PlayerSnapshot(
     Guid Id,

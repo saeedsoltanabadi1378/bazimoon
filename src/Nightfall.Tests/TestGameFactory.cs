@@ -48,6 +48,10 @@ internal static class TestGameFactory
         game.StartNight();
     }
 
+    /// <summary>Ends the last words of the player just voted out (or killed, with last words for night kills on).</summary>
+    public static void FinishLastWords(this GameState game) =>
+        game.FinishLastWords(game.LastWordsPlayerId ?? throw new InvalidOperationException("Nobody is saying last words."), DateTimeOffset.UtcNow);
+
     /// <summary>Runs a Day → Voting → Results → Night cycle with no votes cast, leaving the game ready for the next SubmitNightAction/ResolveNight.</summary>
     public static void CycleThroughToNextNight(this GameState game)
     {

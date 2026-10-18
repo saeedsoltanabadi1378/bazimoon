@@ -46,7 +46,8 @@ public class GameHistoryRepositoryTests : IDisposable
         {
             game.SubmitVote(voter.Id, godfather.Id);
         }
-        game.ResolveVoting(); // eliminates the sole Godfather -> VillagersWin, phase Ended
+        game.ResolveVoting(); // eliminates the sole Godfather -> last words
+        game.FinishLastWords(); // -> VillagersWin, phase Ended
 
         return game;
     }

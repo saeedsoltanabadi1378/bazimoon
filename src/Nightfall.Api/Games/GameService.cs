@@ -42,7 +42,7 @@ public sealed class GameService
         var settings = await _settings.GetAsync();
         if (!settings.IsGameOn("mafia")) throw new GameException(BotSettingsDefaults.MafiaOff);
         int seats = Math.Clamp(table?.Seats ?? settings.MaxPlayers, settings.MinPlayers, settings.MaxPlayers);
-        var game = new GameState(new GameConfig { MinPlayers = settings.MinPlayers, MaxPlayers = seats }, telegramChatId: telegramChatId);
+        var game = new GameState(BuildConfig(settings.MinPlayers, seats, table?.Rules), telegramChatId: telegramChatId);
         var creatorId = PlayerIdentity.DeriveId(game.GameId, creatorTelegramUserId);
         game.AddPlayer(new Player(creatorId, creatorUsername));
 
@@ -104,7 +104,7 @@ public sealed class GameService
 
         var previous = await _db.MafiaTables.FindAsync(gameId);
         var rematchId = await CreateGameAsync(game.TelegramChatId, telegramUserId, username, null,
-            previous is null ? null : new TableOptions(previous.Name, previous.IsOpen, game.Config.MaxPlayers));
+            previous is null ? null : new TableOptions(previous.Name, previous.IsOpen, game.Config.MaxPlayers, TableRules.From(game.Config)));
         game.SetRematch(rematchId);
         // The finished game is already in history; only refresh the live copy so players see the rematch.
         await _sessionStore.SaveAsync(game);
@@ -143,7 +143,7 @@ public sealed class GameService
         EnsureController(game, telegramUserId);
         if (game.CurrentPhase == GamePhase.Night && !game.AreRequiredNightActionsComplete())
             throw new GameException("All living night roles must submit their actions before night can end.");
-        var result = game.ResolveNight();
+        var result = game.ResolveNight(DateTimeOffset.UtcNow);
         await SaveAndNotifyAsync(game);
         return result;
     }
@@ -160,7 +160,7 @@ public sealed class GameService
     {
         var game = await LoadOrThrowAsync(gameId);
         EnsureController(game, telegramUserId);
-        var result = game.ResolveVoting();
+        var result = game.ResolveVoting(DateTimeOffset.UtcNow);
         await SaveAndNotifyAsync(game);
         return result;
     }
@@ -170,7 +170,7 @@ public sealed class GameService
         using var held = await _mutationLock.EnterAsync(gameId);
         var game = await LoadOrThrowAsync(gameId);
         EnsureController(game, telegramUserId);
-        game.StartVoting();
+        game.StartVoting(DateTimeOffset.UtcNow);
         await SaveAndNotifyAsync(game);
     }
 
@@ -214,11 +214,29 @@ public sealed class GameService
         await SaveAndNotifyAsync(game);
     }
 
+    public async Task FinishLastWordsAsync(Guid gameId, long telegramUserId)
+    {
+        using var held = await _mutationLock.EnterAsync(gameId);
+        var game = await LoadOrThrowAsync(gameId);
+        game.FinishLastWords(PlayerIdentity.DeriveId(gameId, telegramUserId), DateTimeOffset.UtcNow);
+        await SaveAndNotifyAsync(game);
+    }
+
+    /// <summary>Moves a game on when its current turn or phase timer has run out. Called every second
+    /// by <see cref="PhaseDeadlineService"/>; finished games are written to history like any other end.</summary>
+    public async Task AdvanceExpiredAsync(Guid gameId, DateTimeOffset now, CancellationToken cancellationToken = default)
+    {
+        using var held = await _mutationLock.EnterAsync(gameId, cancellationToken);
+        var game = await _sessionStore.GetAsync(gameId);
+        if (game is null || !game.AdvanceExpiredPhase(now)) return;
+        await SaveAndNotifyAsync(game);
+    }
+
     public async Task StartNightAsync(Guid gameId, long telegramUserId)
     {
         var game = await LoadOrThrowAsync(gameId);
         EnsureController(game, telegramUserId);
-        game.StartNight();
+        game.StartNight(DateTimeOffset.UtcNow);
         await SaveAndNotifyAsync(game);
     }
 
@@ -283,8 +301,52 @@ public sealed class GameService
         if (member is null) _db.ChatMembers.Add(new() { TelegramChatId = id, TelegramUserId = userId, LastSeenAt = now });
         else member.LastSeenAt = now;
     }
+
+    /// <summary>The table's rules, with each timer the creator picked checked against the allowed choices.</summary>
+    internal static GameConfig BuildConfig(int minPlayers, int maxPlayers, TableRules? rules)
+    {
+        var d = GameConfig.Default;
+        if (rules is null) return new GameConfig { MinPlayers = minPlayers, MaxPlayers = maxPlayers };
+        return new GameConfig
+        {
+            MinPlayers = minPlayers,
+            MaxPlayers = maxPlayers,
+            SpeakerSeconds = Pick(rules.SpeakerSeconds, GameConfig.SpeakerChoices, d.SpeakerSeconds, "speaking turn"),
+            ChallengeSeconds = Pick(rules.ChallengeSeconds, GameConfig.ChallengeChoices, d.ChallengeSeconds, "challenge"),
+            DefenceSeconds = Pick(rules.DefenceSeconds, GameConfig.DefenceChoices, d.DefenceSeconds, "defence"),
+            LastWordsSeconds = Pick(rules.LastWordsSeconds, GameConfig.LastWordsChoices, d.LastWordsSeconds, "last words"),
+            NightSeconds = PickOptional(rules.NightSeconds, GameConfig.NightChoices, "night"),
+            VotingSeconds = PickOptional(rules.VotingSeconds, GameConfig.VotingChoices, "voting"),
+            LastWordsForNightKills = rules.LastWordsForNightKills ?? false,
+        };
+    }
+
+    private static int Pick(int? value, IReadOnlyList<int> choices, int fallback, string name) =>
+        value is not { } v ? fallback
+        : choices.Contains(v) ? v
+        : throw new GameException($"The {name} timer must be one of {string.Join(", ", choices)} seconds.");
+
+    // 0 or null means off: the creator moves the phase on by hand.
+    private static int? PickOptional(int? value, IReadOnlyList<int> choices, string name) =>
+        value is null or 0 ? null : Pick(value, choices, 0, name);
 }
 
 /// <summary>How a table is set up when it is created from the app (or copied into a rematch).
 /// <paramref name="IsOpen"/>: public (listed in Open tables) or private (invite link or code only).</summary>
-public sealed record TableOptions(string? Name, bool IsOpen, int? Seats);
+public sealed record TableOptions(string? Name, bool IsOpen, int? Seats, TableRules? Rules = null);
+
+/// <summary>Timers (seconds) and rule switches the creator picks on Create a table. Missing values keep
+/// the defaults; NightSeconds and VotingSeconds of 0 or null mean the creator ends that phase by hand.</summary>
+public sealed record TableRules(
+    int? SpeakerSeconds = null,
+    int? ChallengeSeconds = null,
+    int? DefenceSeconds = null,
+    int? LastWordsSeconds = null,
+    int? NightSeconds = null,
+    int? VotingSeconds = null,
+    bool? LastWordsForNightKills = null)
+{
+    public static TableRules From(GameConfig config) => new(
+        config.SpeakerSeconds, config.ChallengeSeconds, config.DefenceSeconds, config.LastWordsSeconds,
+        config.NightSeconds, config.VotingSeconds, config.LastWordsForNightKills);
+}

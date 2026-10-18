@@ -97,6 +97,7 @@ public class HubEndpointsTests : IClassFixture<NightfallApiFactory>, IAsyncLifet
             if (views[i].YourPlayerId != godfather)
                 (await clients[i].PostAsJsonAsync($"/api/games/{gameId}/votes", new SubmitVoteRequest(godfather))).EnsureSuccessStatusCode();
         (await clients[0].PostAsync($"/api/games/{gameId}/resolve-voting", null)).EnsureSuccessStatusCode();
+        (await clients[views.FindIndex(v => v.YourPlayerId == godfather)].PostAsync($"/api/games/{gameId}/last-words/finish", null)).EnsureSuccessStatusCode();
 
         for (int i = 0; i < clients.Count; i++)
         {

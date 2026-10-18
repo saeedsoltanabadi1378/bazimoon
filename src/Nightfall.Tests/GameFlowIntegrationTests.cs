@@ -82,6 +82,23 @@ public class GameFlowIntegrationTests : IClassFixture<NightfallApiFactory>, IAsy
         Assert.Contains(votingView.Votes, vote => vote.VoterPlayerId == views[0].YourPlayerId && vote.TargetPlayerId == views[1].YourPlayerId);
         Assert.Contains(votingView.Votes, vote => vote.VoterPlayerId == views[1].YourPlayerId && vote.TargetPlayerId == views[0].YourPlayerId);
 
+        // players[0] and players[1] voted for each other: a tie, so they each defend, then round 2.
+        (await creator.Client.PostAsync($"/api/games/{gameId}/resolve-voting", null)).EnsureSuccessStatusCode();
+        var defenceView = await players[2].Client.GetFromJsonAsync<GameView>($"/api/games/{gameId}");
+        Assert.Equal(GamePhase.Defence, defenceView!.Phase);
+        Assert.Equal(2, defenceView.VotingRound);
+        Assert.Equal(new[] { views[0].YourPlayerId, views[1].YourPlayerId }.Order(), defenceView.RunoffCandidateIds!.Order());
+        for (int i = 0; i < 2; i++)
+        {
+            var speaking = (await creator.Client.GetFromJsonAsync<GameView>($"/api/games/{gameId}"))!.Discussion!.ActivePlayerId;
+            var speaker = players[views.FindIndex(v => v.YourPlayerId == speaking)];
+            (await speaker.Client.PostAsync($"/api/games/{gameId}/discussion/finish", null)).EnsureSuccessStatusCode();
+        }
+        var revoteView = await players[2].Client.GetFromJsonAsync<GameView>($"/api/games/{gameId}");
+        Assert.Equal(GamePhase.Voting, revoteView!.Phase);
+        // Round 2 is between the tied players only.
+        var outsiderVote = await players[0].Client.PostAsJsonAsync($"/api/games/{gameId}/votes", new SubmitVoteRequest(views[2].YourPlayerId));
+        Assert.Equal(HttpStatusCode.BadRequest, outsiderVote.StatusCode);
         (await creator.Client.PostAsync($"/api/games/{gameId}/resolve-voting", null)).EnsureSuccessStatusCode();
         (await creator.Client.PostAsync($"/api/games/{gameId}/start-night", null)).EnsureSuccessStatusCode();
 
@@ -198,6 +215,7 @@ public class GameFlowIntegrationTests : IClassFixture<NightfallApiFactory>, IAsy
         }
         var resolveResponse = await creator.Client.PostAsync($"/api/games/{created.GameId}/resolve-voting", null);
         resolveResponse.EnsureSuccessStatusCode();
+        (await godfather!.Client.PostAsync($"/api/games/{created.GameId}/last-words/finish", null)).EnsureSuccessStatusCode();
 
         var afterEndResponse = await creator.Client.GetAsync($"/api/games/by-chat/{chatId}");
         Assert.Equal(HttpStatusCode.NotFound, afterEndResponse.StatusCode);
@@ -311,6 +329,7 @@ public class GameFlowIntegrationTests : IClassFixture<NightfallApiFactory>, IAsy
             (await players[i].Client.PostAsJsonAsync($"/api/games/{gameId}/votes", new SubmitVoteRequest(godfather))).EnsureSuccessStatusCode();
         }
         (await creator.Client.PostAsync($"/api/games/{gameId}/resolve-voting", null)).EnsureSuccessStatusCode();
+        (await players[views.FindIndex(v => v.YourPlayerId == godfather)].Client.PostAsync($"/api/games/{gameId}/last-words/finish", null)).EnsureSuccessStatusCode();
 
         var first = await (await players[1].Client.PostAsync($"/api/games/{gameId}/rematch", null)).Content.ReadFromJsonAsync<CreateGameResponse>();
         var second = await (await players[2].Client.PostAsync($"/api/games/{gameId}/rematch", null)).Content.ReadFromJsonAsync<CreateGameResponse>();

@@ -41,7 +41,7 @@ if (!builder.Environment.IsEnvironment("Testing"))
     builder.Services.AddHostedService<ReminderService>();
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton<GameMutationLock>();
-builder.Services.AddHostedService<DiscussionDeadlineService>();
+builder.Services.AddHostedService<PhaseDeadlineService>();
 builder.Services.AddSingleton<IGameNotifier, SignalRGameNotifier>();
 builder.Services.AddSignalR();
 

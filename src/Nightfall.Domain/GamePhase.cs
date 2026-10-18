@@ -15,5 +15,11 @@ public enum GamePhase
     Day,
     Voting,
     Results,
-    Ended
+    Ended,
+
+    /// <summary>After a tied vote: each tied player defends themselves before a second vote between them only.</summary>
+    Defence,
+
+    /// <summary>A player who is out speaks once before their role is shown.</summary>
+    LastWords
 }

@@ -104,7 +104,7 @@ public sealed class TableService
     public async Task<IResult> CreateAsync(long userId, string username, CreateTableRequest request)
     {
         var gameId = await _games.CreateGameAsync(null, userId, username, null,
-            new TableOptions(request.Name, request.IsOpen, request.Seats));
+            new TableOptions(request.Name, request.IsOpen, request.Seats, request.Rules));
         return Results.Ok(new CreateGameResponse(gameId));
     }
 
@@ -157,7 +157,8 @@ public sealed record TableDto(
     GamePhase Phase, int Round, int Seated, int MaxPlayers, int MinPlayers, DateTimeOffset CreatedAt,
     IReadOnlyList<string> Players, bool YouAreSeated);
 
-/// <summary><paramref name="IsOpen"/>: public (listed in Open tables) or private (invite link or code only).</summary>
-public sealed record CreateTableRequest(string? Name, bool IsOpen, int? Seats);
+/// <summary><paramref name="IsOpen"/>: public (listed in Open tables) or private (invite link or code only).
+/// <paramref name="Rules"/>: timers and rule switches; missing ones keep the defaults.</summary>
+public sealed record CreateTableRequest(string? Name, bool IsOpen, int? Seats, TableRules? Rules = null);
 public sealed record TableInfoDto(Guid GameId, string? Name, string? ChatTitle, bool IsOpen, bool IsHost, string? InviteCode);
 public sealed record SetTableOpenRequest(bool IsOpen);

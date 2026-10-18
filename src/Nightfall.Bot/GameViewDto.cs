@@ -20,7 +20,9 @@ public sealed record GameViewDto(
     EliminationViewDto? LastVotingElimination,
     WinCondition WinCondition,
     bool YouAreController = false,
-    bool RequiredNightActionsComplete = false);
+    bool RequiredNightActionsComplete = false,
+    int VotingRound = 1,
+    IReadOnlyList<Guid>? RunoffCandidateIds = null);
 
 public sealed record PlayerViewDto(Guid PlayerId, string TelegramUsername, bool IsAlive, Role? RevealedRole);
 

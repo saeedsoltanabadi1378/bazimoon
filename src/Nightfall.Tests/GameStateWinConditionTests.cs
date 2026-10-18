@@ -57,6 +57,8 @@ public class GameStateWinConditionTests
 
         Assert.Equal(godfather.Id, result.Eliminated);
         Assert.Null(result.PromotedGodfatherId); // no Mafia left to succeed the Godfather.
+        Assert.Equal(GamePhase.LastWords, game.CurrentPhase); // the win waits for their last words
+        game.FinishLastWords();
         Assert.Equal(GamePhase.Ended, game.CurrentPhase);
         Assert.Equal(WinCondition.VillagersWin, game.CheckWinCondition());
     }

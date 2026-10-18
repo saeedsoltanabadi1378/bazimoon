@@ -72,6 +72,7 @@ public class GameStateGodfatherSuccessionTests
         var firstResult = game.ResolveVoting();
         Assert.Equal(rank2.Id, firstResult.PromotedGodfatherId);
         Assert.Equal(Role.Godfather, rank2.Role);
+        game.FinishLastWords();
 
         // Round 2: eliminate the newly promoted Godfather (was rank 2) -> rank 3 should be promoted next,
         // proving succession follows the rank assigned at game start, not join/vote order.

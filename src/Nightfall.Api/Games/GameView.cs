@@ -29,7 +29,12 @@ public sealed record GameView(
     IReadOnlyList<DetectiveResultView>? YourInvestigations = null,
     bool YouCannotHealSelf = false,
     NightProgressView? NightProgress = null,
-    Guid? RematchGameId = null)
+    Guid? RematchGameId = null,
+    DateTimeOffset? PhaseDeadline = null,
+    int VotingRound = 1,
+    IReadOnlyList<Guid>? RunoffCandidateIds = null,
+    LastWordsView? LastWords = null,
+    RulesView? Rules = null)
 {
     public static GameView For(GameState game, Guid viewerId)
     {
@@ -37,13 +42,15 @@ public sealed record GameView(
         bool revealAll = game.CurrentPhase == GamePhase.Ended;
         bool viewerIsMafia = viewer?.IsMafiaAligned == true;
         bool isController = game.Players.FirstOrDefault()?.Id == viewerId;
+        // A player's role is shown after their last words, not while they are still speaking.
+        Guid? speakingLastWords = game.CurrentPhase == GamePhase.LastWords ? game.LastWordsPlayerId : null;
 
         var players = game.Players
             .Select(p => new PlayerView(
                 p.Id,
                 p.TelegramUsername,
                 p.IsAlive,
-                RevealedRole: (revealAll || !p.IsAlive || p.Id == viewerId) ? p.Role : null,
+                RevealedRole: (revealAll || (!p.IsAlive && p.Id != speakingLastWords) || p.Id == viewerId) ? p.Role : null,
                 EliminatedBy: p.EliminatedBy,
                 EliminatedRound: p.EliminatedRound,
                 // Who took over as Godfather is Mafia-only knowledge until the game ends.
@@ -76,7 +83,9 @@ public sealed record GameView(
             ? null
             : new EliminationView(game.LastVotingResult.Eliminated, WasSaved: false, game.LastVotingResult.WasTie, game.LastVotingResult.TiedPlayers,
                 GodfatherPromoted: game.LastVotingResult.PromotedGodfatherId.HasValue,
-                Ballots: game.LastVotingResult.Votes?.Select(v => new VoteView(v.Key, v.Value)).ToList());
+                Ballots: game.LastVotingResult.Votes?.Select(v => new VoteView(v.Key, v.Value)).ToList(),
+                Round: game.LastVotingResult.Round,
+                PreviousBallots: game.LastVotingResult.PreviousRound?.Votes?.Select(v => new VoteView(v.Key, v.Value)).ToList());
 
         var votes = game.CurrentPhase == GamePhase.Voting
             ? game.ToSnapshot().PendingVotes.Select(vote => new VoteView(vote.Key, vote.Value)).ToList()
@@ -117,7 +126,8 @@ public sealed record GameView(
             investigation,
             nightElimination,
             votingElimination,
-            game.CheckWinCondition(),
+            // The win is announced once the last words are over.
+            game.CurrentPhase == GamePhase.LastWords ? WinCondition.None : game.CheckWinCondition(),
             isController,
             game.AreRequiredNightActionsComplete(),
             votes,
@@ -129,7 +139,14 @@ public sealed record GameView(
             investigations,
             viewer?.Role == Role.Doctor && game.DoctorSelfHealBlocked,
             progress,
-            game.RematchGameId);
+            game.RematchGameId,
+            game.PhaseDeadline,
+            game.VotingRound,
+            game.RunoffCandidates.Count > 0 ? game.RunoffCandidates.ToList() : null,
+            game.CurrentPhase == GamePhase.LastWords && game.LastWordsPlayerId is { } lastWords && game.PhaseDeadline is { } lastWordsDeadline
+                ? new LastWordsView(lastWords, game.GetPlayer(lastWords)?.EliminatedBy ?? EliminationCause.Vote, lastWordsDeadline, lastWords == viewerId)
+                : null,
+            RulesView.From(game.Config));
     }
 }
 
@@ -150,7 +167,22 @@ public sealed record EliminationView(
     bool WasTie = false,
     IReadOnlyList<Guid>? TiedPlayers = null,
     bool GodfatherPromoted = false,
-    IReadOnlyList<VoteView>? Ballots = null);
+    IReadOnlyList<VoteView>? Ballots = null,
+    int Round = 1,
+    IReadOnlyList<VoteView>? PreviousBallots = null);
+
+/// <summary>The player saying their last words, why they are out, and when their time is up.</summary>
+public sealed record LastWordsView(Guid PlayerId, EliminationCause Cause, DateTimeOffset Deadline, bool YouAreSpeaking);
+
+/// <summary>The table's timers (seconds; null night or voting = the creator moves it on) and rule switches.</summary>
+public sealed record RulesView(
+    int SpeakerSeconds, int ChallengeSeconds, int DefenceSeconds, int LastWordsSeconds,
+    int? NightSeconds, int? VotingSeconds, bool LastWordsForNightKills)
+{
+    public static RulesView From(GameConfig c) => new(
+        c.SpeakerSeconds, c.ChallengeSeconds, c.DefenceSeconds, c.LastWordsSeconds,
+        c.NightSeconds, c.VotingSeconds, c.LastWordsForNightKills);
+}
 
 public sealed record VoteView(Guid VoterPlayerId, Guid? TargetPlayerId);
 

@@ -254,15 +254,17 @@ public sealed class CommandDispatcher
     private static string FormatVotingResult(VotingResult result, GameViewDto view)
     {
         if (result.WasTie)
-            return "🤝 The vote was tied. Nobody was eliminated.";
+            return result.Round == 1
+                ? "🤝 The vote was tied. The tied players now defend themselves, then the town votes again between them only."
+                : "🤝 The re-vote was tied too. Nobody was eliminated.";
 
         if (!result.Eliminated.HasValue)
             return "🗳️ No votes were cast. Nobody was eliminated.";
 
         var eliminated = view.Players.FirstOrDefault(p => p.PlayerId == result.Eliminated.Value);
         string name = eliminated?.TelegramUsername ?? "Someone";
-        string roleText = eliminated?.RevealedRole is { } role ? $" They were a {role}." : "";
-        return $"⚖️ The town has voted out {name}.{roleText}";
+        // Their role is shown in the Mini App once their last words are over.
+        return $"⚖️ The town has voted out {name}. They now have their last words.";
     }
 
     private async Task HandleStartNightAsync(long chatId, TelegramIdentity actor)
@@ -368,6 +370,12 @@ public sealed class CommandDispatcher
                 await AnnounceIfGameEndedAsync(chatId, afterVoting);
                 break;
 
+            case GamePhase.Defence:
+            case GamePhase.LastWords:
+                await _messenger.SendTextAsync(chatId,
+                    "This turn moves on by itself when its timer runs out (or the speaker finishes early). Use /solonext after that.");
+                break;
+
             case GamePhase.Results:
                 await _api.StartNightAsync(gameId.Value, actor);
                 await _messenger.SendTextAsync(chatId,
@@ -427,8 +435,11 @@ public sealed class CommandDispatcher
 
     private async Task SubmitSoloVotesAsync(Guid gameId, GameViewDto humanView)
     {
+        // In a re-vote only the tied players can be voted for.
         var victim = humanView.Players.FirstOrDefault(player =>
-            player.IsAlive && player.TelegramUsername.StartsWith("solo_bot_", StringComparison.Ordinal));
+            player.IsAlive && (humanView.VotingRound == 2
+                ? humanView.RunoffCandidateIds?.Contains(player.PlayerId) == true
+                : player.TelegramUsername.StartsWith("solo_bot_", StringComparison.Ordinal)));
         var fakeEntries = (await _rosterStore.GetAsync(gameId))
             .Where(entry => entry.Username.StartsWith("solo_bot_", StringComparison.Ordinal));
 
