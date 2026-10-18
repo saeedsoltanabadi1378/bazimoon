@@ -86,4 +86,12 @@ export const core = {
   notNow: "Not now",
   installApp: "Install the app",
   addToHomeScreen: "Add to Home Screen",
+  pushTitle: "Get told when the game starts?",
+  pushBody: "You joined the table. Turn on notifications so you hear when the game starts or it is your turn, even with the app closed.",
+  pushReasonTables: "Games starting at tables you joined",
+  pushReasonCouple: "Your turn in Couple Quiz",
+  pushReasonDaily: "Daily puzzle reminder, if you turned it on",
+  pushAllow: "Turn on notifications",
+  pushHowInstall: "Show me how to install",
+  pushIosNote: "On iPhone, notifications only work after you add Bazimoon to your Home Screen (iOS 16.4 or later).",
 };

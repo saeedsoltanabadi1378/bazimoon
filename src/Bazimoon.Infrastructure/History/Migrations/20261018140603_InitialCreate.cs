@@ -26,6 +26,10 @@ namespace Bazimoon.Infrastructure.History.Migrations
                     MaintenanceMessageFa = table.Column<string>(type: "text", nullable: false),
                     ReminderMessage = table.Column<string>(type: "text", nullable: false),
                     ReminderMessageFa = table.Column<string>(type: "text", nullable: false),
+                    TableStartMessage = table.Column<string>(type: "text", nullable: false),
+                    TableStartMessageFa = table.Column<string>(type: "text", nullable: false),
+                    CoupleTurnMessage = table.Column<string>(type: "text", nullable: false),
+                    CoupleTurnMessageFa = table.Column<string>(type: "text", nullable: false),
                     DisabledGamesJson = table.Column<string>(type: "text", nullable: false, defaultValue: "[]"),
                     UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },
@@ -244,6 +248,29 @@ namespace Bazimoon.Infrastructure.History.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "push_subscriptions",
+                columns: table => new
+                {
+                    Id = table.Column<long>(type: "bigint", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    UserId = table.Column<Guid>(type: "uuid", nullable: false),
+                    Endpoint = table.Column<string>(type: "character varying(1024)", maxLength: 1024, nullable: false),
+                    P256dh = table.Column<string>(type: "character varying(128)", maxLength: 128, nullable: false),
+                    Auth = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_push_subscriptions", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_push_subscriptions_users_UserId",
+                        column: x => x.UserId,
+                        principalTable: "users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "refresh_tokens",
                 columns: table => new
                 {
@@ -343,6 +370,17 @@ namespace Bazimoon.Infrastructure.History.Migrations
                 column: "Rating");
 
             migrationBuilder.CreateIndex(
+                name: "IX_push_subscriptions_Endpoint",
+                table: "push_subscriptions",
+                column: "Endpoint",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_push_subscriptions_UserId",
+                table: "push_subscriptions",
+                column: "UserId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_puzzle_results_Day",
                 table: "puzzle_results",
                 column: "Day");
@@ -408,6 +446,9 @@ namespace Bazimoon.Infrastructure.History.Migrations
 
             migrationBuilder.DropTable(
                 name: "player_stats");
+
+            migrationBuilder.DropTable(
+                name: "push_subscriptions");
 
             migrationBuilder.DropTable(
                 name: "puzzle_results");

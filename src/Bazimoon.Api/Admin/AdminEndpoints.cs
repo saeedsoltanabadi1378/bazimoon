@@ -74,7 +74,7 @@ public static class AdminEndpoints
     {
         if (!ValidCsrf(http)) return Results.BadRequest(new { detail = "Invalid CSRF token." });
         if (request.MinPlayers < 3 || request.MaxPlayers > 12 || request.MinPlayers > request.MaxPlayers) return Results.BadRequest(new { detail = "Player limits must be between 3 and 12 (the voice room limit) and minimum cannot exceed maximum." });
-        if (new[] { request.MaintenanceMessage, request.MaintenanceMessageFa, request.ReminderMessage, request.ReminderMessageFa }.Any(m => m is { Length: > 4096 })) return Results.BadRequest(new { detail = "Messages cannot exceed 4096 characters." });
+        if (new[] { request.MaintenanceMessage, request.MaintenanceMessageFa, request.ReminderMessage, request.ReminderMessageFa, request.TableStartMessage, request.TableStartMessageFa, request.CoupleTurnMessage, request.CoupleTurnMessageFa }.Any(m => m is { Length: > 4096 })) return Results.BadRequest(new { detail = "Messages cannot exceed 4096 characters." });
         if (request.DisabledGames is { } disabled && disabled.Except(AppSettingsDefaults.Games).Any()) return Results.BadRequest(new { detail = "Unknown game." });
         var row=await db.AppSettings.SingleOrDefaultAsync(x=>x.Id==1) ?? new AppSettingsRecord();
         if (row.Version != request.Version) return Results.Conflict(new { detail="Settings were changed by another session. Reload and try again." });
@@ -83,6 +83,10 @@ public static class AdminEndpoints
         if (request.MaintenanceMessageFa is not null) row.MaintenanceMessageFa=request.MaintenanceMessageFa;
         if (request.ReminderMessage is { Length: > 0 }) row.ReminderMessage=request.ReminderMessage;
         if (request.ReminderMessageFa is { Length: > 0 }) row.ReminderMessageFa=request.ReminderMessageFa;
+        if (request.TableStartMessage is { Length: > 0 }) row.TableStartMessage=request.TableStartMessage;
+        if (request.TableStartMessageFa is { Length: > 0 }) row.TableStartMessageFa=request.TableStartMessageFa;
+        if (request.CoupleTurnMessage is { Length: > 0 }) row.CoupleTurnMessage=request.CoupleTurnMessage;
+        if (request.CoupleTurnMessageFa is { Length: > 0 }) row.CoupleTurnMessageFa=request.CoupleTurnMessageFa;
         if (request.DisabledGames is not null) row.DisabledGamesJson=JsonSerializer.Serialize(request.DisabledGames.Distinct());
         row.Version++; row.UpdatedAt=DateTime.UtcNow;
         if (db.Entry(row).State == EntityState.Detached) db.AppSettings.Add(row);
@@ -97,6 +101,7 @@ public static class AdminEndpoints
 public sealed record LoginRequest(string Username, string Password);
 public sealed record CancelRequest(string Reason);
 public sealed record SettingsRequest(int Version, int MinPlayers, int MaxPlayers, bool MaintenanceMode, string MaintenanceMessage,
-    string? MaintenanceMessageFa = null, string? ReminderMessage = null, string? ReminderMessageFa = null, string[]? DisabledGames = null);
+    string? MaintenanceMessageFa = null, string? ReminderMessage = null, string? ReminderMessageFa = null, string[]? DisabledGames = null,
+    string? TableStartMessage = null, string? TableStartMessageFa = null, string? CoupleTurnMessage = null, string? CoupleTurnMessageFa = null);
 public sealed record AdminGameView(Guid Id, DateTime CreatedAt, DateTime EndedAt, Bazimoon.Domain.WinCondition Result, string Status, string? CancellationReason, IReadOnlyList<AdminGamePlayerView> Players);
 public sealed record AdminGamePlayerView(Guid PlayerId, Guid? UserId, string DisplayName, Bazimoon.Domain.Role? Role, bool SurvivedToEnd, int? GodfatherRank);

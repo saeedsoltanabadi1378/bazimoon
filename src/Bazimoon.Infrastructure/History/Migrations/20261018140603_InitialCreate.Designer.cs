@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Bazimoon.Infrastructure.History.Migrations
 {
     [DbContext(typeof(BazimoonDbContext))]
-    [Migration("20261018133559_InitialCreate")]
+    [Migration("20261018140603_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -32,6 +32,14 @@ namespace Bazimoon.Infrastructure.History.Migrations
                         .HasColumnType("integer");
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("CoupleTurnMessage")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("CoupleTurnMessageFa")
+                        .IsRequired()
+                        .HasColumnType("text");
 
                     b.Property<string>("DisabledGamesJson")
                         .IsRequired()
@@ -61,6 +69,14 @@ namespace Bazimoon.Infrastructure.History.Migrations
                         .HasColumnType("text");
 
                     b.Property<string>("ReminderMessageFa")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("TableStartMessage")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("TableStartMessageFa")
                         .IsRequired()
                         .HasColumnType("text");
 
@@ -518,6 +534,45 @@ namespace Bazimoon.Infrastructure.History.Migrations
                     b.ToTable("puzzle_results", (string)null);
                 });
 
+            modelBuilder.Entity("Bazimoon.Infrastructure.Identity.PushSubscriptionRecord", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("Auth")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Endpoint")
+                        .IsRequired()
+                        .HasMaxLength(1024)
+                        .HasColumnType("character varying(1024)");
+
+                    b.Property<string>("P256dh")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Endpoint")
+                        .IsUnique();
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("push_subscriptions", (string)null);
+                });
+
             modelBuilder.Entity("Bazimoon.Infrastructure.Identity.RefreshTokenRecord", b =>
                 {
                     b.Property<long>("Id")
@@ -632,6 +687,15 @@ namespace Bazimoon.Infrastructure.History.Migrations
                         .IsRequired();
 
                     b.Navigation("GameRecord");
+                });
+
+            modelBuilder.Entity("Bazimoon.Infrastructure.Identity.PushSubscriptionRecord", b =>
+                {
+                    b.HasOne("Bazimoon.Infrastructure.Identity.UserRecord", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Bazimoon.Infrastructure.Identity.RefreshTokenRecord", b =>

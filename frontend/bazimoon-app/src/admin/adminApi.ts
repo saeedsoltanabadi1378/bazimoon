@@ -189,6 +189,10 @@ export interface AppSettings {
   maintenanceMessageFa: string;
   reminderMessage: string;
   reminderMessageFa: string;
+  tableStartMessage: string;
+  tableStartMessageFa: string;
+  coupleTurnMessage: string;
+  coupleTurnMessageFa: string;
   updatedAt?: string;
   /** Games switched off for everyone. */
   disabledGames?: string[];

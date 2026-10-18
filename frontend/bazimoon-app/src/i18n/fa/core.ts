@@ -87,4 +87,12 @@ export const core: Record<keyof typeof en, string> = {
   notNow: "الان نه",
   installApp: "نصب برنامه",
   addToHomeScreen: "افزودن به صفحه اصلی",
+  pushTitle: "وقتی بازی شروع شد خبرت کنیم؟",
+  pushBody: "به میز پیوستی. اعلان‌ها را روشن کن تا وقتی نوبتت شد یا بازی شروع شد، حتی اگر برنامه بسته باشد، باخبر شوی.",
+  pushReasonTables: "شروع بازی میزهایی که در آن‌ها نشسته‌ای",
+  pushReasonCouple: "نوبت تو در کوییز زوج‌ها",
+  pushReasonDaily: "یادآوری معمای روز (اگر روشن باشد)",
+  pushAllow: "روشن کردن اعلان‌ها",
+  pushHowInstall: "چطور نصبش کنم",
+  pushIosNote: "در آیفون، اعلان‌ها فقط بعد از افزودن نایت‌فال به صفحه اصلی کار می‌کنند (iOS ۱۶٫۴ به بعد).",
 };

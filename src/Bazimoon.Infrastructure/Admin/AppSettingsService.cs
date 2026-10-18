@@ -8,7 +8,9 @@ namespace Bazimoon.Infrastructure.Admin;
 public sealed record AppSettingsSnapshot(int Version, int MinPlayers, int MaxPlayers, bool MaintenanceMode, string MaintenanceMessage,
     string MaintenanceMessageFa = "",
     string ReminderMessage = AppSettingsDefaults.ReminderMessage, string ReminderMessageFa = AppSettingsDefaults.ReminderMessageFa,
-    IReadOnlySet<string>? DisabledGames = null)
+    IReadOnlySet<string>? DisabledGames = null,
+    string TableStartMessage = AppSettingsDefaults.TableStartMessage, string TableStartMessageFa = AppSettingsDefaults.TableStartMessageFa,
+    string CoupleTurnMessage = AppSettingsDefaults.CoupleTurnMessage, string CoupleTurnMessageFa = AppSettingsDefaults.CoupleTurnMessageFa)
 {
     public bool IsGameOn(string game) => DisabledGames is null || !DisabledGames.Contains(game);
 }
@@ -43,7 +45,8 @@ public sealed class AppSettingsService : IAppSettingsService
     }
 
     public static AppSettingsSnapshot ToSnapshot(AppSettingsRecord row) => new(row.Version, row.MinPlayers, row.MaxPlayers, row.MaintenanceMode, row.MaintenanceMessage,
-        row.MaintenanceMessageFa, row.ReminderMessage, row.ReminderMessageFa, ParseSet(row.DisabledGamesJson));
+        row.MaintenanceMessageFa, row.ReminderMessage, row.ReminderMessageFa, ParseSet(row.DisabledGamesJson),
+        row.TableStartMessage, row.TableStartMessageFa, row.CoupleTurnMessage, row.CoupleTurnMessageFa);
 
     /// <summary>Reads a JSON string list; an empty or damaged value counts as none, so one bad
     /// column can never take the app and the admin console down with it.</summary>

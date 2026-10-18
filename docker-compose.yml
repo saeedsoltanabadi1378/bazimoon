@@ -40,6 +40,9 @@ services:
       ConnectionStrings__Redis: "redis:6379,abortConnect=false"
       Jwt__SigningKey: ${JWT_SIGNING_KEY:?JWT_SIGNING_KEY is required}
       Google__ClientId: ${GOOGLE_CLIENT_ID:?GOOGLE_CLIENT_ID is required}
+      Push__PublicKey: ${PUSH_PUBLIC_KEY:-}
+      Push__PrivateKey: ${PUSH_PRIVATE_KEY:-}
+      Push__Subject: ${PUSH_SUBJECT:-https://bazimoon.com}
       Agora__AppId: ${AGORA_APP_ID:?AGORA_APP_ID is required}
       Agora__AppCertificate: ${AGORA_APP_CERTIFICATE:?AGORA_APP_CERTIFICATE is required}
       Cors__AllowedOrigins__0: ${PUBLIC_FRONTEND_ORIGIN:-https://bazimoon.com}

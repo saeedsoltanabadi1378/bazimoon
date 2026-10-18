@@ -148,7 +148,9 @@ public sealed class CoupleService
         couple.StartDay = Today;
         couple.Language = (await _db.PlayerStats.FindAsync(couple.InviterId))?.Language ?? "en";
         await _db.SaveChangesAsync();
-        await _notifier.NotifyAsync(couple.InviterId, $"{username} accepted your Couple Quiz invite. Today's questions are ready.", "couple");
+        await _notifier.NotifyAsync(couple.InviterId, new PushText(
+            $"{username} accepted your Couple Quiz invite. Today's questions are ready.",
+            $"{username} دعوتت به کوییز زوج‌ها را پذیرفت. سؤال‌های امروز آماده است."), "/couple");
         return await GetStateAsync(userId, username);
     }
 
@@ -184,8 +186,20 @@ public sealed class CoupleService
             }
         }
         await _db.SaveChangesAsync();
+        string me = await NameOfAsync(userId);
         if (partner is not null)
-            await _notifier.NotifyAsync(partnerId, $"{await NameOfAsync(userId)} finished today's Couple Quiz. Your reveal is ready.", "couple");
+        {
+            await _notifier.NotifyAsync(partnerId, new PushText(
+                $"{me} finished today's Couple Quiz. Your reveal is ready.",
+                $"{me} کوییز امروز را تمام کرد. نتیجه‌تان آماده است."), "/couple");
+        }
+        else
+        {
+            var settings = await _settings.GetAsync();
+            await _notifier.NotifyAsync(partnerId, new PushText(
+                settings.CoupleTurnMessage.Replace("{partner}", me),
+                settings.CoupleTurnMessageFa.Replace("{partner}", me)), "/couple");
+        }
         return await GetDayAsync(userId, number);
     }
 
@@ -226,7 +240,10 @@ public sealed class CoupleService
         if (inviter) couple.InviterNudgedDay = today;
         else couple.PartnerNudgedDay = today;
         await _db.SaveChangesAsync();
-        await _notifier.NotifyAsync(partnerId, $"{await NameOfAsync(userId)} played today's Couple Quiz and is waiting for you.", "couple");
+        string name = await NameOfAsync(userId);
+        await _notifier.NotifyAsync(partnerId, new PushText(
+            $"{name} played today's Couple Quiz and is waiting for you.",
+            $"{name} کوییز امروز را بازی کرد و منتظر توست."), "/couple");
     }
 
     public async Task LeaveAsync(Guid userId)
@@ -238,7 +255,12 @@ public sealed class CoupleService
         _db.Couples.Remove(couple);
         await _db.SaveChangesAsync();
         if (partnerId is { } other)
-            await _notifier.NotifyAsync(other, $"{await NameOfAsync(userId)} left your Couple Quiz space. Your shared history has been deleted.");
+        {
+            string name = await NameOfAsync(userId);
+            await _notifier.NotifyAsync(other, new PushText(
+                $"{name} left your Couple Quiz space. Your shared history has been deleted.",
+                $"{name} از فضای کوییز زوج‌ها بیرون رفت. سابقه مشترکتان پاک شد."));
+        }
     }
 
     public async Task<CoupleStateDto> UpdateSettingsAsync(Guid userId, string username, CoupleSettingsRequest request)

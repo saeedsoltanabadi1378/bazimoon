@@ -3,6 +3,7 @@ import { ApiError, BazimoonApiClient } from "../api/client";
 import type { AuthSession, AuthUser } from "../api/types";
 import { useLanguage } from "../i18n/LanguageContext";
 import { readLocal, removeLocal, writeLocal } from "../lib/storage";
+import { disablePush, refreshPushSubscription } from "../lib/push";
 
 export type SessionStatus = "loading" | "ready" | "signed-out" | "offline" | "error";
 
@@ -102,14 +103,19 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
   const switchToGoogle = useCallback(async (idToken: string) => {
     const next = await api.signInWithGoogle(idToken, language);
+    await disablePush(api);
     await api.logout().catch(() => undefined);
     api.useSession(next);
     setStatus("ready");
+    void refreshPushSubscription(api);
   }, [api, language]);
 
   const logout = useCallback(async () => {
+    // This device stops getting the signed-out player's notifications.
+    await disablePush(api);
     await api.logout().catch(() => undefined);
     await startGuest();
+    void refreshPushSubscription(api);
   }, [api, startGuest]);
 
   const retry = useCallback(() => setAttempt((a) => a + 1), []);

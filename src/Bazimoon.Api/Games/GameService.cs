@@ -16,13 +16,16 @@ public sealed class GameService
     private readonly IAppSettingsService _settings;
     private readonly BazimoonDbContext _db;
     private readonly GameMutationLock _mutationLock;
+    private readonly Lounge.IPushNotifier _push;
 
     public GameService(
         IGameSessionStore sessionStore,
         IGameHistoryRepository historyRepository,
         IGameNotifier notifier,
-        IGameRosterStore rosterStore, IAppSettingsService settings, BazimoonDbContext db, GameMutationLock mutationLock)
+        IGameRosterStore rosterStore, IAppSettingsService settings, BazimoonDbContext db, GameMutationLock mutationLock,
+        Lounge.IPushNotifier push)
     {
+        _push = push;
         _sessionStore = sessionStore;
         _historyRepository = historyRepository;
         _notifier = notifier;
@@ -126,6 +129,22 @@ public sealed class GameService
         EnsureController(game, userId);
         game.AssignRoles();
         await SaveAndNotifyAsync(game);
+        await NotifyGameStartedAsync(game, userId);
+    }
+
+    /// <summary>Tells everyone else at the table that the game began, so nobody misses their role.</summary>
+    private async Task NotifyGameStartedAsync(GameState game, Guid starterUserId)
+    {
+        var settings = await _settings.GetAsync();
+        string creator = game.GetPlayer(PlayerIdentity.DeriveId(game.GameId, starterUserId))?.DisplayName ?? "";
+        string table = await _db.MafiaTables.Where(t => t.GameId == game.GameId).Select(t => t.Name).FirstOrDefaultAsync() ?? "Mafia";
+        var text = new Lounge.PushText(
+            settings.TableStartMessage.Replace("{creator}", creator).Replace("{table}", table),
+            settings.TableStartMessageFa.Replace("{creator}", creator).Replace("{table}", table == "Mafia" ? "مافیا" : table));
+        foreach (var seat in await _rosterStore.GetAsync(game.GameId))
+        {
+            if (seat.UserId != starterUserId) await _push.NotifyAsync(seat.UserId, text, $"/g/{game.GameId}");
+        }
     }
 
     public async Task SubmitNightActionAsync(Guid gameId, Guid userId, Guid targetPlayerId, NightActionType actionType)

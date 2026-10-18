@@ -84,9 +84,9 @@ public sealed class ReminderService : BackgroundService
             if (player.LastPuzzleDay == today) continue;
             int streak = Progression.CurrentStreak(player.PuzzleStreak, player.LastPuzzleDay, player.StreakFreezes, today);
             // The editable message talks about the streak; with no streak to keep, a plain line is sent.
-            string text = streak > 0
-                ? (player.Language == "fa" ? persian : english).Replace("{streak}", streak.ToString())
-                : player.Language == "fa" ? "پازل‌های امروز آماده‌اند." : "Today's puzzles are ready.";
+            var text = streak > 0
+                ? new PushText(english.Replace("{streak}", streak.ToString()), persian.Replace("{streak}", streak.ToString()))
+                : new PushText("Today's puzzles are ready.", "پازل‌های امروز آماده‌اند.");
             if (await notifier.NotifyAsync(player.UserId, text)) sent++; else failed++;
         }
 
@@ -100,8 +100,8 @@ public sealed class ReminderService : BackgroundService
             var played = await db.CoupleAnswers.Where(a => a.CoupleId == couple.Id && a.Day == today).Select(a => a.UserId).ToListAsync(ct);
             foreach (Guid id in new[] { couple.InviterId, couple.PartnerId!.Value }.Except(played))
             {
-                string text = couple.Language == "fa" ? "سؤال‌های امروز کوییز زوج‌ها منتظر شماست." : "Today's Couple Quiz questions are waiting for you.";
-                if (await notifier.NotifyAsync(id, text, "couple")) sent++; else failed++;
+                var text = new PushText("Today's Couple Quiz questions are waiting for you.", "سؤال‌های امروز کوییز زوج‌ها منتظر شماست.");
+                if (await notifier.NotifyAsync(id, text, "/couple")) sent++; else failed++;
             }
         }
 

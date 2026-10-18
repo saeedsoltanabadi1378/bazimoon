@@ -4,7 +4,7 @@ import { useAdminI18n } from "../i18n";
 import { Header, PageState, Svg, ICONS, gameName, useAdminData } from "../ui";
 import { GAME_STYLE } from "../gameStyle";
 
-type MessageKey = "reminderMessage";
+type MessageKey = "tableStartMessage" | "coupleTurnMessage" | "reminderMessage";
 
 export function SettingsPage() {
   const { t, n, date, lang } = useAdminI18n();
@@ -60,6 +60,8 @@ export function SettingsPage() {
     { key: "maxPlayers", label: t("maxPlayers"), hint: t("maxPlayersHint"), min: draft.minPlayers, max: 12 },
   ];
   const messages: { key: MessageKey; title: string; rows: number }[] = [
+    { key: "tableStartMessage", title: t("msgTableStart"), rows: 2 },
+    { key: "coupleTurnMessage", title: t("msgCoupleTurn"), rows: 2 },
     { key: "reminderMessage", title: t("msgReminder"), rows: 2 },
   ];
 
@@ -177,7 +179,7 @@ export function SettingsPage() {
 
 function countChanges(a: AppSettings, b: AppSettings) {
   const keys: (keyof AppSettings)[] = ["minPlayers", "maxPlayers", "maintenanceMode", "maintenanceMessage", "maintenanceMessageFa",
-    "reminderMessage", "reminderMessageFa"];
+    "reminderMessage", "reminderMessageFa", "tableStartMessage", "tableStartMessageFa", "coupleTurnMessage", "coupleTurnMessageFa"];
   let n = keys.filter((k) => a[k] !== b[k]).length;
   for (const game of ALL_GAMES) if ((a.disabledGames ?? []).includes(game) !== (b.disabledGames ?? []).includes(game)) n++;
   return n;

@@ -38,6 +38,8 @@ export default defineConfig({
         // The API, SignalR and the admin console always go to the network.
         navigateFallbackDenylist: [/^\/api\//, /^\/hubs\//, /^\/admin/],
         cleanupOutdatedCaches: true,
+        // Push and notification-click handlers live in public/push-sw.js.
+        importScripts: ['push-sw.js'],
         runtimeCaching: [
           {
             urlPattern: ({ url }) => url.origin === 'https://fonts.googleapis.com' || url.origin === 'https://fonts.gstatic.com',

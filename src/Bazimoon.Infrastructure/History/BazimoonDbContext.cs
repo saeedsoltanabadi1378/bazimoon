@@ -17,6 +17,7 @@ public sealed class BazimoonDbContext : DbContext
     public DbSet<UserRecord> Users => Set<UserRecord>();
     public DbSet<UserIdentityRecord> UserIdentities => Set<UserIdentityRecord>();
     public DbSet<RefreshTokenRecord> RefreshTokens => Set<RefreshTokenRecord>();
+    public DbSet<PushSubscriptionRecord> PushSubscriptions => Set<PushSubscriptionRecord>();
     public DbSet<OperationalEventRecord> OperationalEvents => Set<OperationalEventRecord>();
     public DbSet<PlayerStatsRecord> PlayerStats => Set<PlayerStatsRecord>();
     public DbSet<PuzzleResultRecord> PuzzleResults => Set<PuzzleResultRecord>();
@@ -45,6 +46,18 @@ public sealed class BazimoonDbContext : DbContext
             b.HasIndex(i => new { i.Provider, i.ProviderUserId }).IsUnique();
             b.HasIndex(i => i.UserId);
             b.HasOne<UserRecord>().WithMany().HasForeignKey(i => i.UserId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<PushSubscriptionRecord>(b =>
+        {
+            b.ToTable("push_subscriptions");
+            b.HasKey(s => s.Id);
+            b.Property(s => s.Endpoint).HasMaxLength(1024);
+            b.Property(s => s.P256dh).HasMaxLength(128);
+            b.Property(s => s.Auth).HasMaxLength(64);
+            b.HasIndex(s => s.Endpoint).IsUnique();
+            b.HasIndex(s => s.UserId);
+            b.HasOne<UserRecord>().WithMany().HasForeignKey(s => s.UserId).OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<RefreshTokenRecord>(b =>

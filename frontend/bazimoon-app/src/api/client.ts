@@ -128,6 +128,18 @@ export class BazimoonApiClient {
     return this.request<AuthSession>("POST", "/api/auth/link/google", { idToken });
   }
 
+  pushKey() {
+    return this.request<{ publicKey: string | null }>("GET", "/api/push/key");
+  }
+
+  subscribePush(endpoint: string, p256dh: string, auth: string) {
+    return this.request<void>("POST", "/api/push/subscriptions", { endpoint, keys: { p256dh, auth } });
+  }
+
+  unsubscribePush(endpoint: string) {
+    return this.request<void>("POST", "/api/push/subscriptions/remove", { endpoint });
+  }
+
   logout() {
     const refreshToken = this.refreshToken;
     this.useSession(null);

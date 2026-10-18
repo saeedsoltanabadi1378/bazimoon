@@ -1,4 +1,5 @@
 import { useGame } from "./GameProvider";
+import { PushPrompt } from "../hub/PushPrompt";
 import { useLanguage } from "../i18n/LanguageContext";
 import { useNavigation } from "../app/router";
 import { Avatar, Bar, Body, IconButton, Screen } from "../ui/components";
@@ -185,6 +186,7 @@ export function LobbyScreen() {
           <button type="button" className="btn btn--ghost" disabled={busy} onClick={() => void leaveGame()}>{t("leaveLobby")}</button>
         )}
       </Bar>
+      <PushPrompt active={joined} />
     </Screen>
   );
 }

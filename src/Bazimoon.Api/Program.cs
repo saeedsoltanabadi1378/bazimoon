@@ -39,7 +39,8 @@ builder.Services.AddScoped<CoupleService>();
 builder.Services.AddSingleton<Bazimoon.Api.EsmFamil.EsmFamilRoomService>();
 builder.Services.AddSingleton<ReminderStatus>();
 builder.Services.AddScoped<Bazimoon.Api.Admin.AdminDashboardService>();
-builder.Services.AddSingleton<IPushNotifier, NoPushNotifier>();
+builder.Services.AddOptions<PushOptions>().Bind(builder.Configuration.GetSection(PushOptions.SectionName));
+builder.Services.AddHttpClient<IPushNotifier, WebPushNotifier>(c => c.Timeout = TimeSpan.FromSeconds(10));
 // Tests drive ReminderService.SendDueAsync directly instead of waiting on the timer.
 if (!builder.Environment.IsEnvironment("Testing"))
 {
@@ -161,6 +162,7 @@ app.MapGameEndpoints();
 app.MapHubEndpoints();
 app.MapTableEndpoints();
 app.MapCoupleEndpoints();
+app.MapPushEndpoints();
 Bazimoon.Api.EsmFamil.EsmFamilEndpoints.MapEsmFamilEndpoints(app);
 app.MapHub<GameHub>("/hubs/game");
 

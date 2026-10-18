@@ -15,6 +15,12 @@ public sealed class AppSettingsRecord
     /// <summary>Daily puzzle reminder; {streak} is replaced with the player's current streak.</summary>
     public string ReminderMessage { get; set; } = AppSettingsDefaults.ReminderMessage;
     public string ReminderMessageFa { get; set; } = AppSettingsDefaults.ReminderMessageFa;
+    /// <summary>Sent to the players at a table when its game starts; {creator} and {table} are filled in.</summary>
+    public string TableStartMessage { get; set; } = AppSettingsDefaults.TableStartMessage;
+    public string TableStartMessageFa { get; set; } = AppSettingsDefaults.TableStartMessageFa;
+    /// <summary>Sent when a partner has answered today's Couple Quiz; {partner} is filled in.</summary>
+    public string CoupleTurnMessage { get; set; } = AppSettingsDefaults.CoupleTurnMessage;
+    public string CoupleTurnMessageFa { get; set; } = AppSettingsDefaults.CoupleTurnMessageFa;
     /// <summary>Games an admin switched off (keys from AppSettingsDefaults.Games). Hidden from the app; new Mafia tables and couple invites are refused.</summary>
     public string DisabledGamesJson { get; set; } = "[]";
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
@@ -28,6 +34,10 @@ public static class AppSettingsDefaults
     public const string MafiaOffFa = "مافیا فعلاً خاموش است. بعداً دوباره امتحان کنید.";
     public const string MaintenanceMessageFa = "نایت‌فال موقتاً برای به‌روزرسانی در دسترس نیست.";
     public const string ReminderMessage = "Today's puzzles are ready. Keep your {streak}-day streak going!";
+    public const string TableStartMessage = "{creator} started {table}. Your role is waiting.";
+    public const string TableStartMessageFa = "{creator} بازی {table} را شروع کرد. نقشت منتظر توست.";
+    public const string CoupleTurnMessage = "{partner} answered today's questions. Your turn!";
+    public const string CoupleTurnMessageFa = "{partner} به سؤال‌های امروز جواب داد. نوبت توست!";
     public const string ReminderMessageFa = "پازل‌های امروز آماده‌اند. رکورد {streak} روزه‌ات را حفظ کن!";
 }
 

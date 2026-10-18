@@ -8,11 +8,11 @@ namespace Bazimoon.Tests;
 /// <summary>Records player notifications instead of sending them.</summary>
 public sealed class FakePushNotifier : IPushNotifier
 {
-    public ConcurrentQueue<(Guid UserId, string Text, string? Target)> Sent { get; } = new();
+    public ConcurrentQueue<(Guid UserId, string Text, string? Target, string TextFa)> Sent { get; } = new();
 
-    public Task<bool> NotifyAsync(Guid userId, string text, string? target = null)
+    public Task<bool> NotifyAsync(Guid userId, PushText text, string? target = null)
     {
-        Sent.Enqueue((userId, text, target));
+        Sent.Enqueue((userId, text.En, target, text.Fa));
         return Task.FromResult(true);
     }
 }
