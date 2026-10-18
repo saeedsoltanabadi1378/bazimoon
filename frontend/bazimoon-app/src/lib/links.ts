@@ -26,7 +26,8 @@ export type DeepLink =
   | { kind: "game"; gameId: string }
   | { kind: "coupleInvite"; token: string }
   | { kind: "couple" }
-  | { kind: "esmfamil"; code: string };
+  | { kind: "esmfamil"; code: string }
+  | { kind: "play"; game: string };
 
 /** Reads the deep link the app was opened with from its path. */
 export function readDeepLink(pathname = window.location.pathname): DeepLink | null {
@@ -35,5 +36,7 @@ export function readDeepLink(pathname = window.location.pathname): DeepLink | nu
   if (first === "g" && second) return { kind: "game", gameId: second };
   if (first === "couple") return second ? { kind: "coupleInvite", token: second } : { kind: "couple" };
   if (first === "ef" && second) return { kind: "esmfamil", code: second };
+  // Play buttons on the search pages (/en/<game>/, /fa/<game>/) open /play/<game>.
+  if (first === "play" && second) return { kind: "play", game: second };
   return null;
 }

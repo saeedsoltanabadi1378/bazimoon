@@ -1,7 +1,7 @@
 import { useEffect, useMemo } from "react";
 import { LanguageProvider, useLanguage } from "./i18n/LanguageContext";
 import { SessionProvider, useSession } from "./app/session";
-import { NavigationProvider, useNavigation, type Route } from "./app/router";
+import { NavigationProvider, useNavigation, type GameKey, type Route } from "./app/router";
 import { LoadingScreen, StateScreen } from "./app/StateScreen";
 import { MafiaRoute } from "./mafia/MafiaRoute";
 import { MafiaTablesScreen } from "./hub/MafiaTablesScreen";
@@ -23,7 +23,10 @@ import { GoogleButton } from "./ui/GoogleButton";
 import { UpdatePrompt } from "./app/UpdatePrompt";
 import { GoogleResultSheet } from "./hub/SaveProgress";
 
-/** Where the app opens: an invite or game link (/t/CODE, /g/ID, /couple/TOKEN, /ef/CODE), first-launch welcome, or home. */
+const gameKeys: GameKey[] = ["zip", "queens", "merge", "mines", "memory", "nard", "word", "ladder", "stack", "blocks", "sudoku", "snake", "dooz", "spy", "esmfamil"];
+const isGameKey = (key: string): key is GameKey => (gameKeys as string[]).includes(key);
+
+/** Where the app opens: an invite or game link (/t/CODE, /g/ID, /couple/TOKEN, /ef/CODE, /play/GAME), first-launch welcome, or home. */
 function initialRoutes(): Route[] {
   const link = readDeepLink();
   // The link has been read; keep the address bar on the app root so reloads open Home.
@@ -39,6 +42,11 @@ function initialRoutes(): Route[] {
       return [{ name: "home" }, { name: "couple", screen: "home" }];
     case "esmfamil":
       return [{ name: "home" }, { name: "game", game: "esmfamil", screen: "lobby", params: { code: `EF-${link.code}` } }];
+    case "play":
+      if (link.game === "mafia") return [{ name: "home" }, { name: "mafia" }];
+      if (link.game === "couple") return [{ name: "home" }, { name: "couple", screen: "home" }];
+      if (isGameKey(link.game)) return [{ name: "home" }, { name: "game", game: link.game, screen: "intro" }];
+      break;
   }
   if (!readLocal<boolean>(WELCOMED_KEY, false)) return [{ name: "welcome" }];
   return [{ name: "home" }];
