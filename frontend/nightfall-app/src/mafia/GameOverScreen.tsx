@@ -40,6 +40,7 @@ export function GameOverScreen() {
   const fate = (p: (typeof players)[number]) => {
     if (p.isAlive) return p.wasPromoted ? t("fatePromotedSurvived") : t("fateSurvived");
     const number = p.eliminatedRound ?? 0;
+    if (p.eliminatedBy === "Left") return t("fateLeft");
     if (p.eliminatedBy === "Night") return t(p.wasPromoted ? "fatePromotedKilled" : "fateKilled", { number });
     return t(p.wasPromoted ? "fatePromotedVoted" : "fateVotedOut", { number });
   };

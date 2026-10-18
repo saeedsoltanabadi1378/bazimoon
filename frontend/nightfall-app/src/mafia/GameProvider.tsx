@@ -35,6 +35,7 @@ export interface GameContextValue {
   rejectChallenge(challengerId: string): Promise<boolean>;
   finishDiscussion(): Promise<boolean>;
   finishLastWords(): Promise<boolean>;
+  setReady(ready: boolean): Promise<boolean>;
 }
 
 const GameContext = createContext<GameContextValue | null>(null);
@@ -150,6 +151,7 @@ export function GameProvider({ gameId, children }: { gameId: string; children: R
     rejectChallenge: (id) => run(() => api.rejectChallenge(gameId, id)),
     finishDiscussion: () => run(() => api.finishDiscussion(gameId)),
     finishLastWords: () => run(() => api.finishLastWords(gameId)),
+    setReady: (ready) => run(() => api.setReady(gameId, ready)),
   };
 
   return <GameContext.Provider value={value}>{children}</GameContext.Provider>;

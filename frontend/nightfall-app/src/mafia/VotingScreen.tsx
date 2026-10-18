@@ -5,7 +5,7 @@ import { useLanguage } from "../i18n/LanguageContext";
 import { Bar, Body, PhaseHeader, Screen } from "../ui/components";
 import { Icon } from "../ui/Icon";
 import { findPlayer, playerColor } from "./roles";
-import { ActionError, PhaseTimer, ReconnectingBanner, VoiceStatusLine } from "./parts";
+import { ActionError, LeaveGameButton, PhaseTimer, ReconnectingBanner, VoiceStatusLine, TableNotices } from "./parts";
 import { haptic } from "../lib/haptics";
 
 export function VotingScreen() {
@@ -66,6 +66,7 @@ export function VotingScreen() {
 
       <Body tight>
         <ReconnectingBanner />
+        <TableNotices />
         <PhaseTimer deadline={view.phaseDeadline} total={view.rules.votingSeconds} label={(seconds) => t("votingSecondsLeft", { seconds })} />
         {revote && <p style={{ margin: 0, fontSize: 14, lineHeight: 1.5, color: "var(--text-2)" }}>{t("revoteRule")}</p>}
         <div className="stack" style={{ gap: 8 }} role="radiogroup" aria-label={revote ? t("revoteTitle") : t("townVote")}>
@@ -132,6 +133,7 @@ export function VotingScreen() {
           </button>
         )}
         <ActionError />
+        <LeaveGameButton />
       </Body>
 
       <Bar>

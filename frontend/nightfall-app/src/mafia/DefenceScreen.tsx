@@ -4,7 +4,7 @@ import { useLanguage } from "../i18n/LanguageContext";
 import { Bar, Body, PhaseHeader, Screen } from "../ui/components";
 import { Icon } from "../ui/Icon";
 import { findPlayer, playerColor } from "./roles";
-import { ActionError, ReconnectingBanner, RolePeek } from "./parts";
+import { ActionError, LeaveGameButton, ReconnectingBanner, RolePeek, TableNotices } from "./parts";
 import { useClock, useSecondsLeft } from "./timers";
 
 const RING = 2 * Math.PI * 60;
@@ -39,6 +39,7 @@ export function DefenceScreen() {
 
       <Body tight>
         <ReconnectingBanner />
+        <TableNotices />
         <section className="row" style={{ gap: 12, padding: 14, borderRadius: 18, background: "#241D12", border: "1px solid #4A3A22" }}>
           <span style={{ width: 44, height: 44, flex: "none", borderRadius: 999, background: "#3A2A16", color: "#F0A83A", display: "flex", alignItems: "center", justifyContent: "center" }}>
             <Icon name="scales" />
@@ -113,6 +114,7 @@ export function DefenceScreen() {
           <span>{t("defenceNote")}</span>
         </div>
         <ActionError />
+        <LeaveGameButton />
       </Body>
 
       <Bar row>

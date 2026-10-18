@@ -5,7 +5,7 @@ import { useLanguage } from "../i18n/LanguageContext";
 import { Bar, Body, PhaseHeader, Screen } from "../ui/components";
 import { Icon, type IconName } from "../ui/Icon";
 import { findPlayer, playerColor } from "./roles";
-import { ActionError, ReconnectingBanner, RolePeek, useRoleName } from "./parts";
+import { ActionError, LeaveGameButton, ReconnectingBanner, RolePeek, useRoleName, TableNotices } from "./parts";
 import { haptic } from "../lib/haptics";
 
 const RING = 2 * Math.PI * 60;
@@ -74,6 +74,7 @@ export function DayScreen() {
 
       <Body tight>
         <ReconnectingBanner />
+        <TableNotices />
         <section className="row" style={{ gap: 12, padding: 14, borderRadius: 18, background: report.bg, border: `1px solid ${report.edge}` }}>
           <span style={{ width: 44, height: 44, flex: "none", borderRadius: 999, background: report.ibg, color: report.fg, display: "flex", alignItems: "center", justifyContent: "center" }}>
             <Icon name={report.icon} />
@@ -165,6 +166,7 @@ export function DayScreen() {
           </button>
         )}
         <ActionError />
+        <LeaveGameButton />
       </Body>
 
       <Bar row>

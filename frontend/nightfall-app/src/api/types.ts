@@ -22,7 +22,7 @@ export type NightActionType = "Investigate" | "Heal" | "Kill";
 export type WinCondition = "None" | "VillagersWin" | "MafiaWin";
 export type DiscussionSegmentType = "Speaker" | "Challenge";
 
-export type EliminationCause = "Night" | "Vote";
+export type EliminationCause = "Night" | "Vote" | "Left";
 
 export interface PlayerView {
   playerId: string;
@@ -121,6 +121,16 @@ export interface GameView {
   runoffCandidateIds: string[] | null;
   lastWords: LastWordsView | null;
   rules: RulesView;
+  /** Lobby players who tapped Ready. */
+  readyPlayerIds: string[] | null;
+  /** When a full lobby where everyone is ready starts by itself. */
+  autoStartAt: string | null;
+  /** Who runs the game; passes to the next seat when the creator leaves. */
+  controllerPlayerId: string | null;
+  /** Timed turns you have missed in a row (two remove you). */
+  yourStrikes: number;
+  /** Players removed for inactivity when the last timed night or vote closed. */
+  removedForInactivity: string[] | null;
 }
 
 /** Your rating outcome for a finished game (from the history service). */

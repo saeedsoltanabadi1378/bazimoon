@@ -3,7 +3,7 @@ import { useLanguage } from "../i18n/LanguageContext";
 import { Bar, Body, IconDisc, RoleTag, Screen } from "../ui/components";
 import { Icon } from "../ui/Icon";
 import { findPlayer, isMafiaRole, playerColor, roleMeta } from "./roles";
-import { ActionError, ReconnectingBanner, useRoleName } from "./parts";
+import { ActionError, LeaveGameButton, ReconnectingBanner, useRoleName, TableNotices } from "./parts";
 import { BallotRows } from "./VotingScreen";
 
 /**
@@ -53,6 +53,7 @@ export function ResultsScreen({ onSeeFinal }: { onSeeFinal?: () => void }) {
 
       <Body tight>
         <ReconnectingBanner />
+        <TableNotices />
         {out ? (
           <section className="stack center" style={{ gap: 12, padding: "24px 16px", borderRadius: 24, background: "var(--surface)", textAlign: "center" }}>
             <span className="avatar display" aria-hidden="true" style={{ width: 96, height: 96, fontSize: 38, fontWeight: 800, background: playerColor(view, out.playerId), filter: "grayscale(0.6)" }}>
@@ -124,6 +125,7 @@ export function ResultsScreen({ onSeeFinal }: { onSeeFinal?: () => void }) {
           ))}
         </div>
         <ActionError />
+        <LeaveGameButton />
       </Body>
 
       <Bar>

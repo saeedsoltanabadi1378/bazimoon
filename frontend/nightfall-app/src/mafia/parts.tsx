@@ -150,3 +150,92 @@ export function MicButton({ size = 52, hotColor = "#E5604D", hotInk = "#1C0905" 
     </button>
   );
 }
+
+/** Table notices: your strike warning, players removed for inactivity, and the creator hand-off. */
+export function TableNotices() {
+  const { view } = useGame();
+  const { t } = useLanguage();
+  const roleName = useRoleName();
+  if (!view) return null;
+  const removed = view.removedForInactivity ?? [];
+  const youRemoved = removed.includes(view.yourPlayerId);
+  const firstSeat = view.players[0];
+  const handedOver = view.youAreController && firstSeat && firstSeat.playerId !== view.yourPlayerId && firstSeat.eliminatedBy === "Left";
+  const box = (bg: string, edge: string) => ({ display: "flex", gap: 10, alignItems: "flex-start", padding: "12px 14px", borderRadius: 14, background: bg, border: `1px solid ${edge}`, fontSize: 14, lineHeight: 1.45 }) as const;
+  return (
+    <>
+      {view.youAreAlive && view.yourStrikes > 0 && (
+        <div role="alert" style={box("#2A2113", "#6B5A3E")}>
+          <span style={{ marginTop: 2 }}><Icon name="warning" size={18} color="#F0A83A" /></span>
+          <span><b>{t("strikeWarnTitle")}</b> {t("strikeWarnText")}</span>
+        </div>
+      )}
+      {youRemoved && (
+        <section className="stack center" style={{ gap: 10, padding: "24px 16px", borderRadius: 24, background: "var(--surface)", textAlign: "center" }}>
+          <span style={{ width: 64, height: 64, borderRadius: 999, background: "#3A1C1A", color: "#F08A7A", display: "flex", alignItems: "center", justifyContent: "center" }}><Icon name="clock" size={28} /></span>
+          <div style={{ fontSize: 18, fontWeight: 600 }}>{t("youRemovedTitle")}</div>
+          <div style={{ fontSize: 14, lineHeight: 1.5, color: "var(--text-2)" }}>{t("youRemovedText")}</div>
+        </section>
+      )}
+      {removed.filter((id) => id !== view.yourPlayerId).map((id) => {
+        const p = view.players.find((x) => x.playerId === id);
+        if (!p) return null;
+        return (
+          <div key={id} style={box("#2A1612", "#4A2620")}>
+            <span style={{ marginTop: 2 }}><Icon name="eliminated" size={18} color="#F08A7A" /></span>
+            <span>
+              <b>{t("removedTitle", { name: p.telegramUsername })}</b> {t("removedText")}
+              {p.revealedRole && <> {t("removedRole", { role: roleName(p.revealedRole) })}</>}
+            </span>
+          </div>
+        );
+      })}
+      {handedOver && (
+        <div style={box("#10251F", "#1E4A40")}>
+          <span style={{ marginTop: 2 }}><Icon name="godfather" size={18} color="#5FD0BE" /></span>
+          <span><b>{t("newCreatorTitle")}</b> {t("newCreatorText", { name: firstSeat.telegramUsername })}</span>
+        </div>
+      )}
+    </>
+  );
+}
+
+/** "Leave game" for a living player in a game under way, behind a confirm sheet (leaving counts as a loss). */
+export function LeaveGameButton() {
+  const { view, busy, leaveGame } = useGame();
+  const { t } = useLanguage();
+  const [open, setOpen] = useState(false);
+  if (!view || !view.youAreAlive || view.phase === "Lobby" || view.phase === "Ended") return null;
+  return (
+    <>
+      <button type="button" className="btn btn--outline btn--sm" onClick={() => setOpen(true)}>{t("leaveGame")}</button>
+      {open && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 50, background: "rgba(8,6,4,0.72)", display: "flex", alignItems: "flex-end" }} onClick={() => setOpen(false)}>
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="leave-h"
+            onClick={(e) => e.stopPropagation()}
+            className="stack"
+            style={{ width: "100%", gap: 12, padding: "22px 16px 26px", borderRadius: "24px 24px 0 0", background: "var(--surface)" }}
+          >
+            <h2 id="leave-h" style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>{t("leaveTitle")}</h2>
+            <p style={{ margin: 0, fontSize: 14, lineHeight: 1.5, color: "var(--text-2)" }}>{t("leaveText")}</p>
+            <button
+              type="button"
+              className="btn"
+              style={{ background: "#E5604D", color: "#1C0905" }}
+              disabled={busy}
+              onClick={async () => {
+                if (await leaveGame()) setOpen(false);
+              }}
+            >
+              {t("leaveConfirm")}
+            </button>
+            <button type="button" className="btn btn--outline" autoFocus onClick={() => setOpen(false)}>{t("leaveCancel")}</button>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
