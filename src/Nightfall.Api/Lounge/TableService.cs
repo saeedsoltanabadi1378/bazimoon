@@ -94,7 +94,8 @@ public sealed class TableService
             return new TableDto(
                 game.GameId, record?.Name, titles.GetValueOrDefault(game.TelegramChatId ?? 0), host, record?.IsOpen ?? false,
                 game.CurrentPhase, game.NightNumber, game.Players.Count, game.Config.MaxPlayers, game.Config.MinPlayers, game.CreatedAt,
-                game.Players.Select(p => p.TelegramUsername).Take(6).ToList(), game.GetPlayer(you) is not null);
+                game.Players.Select(p => p.TelegramUsername).Take(6).ToList(), game.GetPlayer(you) is not null,
+                game.Config.AllowSpectators, game.Spectators.Count, game.GetSpectator(you) is not null);
         }).ToList();
     }
 
@@ -155,7 +156,8 @@ public sealed class TableService
 public sealed record TableDto(
     Guid GameId, string? Name, string? ChatTitle, string? Host, bool IsOpen,
     GamePhase Phase, int Round, int Seated, int MaxPlayers, int MinPlayers, DateTimeOffset CreatedAt,
-    IReadOnlyList<string> Players, bool YouAreSeated);
+    IReadOnlyList<string> Players, bool YouAreSeated,
+    bool AllowSpectators = false, int Spectators = 0, bool YouAreWatching = false);
 
 /// <summary><paramref name="IsOpen"/>: public (listed in Open tables) or private (invite link or code only).
 /// <paramref name="Rules"/>: timers and rule switches; missing ones keep the defaults.</summary>

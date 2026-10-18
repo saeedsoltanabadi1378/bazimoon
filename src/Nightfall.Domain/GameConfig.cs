@@ -40,6 +40,9 @@ public sealed class GameConfig
     /// <summary>Show a player's role once they are out. Off: roles stay hidden until an Inquiry or the end.</summary>
     public bool RevealRolesOnDeath { get; init; } = true;
 
+    /// <summary>People without a seat can watch the game in progress (public tables default to on).</summary>
+    public bool AllowSpectators { get; init; }
+
     public static GameConfig Default { get; } = new();
 
     public static readonly IReadOnlyList<int> SpeakerChoices = [30, 45, 60, 90];

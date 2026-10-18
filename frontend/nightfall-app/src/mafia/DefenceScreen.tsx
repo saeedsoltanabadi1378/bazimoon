@@ -5,6 +5,7 @@ import { Bar, Body, PhaseHeader, Screen } from "../ui/components";
 import { Icon } from "../ui/Icon";
 import { findPlayer, playerColor } from "./roles";
 import { ActionError, LeaveGameButton, ReconnectingBanner, RolePeek, TableNotices } from "./parts";
+import { GraveyardBar, SpectatorBanner, SpectatorList } from "./Graveyard";
 import { useClock, useSecondsLeft } from "./timers";
 
 const RING = 2 * Math.PI * 60;
@@ -39,6 +40,7 @@ export function DefenceScreen() {
 
       <Body tight>
         <ReconnectingBanner />
+        <SpectatorBanner />
         <TableNotices />
         <section className="row" style={{ gap: 12, padding: 14, borderRadius: 18, background: "#241D12", border: "1px solid #4A3A22" }}>
           <span style={{ width: 44, height: 44, flex: "none", borderRadius: 999, background: "#3A2A16", color: "#F0A83A", display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -115,8 +117,12 @@ export function DefenceScreen() {
         </div>
         <ActionError />
         <LeaveGameButton />
+        <SpectatorList />
       </Body>
 
+      {view.youCanUseGraveyard ? (
+        <Bar><GraveyardBar /></Bar>
+      ) : (
       <Bar row>
         {youActive ? (
           <button type="button" className="btn btn--primary grow" style={{ fontSize: 15 }} disabled={busy} onClick={() => void finishDiscussion()}>
@@ -124,11 +130,12 @@ export function DefenceScreen() {
           </button>
         ) : (
           <div className="grow" style={{ minHeight: 52, padding: "8px 14px", borderRadius: 16, border: "1.5px dashed var(--edge)", color: "var(--text-2)", fontSize: 14, display: "flex", alignItems: "center" }}>
-            {view.youAreAlive ? t("defenceListening") : t("defenceDeadNote")}
+            {view.youAreAlive ? t("defenceListening") : view.youAreSpectator ? t("defenceSpectatorNote") : t("defenceDeadNote")}
           </div>
         )}
         <MicState live={live} />
       </Bar>
+      )}
     </Screen>
   );
 }

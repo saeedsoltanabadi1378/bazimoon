@@ -49,6 +49,7 @@ public static class InfrastructureServiceCollectionExtensions
         services.AddSingleton<IGameSessionStore, GameSessionStore>();
         services.AddSingleton<IChatGameIndex, ChatGameIndex>();
         services.AddSingleton<IGameRosterStore, GameRosterStore>();
+        services.AddSingleton<IGraveyardStore, GraveyardStore>();
 
         services.AddOptions<AgoraOptions>()
             .Bind(configuration.GetSection(AgoraOptions.SectionName))

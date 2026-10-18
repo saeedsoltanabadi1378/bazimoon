@@ -45,6 +45,9 @@ export function CreateTableScreen() {
   const [innocent, setInnocent] = useState<boolean | null>(null);
   const [jokerEnds, setJokerEnds] = useState(true);
   const [revealRoles, setRevealRoles] = useState(true);
+  // Follows public/private until the creator flips it.
+  const [spectators, setSpectators] = useState<boolean | null>(null);
+  const spectatorsOn = spectators ?? isOpen;
   const roleName = useRoleName();
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
@@ -55,7 +58,7 @@ export function CreateTableScreen() {
     try {
       const rules: TableRules = {
         ...timers, lastWordsForNightKills: nightLastWords, preset, mafiaCount, optionalRoles: optional,
-        godfatherAppearsInnocent: innocent ?? preset === "Iranian", jokerWinEndsGame: jokerEnds, revealRolesOnDeath: revealRoles,
+        godfatherAppearsInnocent: innocent ?? preset === "Iranian", jokerWinEndsGame: jokerEnds, revealRolesOnDeath: revealRoles, allowSpectators: spectatorsOn,
       };
       const { gameId } = await api.createTable({ name: name.trim() || null, isOpen, seats, rules });
       haptic.success();
@@ -201,6 +204,7 @@ export function CreateTableScreen() {
             { on: innocentOn, title: t("optInnocent"), text: t("optInnocentText"), flip: () => setInnocent(!innocentOn) },
             { on: jokerEnds, title: t("optJokerEnds"), text: t("optJokerEndsText"), flip: () => setJokerEnds((v) => !v) },
             { on: revealRoles, title: t("optRevealRoles"), text: t("optRevealRolesText"), flip: () => setRevealRoles((v) => !v) },
+            { on: spectatorsOn, title: t("optSpectators"), text: t("optSpectatorsText"), flip: () => setSpectators(!spectatorsOn) },
           ].map((o, i) => (
             <div key={o.title} className="row" style={{ gap: 12, minHeight: 56, borderTop: i ? "1px solid #1E2138" : 0 }}>
               <span className="grow stack" style={{ gap: 2 }}>

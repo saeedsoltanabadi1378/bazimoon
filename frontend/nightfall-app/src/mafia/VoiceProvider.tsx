@@ -2,7 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState, ty
 import { VoiceSession } from "../lib/voiceSession";
 import { useGame } from "./GameProvider";
 
-export type VoiceChannel = "main" | "mafia";
+export type VoiceChannel = "main" | "mafia" | "graveyard";
 
 interface VoiceState {
   channel: VoiceChannel | null;
@@ -12,6 +12,9 @@ interface VoiceState {
   failed: boolean;
   toggleMute(): Promise<void>;
   retry(): void;
+  /** Players who are out and spectators pick the room (listen) or the graveyard (talk). */
+  graveyardChosen: boolean;
+  chooseGraveyard(on: boolean): void;
 }
 
 const VoiceContext = createContext<VoiceState | null>(null);
@@ -35,6 +38,7 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
   const [connecting, setConnecting] = useState(false);
   const [failed, setFailed] = useState(false);
   const [attempt, setAttempt] = useState(0);
+  const [graveyardChosen, setGraveyardChosen] = useState(false);
 
   const gameId = view?.gameId;
   const phase = view?.phase;
@@ -43,6 +47,8 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
   const isNight = phase === "NightZero" || phase === "Night";
   const mafia = Boolean(isNight && alive && (view?.yourRole === "Mafia" || view?.yourRole === "Godfather"));
   const inVoicePhase = phase ? voicePhases.has(phase) : false;
+  // Your own last words always go to the room.
+  const graveyard = Boolean(graveyardChosen && view?.youCanUseGraveyard && !view?.lastWords?.youAreSpeaking);
 
   useEffect(() => {
     const session = sessionRef.current;
@@ -82,8 +88,8 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
       setPublishing(false);
       return;
     }
-    void join(mafia ? "mafia" : "main");
-  }, [gameId, inVoicePhase, phase, speaker, alive, mafia, join, attempt]);
+    void join(mafia ? "mafia" : graveyard ? "graveyard" : "main");
+  }, [gameId, inVoicePhase, phase, speaker, alive, mafia, graveyard, join, attempt]);
 
   const toggleMute = useCallback(async () => {
     const next = !muted;
@@ -91,7 +97,10 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
     setMuted(next);
   }, [muted]);
 
-  const value: VoiceState = { channel, publishing, muted, connecting, failed, toggleMute, retry: () => setAttempt((a) => a + 1) };
+  const value: VoiceState = {
+    channel, publishing, muted, connecting, failed, toggleMute, retry: () => setAttempt((a) => a + 1),
+    graveyardChosen, chooseGraveyard: setGraveyardChosen,
+  };
   return <VoiceContext.Provider value={value}>{children}</VoiceContext.Provider>;
 }
 

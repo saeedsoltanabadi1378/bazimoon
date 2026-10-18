@@ -136,6 +136,10 @@ export interface Table {
   createdAt: string;
   players: string[];
   youAreSeated: boolean;
+  /** The table lets people without a seat watch. */
+  allowSpectators: boolean;
+  spectators: number;
+  youAreWatching: boolean;
 }
 
 export interface TableInfo {
@@ -294,6 +298,7 @@ export interface TableRules {
   godfatherAppearsInnocent?: boolean;
   jokerWinEndsGame?: boolean;
   revealRolesOnDeath?: boolean;
+  allowSpectators?: boolean;
 }
 
 export const hubApi = (api: NightfallApiClient) => ({

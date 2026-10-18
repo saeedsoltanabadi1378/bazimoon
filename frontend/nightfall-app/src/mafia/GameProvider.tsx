@@ -2,7 +2,7 @@ import type { HubConnection } from "@microsoft/signalr";
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { ApiError, type NightfallApiClient } from "../api/client";
 import { connectToGameHub } from "../api/signalr";
-import type { GameView, NightActionType } from "../api/types";
+import type { GameView, GraveyardMessage, NightActionType } from "../api/types";
 import { useSession } from "../app/session";
 import { useLanguage } from "../i18n/LanguageContext";
 import { haptic } from "../lib/haptics";
@@ -38,6 +38,13 @@ export interface GameContextValue {
   revealMayor(): Promise<boolean>;
   callInquiry(): Promise<boolean>;
   setReady(ready: boolean): Promise<boolean>;
+  stopWatching(): Promise<boolean>;
+  setSpectatorMuted(spectatorId: string, muted: boolean): Promise<boolean>;
+  /** Graveyard chat, for players who are out and spectators. */
+  graveyard: GraveyardMessage[];
+  graveyardUnread: number;
+  markGraveyardRead(): void;
+  sendGraveyard(text: string): Promise<boolean>;
 }
 
 const GameContext = createContext<GameContextValue | null>(null);
@@ -51,6 +58,13 @@ export function GameProvider({ gameId, children }: { gameId: string; children: R
   const [busy, setBusy] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const hubRef = useRef<HubConnection | null>(null);
+  const [graveyard, setGraveyard] = useState<GraveyardMessage[]>([]);
+  const [graveyardSeen, setGraveyardSeen] = useState(0);
+  const [hubVersion, setHubVersion] = useState(0);
+
+  const addGraveyard = useCallback((message: GraveyardMessage) => {
+    setGraveyard((list) => (list.some((m) => m.id === message.id) ? list : [...list, message].slice(-200)));
+  }, []);
 
   const refresh = useCallback(async () => {
     try {
@@ -84,7 +98,7 @@ export function GameProvider({ gameId, children }: { gameId: string; children: R
     let cancelled = false;
     connectToGameHub(import.meta.env.VITE_API_BASE_URL, api.getToken() ?? "", gameId, () => void refresh(), (state) => {
       if (!cancelled) setLink(state);
-    })
+    }, addGraveyard)
       .then(async (hub) => {
         if (cancelled) {
           await hub.stop();
@@ -92,6 +106,7 @@ export function GameProvider({ gameId, children }: { gameId: string; children: R
         }
         hubRef.current = hub;
         setLink("connected");
+        setHubVersion((v) => v + 1);
       })
       .catch((err) => {
         console.error("[Nightfall] Failed to connect to the live update hub", err);
@@ -102,7 +117,26 @@ export function GameProvider({ gameId, children }: { gameId: string; children: R
       void hubRef.current?.stop();
       hubRef.current = null;
     };
-  }, [api, gameId, status, refresh]);
+  }, [api, gameId, status, refresh, addGraveyard]);
+
+  // Once you're out (or watching), join the graveyard group and load its history.
+  const canGraveyard = Boolean(view?.youCanUseGraveyard);
+  useEffect(() => {
+    if (!canGraveyard) return;
+    let cancelled = false;
+    hubRef.current?.invoke("JoinGraveyard", gameId).catch((err) => console.warn("[Nightfall] Failed to join the graveyard", err));
+    api.getGraveyard(gameId)
+      .then((history) => {
+        if (!cancelled) setGraveyard((list) => [...history, ...list.filter((m) => !history.some((h) => h.id === m.id))].slice(-200));
+      })
+      .catch((err) => console.warn("[Nightfall] Failed to load the graveyard", err));
+    return () => {
+      cancelled = true;
+    };
+  }, [api, gameId, canGraveyard, hubVersion, link]);
+
+  const yourId = view?.yourPlayerId;
+  const graveyardUnread = graveyard.slice(graveyardSeen).filter((m) => m.senderId !== yourId).length;
 
   // A dropped hub means we may have missed updates — poll until it's back.
   useEffect(() => {
@@ -156,6 +190,22 @@ export function GameProvider({ gameId, children }: { gameId: string; children: R
     revealMayor: () => run(() => api.revealMayor(gameId)),
     callInquiry: () => run(() => api.callInquiry(gameId)),
     setReady: (ready) => run(() => api.setReady(gameId, ready)),
+    stopWatching: () => run(() => api.stopSpectating(gameId)),
+    setSpectatorMuted: (id, muted) => run(() => api.setSpectatorMuted(gameId, id, muted)),
+    graveyard,
+    graveyardUnread,
+    markGraveyardRead: () => setGraveyardSeen(graveyard.length),
+    sendGraveyard: async (text) => {
+      setActionError(null);
+      try {
+        addGraveyard(await api.sendGraveyard(gameId, text));
+        return true;
+      } catch (err) {
+        haptic.warn();
+        setActionError(err instanceof ApiError && err.status !== 0 ? err.message : t("genericError"));
+        return false;
+      }
+    },
   };
 
   return <GameContext.Provider value={value}>{children}</GameContext.Provider>;

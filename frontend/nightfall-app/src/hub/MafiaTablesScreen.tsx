@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useLanguage } from "../i18n/LanguageContext";
 import { useNavigation } from "../app/router";
+import { useSession } from "../app/session";
 import { Body, Screen, TopBar } from "../ui/components";
 import { Icon } from "../ui/Icon";
 import { TabBar } from "../ui/TabBar";
@@ -16,6 +17,7 @@ export function MafiaTablesScreen({ code }: { code?: string }) {
   const { t } = useLanguage();
   const { push, replace } = useNavigation();
   const { api, isGameOn } = useHub();
+  const session = useSession();
   const mafiaOn = isGameOn("mafia");
   const [tab, setTab] = useState<"open" | "mine">("open");
   const { data, loading, error, reload } = useLoad(() => (mafiaOn ? api.tables(tab) : Promise.resolve([])), [api, tab, mafiaOn]);
@@ -36,6 +38,19 @@ export function MafiaTablesScreen({ code }: { code?: string }) {
     } finally {
       setResolving(false);
     }
+  }
+
+  // Watching a game in progress takes a spectator place first; seated players and lobbies just open.
+  async function openTable(table: Table) {
+    if (table.phase !== "Lobby" && !table.youAreSeated && !table.youAreWatching) {
+      try {
+        await session.api.spectate(table.gameId);
+      } catch {
+        reload();
+        return;
+      }
+    }
+    push({ name: "mafia", gameId: table.gameId });
   }
 
   // An invite link opens the table straight away.
@@ -93,7 +108,7 @@ export function MafiaTablesScreen({ code }: { code?: string }) {
           </div>
         )}
         <div className="stack" style={{ gap: 10 }}>
-          {data?.map((table) => <TableCard key={table.gameId} table={table} onOpen={() => push({ name: "mafia", gameId: table.gameId })} />)}
+          {data?.map((table) => <TableCard key={table.gameId} table={table} onOpen={() => void openTable(table)} />)}
         </div>
 
         <form onSubmit={submit} className="stack" style={{ gap: 8, padding: 14, borderRadius: 18, border: "1.5px dashed #2E3252" }}>
@@ -134,10 +149,13 @@ function TableCard({ table, onOpen }: { table: Table; onOpen(): void }) {
   const { t } = useLanguage();
   const live = table.phase !== "Lobby";
   const full = !live && table.seated >= table.maxPlayers;
-  const muted = !table.youAreSeated && (live || full);
-  const action = table.youAreSeated ? t("returnShort") : live ? t("watch") : full ? t("tableFull") : t("joinTable");
+  const watchable = live && table.allowSpectators;
+  const watch = !table.youAreSeated && watchable;
+  const muted = !table.youAreSeated && !watch && (live || full);
+  const action = table.youAreSeated ? t("returnShort") : watch ? t("watch") : live ? t("tableInProgress") : full ? t("tableFull") : t("joinTable");
+  const playing = table.round > 0 ? t("tableNightPlaying", { round: table.round, count: table.seated }) : t("tablePlaying", { count: table.seated });
   const seats = live
-    ? table.round > 0 ? t("tableNightPlaying", { round: table.round, count: table.seated }) : t("tablePlaying", { count: table.seated })
+    ? watchable && table.spectators > 0 ? `${playing} · ${t("tableWatching", { count: table.spectators })}` : playing
     : t("seatedOf", { seated: table.seated, max: table.maxPlayers });
   const title = table.name ?? table.chatTitle ?? t("mafiaTables");
 
@@ -165,9 +183,9 @@ function TableCard({ table, onOpen }: { table: Table; onOpen(): void }) {
         <button
           type="button"
           onClick={onOpen}
-          disabled={full && !table.youAreSeated}
+          disabled={!table.youAreSeated && (full || (live && !watch))}
           aria-label={`${action} · ${title}`}
-          style={{ minHeight: 40, padding: "0 16px", borderRadius: 12, border: muted ? "1.5px solid #2E3252" : 0, background: muted ? "transparent" : "#9C8CFF", color: muted ? "var(--text-2)" : "#120D2E", fontFamily: "inherit", fontSize: 14, fontWeight: 600, cursor: "pointer" }}
+          style={{ minHeight: 40, padding: "0 16px", borderRadius: 12, border: muted ? "1.5px solid #2E3252" : 0, background: muted ? "transparent" : watch ? "#1C2230" : "#9C8CFF", color: muted ? "var(--text-2)" : watch ? "#8FA8FF" : "#120D2E", fontFamily: "inherit", fontSize: 14, fontWeight: 600, cursor: "pointer" }}
         >
           {action}
         </button>
