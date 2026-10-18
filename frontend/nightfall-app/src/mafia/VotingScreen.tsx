@@ -1,10 +1,11 @@
 import { useState } from "react";
+import type { VoteView } from "../api/types";
 import { useGame } from "./GameProvider";
 import { useLanguage } from "../i18n/LanguageContext";
 import { Bar, Body, PhaseHeader, Screen } from "../ui/components";
 import { Icon } from "../ui/Icon";
 import { findPlayer, playerColor } from "./roles";
-import { ActionError, ReconnectingBanner, VoiceStatusLine } from "./parts";
+import { ActionError, PhaseTimer, ReconnectingBanner, VoiceStatusLine } from "./parts";
 import { haptic } from "../lib/haptics";
 
 export function VotingScreen() {
@@ -20,13 +21,18 @@ export function VotingScreen() {
   };
 
   const alivePlayers = view.players.filter((p) => p.isAlive);
+  // Round 2 (after a tie and the defences) is between the tied players only.
+  const revote = view.votingRound === 2;
+  const runoff = new Set(view.runoffCandidateIds ?? []);
+  const candidates = revote ? alivePlayers.filter((p) => runoff.has(p.playerId)) : alivePlayers;
+  const roundOne = revote ? view.lastVotingElimination?.ballots ?? [] : [];
   const votes = view.votes ?? [];
   const mine = votes.find((v) => v.voterPlayerId === view.yourPlayerId);
   const voted = Boolean(mine);
   const alive = view.youAreAlive;
   const open = alive && !voted;
 
-  const tally = alivePlayers
+  const tally = candidates
     .map((p) => {
       const by = votes.filter((v) => v.targetPlayerId === p.playerId).map((v) => name(v.voterPlayerId));
       return { p, by, count: by.length };
@@ -48,8 +54,8 @@ export function VotingScreen() {
   return (
     <Screen theme="day">
       <PhaseHeader
-        kicker={t("dayN", { number: view.nightNumber })}
-        title={t("townVote")}
+        kicker={revote ? t("revoteKicker", { number: view.nightNumber }) : t("dayN", { number: view.nightNumber })}
+        title={revote ? t("revoteTitle") : t("townVote")}
         right={
           <div style={{ textAlign: "end" }}>
             <div className="num" style={{ fontSize: 22, fontWeight: 700 }}>{votes.length} / {alivePlayers.length}</div>
@@ -60,7 +66,9 @@ export function VotingScreen() {
 
       <Body tight>
         <ReconnectingBanner />
-        <div className="stack" style={{ gap: 8 }} role="radiogroup" aria-label={t("townVote")}>
+        <PhaseTimer deadline={view.phaseDeadline} total={view.rules.votingSeconds} label={(seconds) => t("votingSecondsLeft", { seconds })} />
+        {revote && <p style={{ margin: 0, fontSize: 14, lineHeight: 1.5, color: "var(--text-2)" }}>{t("revoteRule")}</p>}
+        <div className="stack" style={{ gap: 8 }} role="radiogroup" aria-label={revote ? t("revoteTitle") : t("townVote")}>
           {tally.map(({ p, by, count }) => {
             const you = p.playerId === view.yourPlayerId;
             const chosen = (open && picked === p.playerId) || mine?.targetPlayerId === p.playerId;
@@ -99,6 +107,13 @@ export function VotingScreen() {
           })}
         </div>
 
+        {revote && roundOne.length > 0 && (
+          <section className="stack" style={{ gap: 8, padding: 14, borderRadius: 18, background: "#1A1611" }}>
+            <h2 style={{ fontSize: 14, fontWeight: 600 }}>{t("roundOne")}</h2>
+            <BallotRows ballots={roundOne} name={name} />
+          </section>
+        )}
+
         <section className="stack" style={{ gap: 8, padding: 14, borderRadius: 18, background: "#1A1611" }} aria-live="polite">
           <h2 style={{ fontSize: 14, fontWeight: 600 }}>{t("liveVoting")}</h2>
           {votes.length === 0 && <div style={{ fontSize: 14, color: "var(--text-2)" }}>{t("waitingForVotes")}</div>}
@@ -126,7 +141,7 @@ export function VotingScreen() {
               {t("abstain")}
             </button>
             <button type="button" className="btn btn--primary grow" style={{ fontSize: 15 }} disabled={!picked || busy} onClick={() => void cast(picked)}>
-              {picked ? t("voteToEliminate", { name: name(picked) }) : t("pickAPlayer")}
+              {picked ? t("voteToEliminate", { name: name(picked) }) : revote ? t("pickTiedPlayer") : t("pickAPlayer")}
             </button>
           </div>
         ) : (
@@ -138,5 +153,29 @@ export function VotingScreen() {
         <VoiceStatusLine />
       </Bar>
     </Screen>
+  );
+}
+
+/** A finished round's count per player, most votes first, with abstentions last. */
+export function BallotRows({ ballots, name, highlightTop = false }: { ballots: VoteView[]; name: (id: string) => string; highlightTop?: boolean }) {
+  const { t, n } = useLanguage();
+  const counts = new Map<string, number>();
+  let abstained = 0;
+  for (const b of ballots) {
+    if (b.targetPlayerId) counts.set(b.targetPlayerId, (counts.get(b.targetPlayerId) ?? 0) + 1);
+    else abstained++;
+  }
+  const rows = [...counts.entries()].map(([id, count]) => ({ key: id, label: name(id), count })).sort((a, b) => b.count - a.count);
+  if (abstained) rows.push({ key: "abstain", label: t("abstainRow"), count: abstained });
+  const top = rows.reduce((m, r) => Math.max(m, r.count), 0);
+  return (
+    <>
+      {rows.map((r) => (
+        <div key={r.key} className="row row--between" style={{ fontSize: 14, color: "var(--text-2)" }}>
+          <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.label}</span>
+          <span className="num" style={{ fontWeight: 700, color: highlightTop && r.count === top && r.key !== "abstain" ? "#F0A83A" : undefined }}>{n(r.count)}</span>
+        </div>
+      ))}
+    </>
   );
 }

@@ -4,7 +4,7 @@ import { useGame } from "./GameProvider";
 import { useLanguage, type TranslationKey } from "../i18n/LanguageContext";
 import { Banner, Bar, Body, IconDisc, PhaseHeader, ProgressBar, Screen } from "../ui/components";
 import { findPlayer, isMafiaRole, nightLabelNumber, playerColor, roleMeta } from "./roles";
-import { ActionError, CreatorBox, ReconnectingBanner, RolePeek, VoiceStatusLine } from "./parts";
+import { ActionError, CreatorBox, PhaseTimer, ReconnectingBanner, RolePeek, VoiceStatusLine } from "./parts";
 import { haptic } from "../lib/haptics";
 
 const actions: Partial<Record<Role, { type: NightActionType; verb: TranslationKey; prompt: TranslationKey; includeSelf: boolean }>> = {
@@ -125,6 +125,10 @@ export function NightScreen() {
 
       <Body tight>
         <ReconnectingBanner />
+        <PhaseTimer
+          deadline={view.phaseDeadline} total={view.rules.nightSeconds} label={(seconds) => t("nightSecondsLeft", { seconds })}
+          accent="#9C8CFF" track="#262A44" bg="#151829" edge="#262A44"
+        />
         {info && canAct && <Banner icon="info" iconColor={meta.fg} background={infoBg}><span style={{ color: "var(--text-soft)" }}>{info}</span></Banner>}
 
         {canAct && action ? (

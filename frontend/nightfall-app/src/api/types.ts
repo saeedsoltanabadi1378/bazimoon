@@ -11,7 +11,9 @@ export type GamePhase =
   | "Day"
   | "Voting"
   | "Results"
-  | "Ended";
+  | "Ended"
+  | "Defence"
+  | "LastWords";
 
 export type Role = "Villager" | "Detective" | "Doctor" | "Mafia" | "Godfather";
 
@@ -45,6 +47,29 @@ export interface EliminationView {
   tiedPlayers: string[] | null;
   godfatherPromoted: boolean;
   ballots: VoteView[] | null;
+  /** 1 for the day's vote, 2 for the re-vote between the players tied in round 1. */
+  round: number;
+  /** Round 1's ballots, when this result is round 2. */
+  previousBallots: VoteView[] | null;
+}
+
+/** The player saying their last words, why they are out, and when their time is up. */
+export interface LastWordsView {
+  playerId: string;
+  cause: EliminationCause;
+  deadline: string;
+  youAreSpeaking: boolean;
+}
+
+/** The table's timers in seconds (null night or voting: the creator moves it on) and rule switches. */
+export interface RulesView {
+  speakerSeconds: number;
+  challengeSeconds: number;
+  defenceSeconds: number;
+  lastWordsSeconds: number;
+  nightSeconds: number | null;
+  votingSeconds: number | null;
+  lastWordsForNightKills: boolean;
 }
 
 export interface MafiaMemberView {
@@ -89,6 +114,13 @@ export interface GameView {
   youCannotHealSelf: boolean;
   nightProgress: NightProgressView | null;
   rematchGameId: string | null;
+  /** When a timed Night, Voting or LastWords phase moves on by itself. */
+  phaseDeadline: string | null;
+  votingRound: number;
+  /** The tied players: they defend, and round 2 is between them only. */
+  runoffCandidateIds: string[] | null;
+  lastWords: LastWordsView | null;
+  rules: RulesView;
 }
 
 /** Your rating outcome for a finished game (from the history service). */

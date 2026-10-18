@@ -106,6 +106,8 @@ export const PHASE_COLORS: Record<string, [string, string, string]> = {
   Day: ["#2A2113", "#F0A83A", ICONS.sun],
   Voting: ["#2A1418", "#F08A7A", ICONS.vote],
   Results: ["#2A1418", "#F08A7A", ICONS.vote],
+  Defence: ["#2A2113", "#F0A83A", ICONS.sun],
+  LastWords: ["#2A1418", "#F08A7A", ICONS.vote],
   Ended: ["#1E2138", "#C9C8DC", ICONS.lobby],
 };
 
@@ -120,6 +122,8 @@ export function usePhaseLabel() {
       case "Day": return t("phaseDay", { round });
       case "Voting": return t("phaseVoting");
       case "Results": return t("phaseResults");
+      case "Defence": return t("phaseDefence");
+      case "LastWords": return t("phaseLastWords");
       default: return t("phaseEnded");
     }
   };

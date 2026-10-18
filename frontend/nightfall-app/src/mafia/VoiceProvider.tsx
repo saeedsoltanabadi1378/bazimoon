@@ -16,12 +16,13 @@ interface VoiceState {
 
 const VoiceContext = createContext<VoiceState | null>(null);
 
-const voicePhases = new Set(["NightZero", "Night", "Day", "Voting", "Results"]);
+const voicePhases = new Set(["NightZero", "Night", "Day", "Defence", "Voting", "Results", "LastWords"]);
 
 /**
  * Voice follows the game automatically: at night living Mafia talk in their private channel while
  * everyone else listens to the room; by day the room opens and the API decides who may speak
- * (only the player holding the floor during the timed discussion). The session re-joins whenever
+ * (only the player holding the floor during the timed discussion or a defence, and a player who is
+ * out during their last words). The session re-joins whenever
  * the phase or the active speaker changes so the token's publish rights stay current.
  */
 export function VoiceProvider({ children }: { children: ReactNode }) {

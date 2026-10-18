@@ -92,6 +92,21 @@ export function LobbyScreen() {
           <p className="small muted">{note}</p>
         </section>
 
+        <section className="stack stack--sm" aria-labelledby="table-rules">
+          <h2 id="table-rules" className="h2">{t("tableRules")}</h2>
+          <p className="small muted" style={{ margin: 0 }}>
+            {[
+              t("ruleSpeaking", { seconds: view.rules.speakerSeconds }),
+              t("ruleChallenge", { seconds: view.rules.challengeSeconds }),
+              t("ruleDefence", { seconds: view.rules.defenceSeconds }),
+              t("ruleLastWords", { seconds: view.rules.lastWordsSeconds }),
+              view.rules.nightSeconds ? t("ruleNight", { seconds: view.rules.nightSeconds }) : t("ruleNightOff"),
+              view.rules.votingSeconds ? t("ruleVoting", { seconds: view.rules.votingSeconds }) : t("ruleVotingOff"),
+            ].join(" · ")}
+          </p>
+          {view.rules.lastWordsForNightKills && <p className="small muted" style={{ margin: 0 }}>{t("ruleNightLastWords")}</p>}
+        </section>
+
         <ul className="list" style={{ listStyle: "none", margin: 0, padding: 0 }} aria-label={t("playersInLobby")}>
           {view.players.map((p) => {
             const you = p.playerId === view.yourPlayerId;

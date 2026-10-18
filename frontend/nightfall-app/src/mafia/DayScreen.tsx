@@ -52,7 +52,7 @@ export function DayScreen() {
   const challenge = discussion?.segmentType === "Challenge";
   const youActive = discussion?.activePlayerId === view.yourPlayerId;
   const youSpeaker = youActive && !challenge;
-  const total = challenge ? 40 : 60;
+  const total = challenge ? view.rules.challengeSeconds : view.rules.speakerSeconds;
   const seconds = discussion ? Math.max(0, Math.ceil((new Date(discussion.deadline).getTime() - now) / 1000)) : 0;
   const frac = Math.min(1, seconds / total);
   const clock = `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
@@ -118,7 +118,7 @@ export function DayScreen() {
           <section className="stack" style={{ gap: 8 }}>
             <div className="row row--between" style={{ fontSize: 13 }}>
               <span className="strong">{t("speakingOrder")}</span>
-              <span className="muted">{t("turnLengths")}</span>
+              <span className="muted">{t("turnLengths", { speaker: view.rules.speakerSeconds, challenge: view.rules.challengeSeconds })}</span>
             </div>
             <ol className="row" style={{ gap: 8, overflowX: "auto", listStyle: "none", margin: 0, padding: 0 }}>
               {order.map((id) => {

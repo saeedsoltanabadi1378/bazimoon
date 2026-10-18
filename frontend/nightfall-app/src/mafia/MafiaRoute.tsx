@@ -7,6 +7,8 @@ import { FirstNightScreen } from "./FirstNightScreen";
 import { NightScreen } from "./NightScreen";
 import { DayScreen } from "./DayScreen";
 import { VotingScreen } from "./VotingScreen";
+import { DefenceScreen } from "./DefenceScreen";
+import { LastWordsScreen } from "./LastWordsScreen";
 import { ResultsScreen } from "./ResultsScreen";
 import { GameOverScreen } from "./GameOverScreen";
 import { LoadingScreen, StateScreen } from "../app/StateScreen";
@@ -34,13 +36,18 @@ function PhaseRouter() {
   const [revealed, setRevealed] = useState(() => readLocal<boolean>(revealKey(gameId), false));
   const [verdictFirst, setVerdictFirst] = useState(false);
   const lastPhase = useRef(view?.phase);
+  const lastWordsCause = useRef(view?.lastWords?.cause);
 
-  // When the town's vote ends the game, show the verdict before the final results (design flow).
+  // When the town's vote ends the game (after the last words), show the verdict before the final
+  // results (design flow).
+  const cause = view?.lastWords?.cause;
   useEffect(() => {
     const phase = view?.phase;
-    if (lastPhase.current === "Voting" && phase === "Ended") setVerdictFirst(true);
+    const fromVote = lastPhase.current === "Voting" || (lastPhase.current === "LastWords" && lastWordsCause.current === "Vote");
+    if (fromVote && phase === "Ended") setVerdictFirst(true);
     lastPhase.current = phase;
-  }, [view?.phase]);
+    if (cause) lastWordsCause.current = cause;
+  }, [view?.phase, cause]);
 
   if (status === "loading") return <LoadingScreen label={t("loadingGame")} />;
   if (status === "not-found") {
@@ -78,8 +85,12 @@ function PhaseRouter() {
       return <NightScreen />;
     case "Day":
       return <DayScreen />;
+    case "Defence":
+      return <DefenceScreen />;
     case "Voting":
       return <VotingScreen />;
+    case "LastWords":
+      return <LastWordsScreen />;
     case "Results":
       return <ResultsScreen />;
     case "Ended":

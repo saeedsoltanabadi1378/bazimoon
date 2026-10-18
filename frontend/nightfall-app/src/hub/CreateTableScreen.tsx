@@ -4,13 +4,26 @@ import { useNavigation } from "../app/router";
 import { Body, Screen, TopBar } from "../ui/components";
 import { Icon } from "../ui/Icon";
 import { useHub } from "./HubData";
+import type { TableRules } from "../api/hub";
 import { haptic } from "../lib/haptics";
 
 const MIN_SEATS = 3;
 const MAX_SEATS = 12;
 
-/** Open a Mafia table: public (listed for everyone) or private, a name and seats. No group is
- * needed; the host shares the invite link from the lobby. */
+type TimerKey = "speakerSeconds" | "challengeSeconds" | "defenceSeconds" | "lastWordsSeconds" | "nightSeconds" | "votingSeconds";
+
+/** The choices the server accepts for each timer (0 = off: the creator moves that phase on by hand). */
+const TIMERS: { key: TimerKey; label: "timerSpeak" | "timerChallenge" | "timerDefence" | "timerLastWords" | "timerNight" | "timerVoting"; choices: number[]; initial: number }[] = [
+  { key: "speakerSeconds", label: "timerSpeak", choices: [30, 45, 60, 90], initial: 60 },
+  { key: "challengeSeconds", label: "timerChallenge", choices: [20, 30, 40], initial: 40 },
+  { key: "defenceSeconds", label: "timerDefence", choices: [20, 30, 45], initial: 30 },
+  { key: "lastWordsSeconds", label: "timerLastWords", choices: [10, 20, 30], initial: 20 },
+  { key: "nightSeconds", label: "timerNight", choices: [0, 45, 60, 90], initial: 0 },
+  { key: "votingSeconds", label: "timerVoting", choices: [0, 30, 45, 60], initial: 0 },
+];
+
+/** Open a Mafia table: public (listed for everyone) or private, a name, seats, timers and rules.
+ * No group is needed; the host shares the invite link from the lobby. */
 export function CreateTableScreen() {
   const { t, n } = useLanguage();
   const { back, replace } = useNavigation();
@@ -18,6 +31,11 @@ export function CreateTableScreen() {
   const [isOpen, setIsOpen] = useState(true);
   const [name, setName] = useState("");
   const [seats, setSeats] = useState(10);
+  const [timersOpen, setTimersOpen] = useState(true);
+  const [timers, setTimers] = useState<Record<TimerKey, number>>(
+    () => Object.fromEntries(TIMERS.map((tm) => [tm.key, tm.initial])) as Record<TimerKey, number>,
+  );
+  const [nightLastWords, setNightLastWords] = useState(false);
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
 
@@ -25,7 +43,8 @@ export function CreateTableScreen() {
     setBusy(true);
     setFailed(false);
     try {
-      const { gameId } = await api.createTable({ name: name.trim() || null, isOpen, seats });
+      const rules: TableRules = { ...timers, lastWordsForNightKills: nightLastWords };
+      const { gameId } = await api.createTable({ name: name.trim() || null, isOpen, seats, rules });
       haptic.success();
       replace({ name: "mafia", gameId });
     } catch {
@@ -39,6 +58,7 @@ export function CreateTableScreen() {
     { open: true, title: t("publicTable"), desc: t("publicTableDesc"), icon: "globe" as const, bg: "#13302C", fg: "#5FD0BE" },
     { open: false, title: t("privateTable"), desc: t("privateTableDesc"), icon: "lock" as const, bg: "#1E2138", fg: "#B79CF2" },
   ];
+  const sec = (v: number) => (v === 0 ? t("timerOff") : t("secondsShort", { count: v }));
   const selected = (on: boolean) => ({ border: `2px solid ${on ? "#9C8CFF" : "#262A44"}`, background: on ? "#1A1836" : "var(--surface)" });
 
   return (
@@ -87,6 +107,82 @@ export function CreateTableScreen() {
             <button type="button" className="btn btn--outline" aria-label={t("moreSeats")} disabled={seats >= MAX_SEATS} onClick={() => setSeats((s) => s + 1)} style={{ width: 44, minHeight: 44, padding: 0, fontSize: 18 }}>+</button>
           </div>
         </div>
+        <section className="stack" aria-labelledby="timers-h" style={{ gap: 12, padding: 14, borderRadius: 18, background: "var(--surface)" }}>
+          <button
+            type="button"
+            aria-expanded={timersOpen}
+            aria-controls="timers-body"
+            onClick={() => setTimersOpen((o) => !o)}
+            className="row"
+            style={{ gap: 10, minHeight: 44, padding: 0, border: 0, background: "transparent", color: "var(--text)", font: "inherit", textAlign: "start", cursor: "pointer" }}
+          >
+            <span style={{ width: 32, height: 32, flex: "none", borderRadius: 10, background: "#1E2138", color: "#9C8CFF", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <Icon name="clock" size={17} />
+            </span>
+            <span className="grow stack" style={{ gap: 0 }}>
+              <span id="timers-h" style={{ fontSize: 15, fontWeight: 600 }}>{t("timers")}</span>
+              <span className="tiny muted">{t("timersSummary", { speak: sec(timers.speakerSeconds), challenge: sec(timers.challengeSeconds), night: sec(timers.nightSeconds) })}</span>
+            </span>
+            <span aria-hidden="true" style={{ display: "flex", transform: timersOpen ? "rotate(-90deg)" : "rotate(90deg)" }}><Icon name="forward" size={18} /></span>
+          </button>
+          {timersOpen && (
+            <div id="timers-body" className="stack" style={{ gap: 14 }}>
+              {TIMERS.map((tm) => (
+                <div key={tm.key} role="radiogroup" aria-label={t(tm.label)} className="stack" style={{ gap: 6 }}>
+                  <span style={{ fontSize: 13, fontWeight: 600 }}>{t(tm.label)}</span>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: 6 }}>
+                    {tm.choices.map((v) => {
+                      const on = timers[tm.key] === v;
+                      return (
+                        <button
+                          key={v}
+                          type="button"
+                          role="radio"
+                          aria-checked={on}
+                          onClick={() => {
+                            haptic.select();
+                            setTimers((cur) => ({ ...cur, [tm.key]: v }));
+                          }}
+                          style={{
+                            minHeight: 44, borderRadius: 12, border: `1.5px solid ${on ? "#9C8CFF" : "#262A44"}`, background: on ? "#1A1836" : "#0F1224",
+                            color: on ? "var(--text)" : "var(--text-2)", font: "inherit", fontSize: 13, fontWeight: 600, cursor: "pointer",
+                          }}
+                        >
+                          {sec(v)}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+              <span className="tiny muted" style={{ lineHeight: 1.45 }}>{t("timersOffNote")}</span>
+            </div>
+          )}
+        </section>
+
+        <section className="stack" aria-labelledby="rules-h" style={{ gap: 4, padding: 14, borderRadius: 18, background: "var(--surface)" }}>
+          <h2 id="rules-h" style={{ margin: "0 0 6px", fontSize: 15, fontWeight: 600 }}>{t("tableRulesTitle")}</h2>
+          <div className="row" style={{ gap: 12 }}>
+            <div className="grow stack" style={{ gap: 2 }}>
+              <span style={{ fontSize: 14, fontWeight: 600 }}>{t("lastWordsNightTitle")}</span>
+              <span className="tiny muted" style={{ lineHeight: 1.4 }}>{t("lastWordsNightDesc")}</span>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={nightLastWords}
+              aria-label={t("lastWordsNightTitle")}
+              onClick={() => setNightLastWords((v) => !v)}
+              style={{ width: 52, height: 30, flex: "none", padding: 3, borderRadius: 999, border: 0, background: nightLastWords ? "#5FD0BE" : "#3A3F5E", display: "flex", justifyContent: nightLastWords ? "flex-end" : "flex-start", cursor: "pointer" }}
+            >
+              <span style={{ width: 24, height: 24, borderRadius: 999, background: "#EDEBF5" }} />
+            </button>
+          </div>
+          <p className="tiny muted" style={{ margin: "10px 0 0", paddingTop: 10, borderTop: "1px solid #1E2138", lineHeight: 1.45 }}>
+            {t("rulesAlwaysNote")} {t("rulesInLobbyNote")}
+          </p>
+        </section>
+
         {failed && <p role="alert" className="small" style={{ color: "#F08A7A" }}>{t("genericError")}</p>}
       </Body>
 

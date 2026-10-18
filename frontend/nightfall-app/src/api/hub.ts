@@ -195,6 +195,18 @@ export interface Archive {
   days: ArchiveDay[];
 }
 
+/** Timers in seconds and rule switches for a new table. nightSeconds / votingSeconds of 0 mean the
+ * creator moves that phase on by hand. */
+export interface TableRules {
+  speakerSeconds: number;
+  challengeSeconds: number;
+  defenceSeconds: number;
+  lastWordsSeconds: number;
+  nightSeconds: number;
+  votingSeconds: number;
+  lastWordsForNightKills: boolean;
+}
+
 export const hubApi = (api: NightfallApiClient) => ({
   profile: () => api.request<Profile>("GET", "/api/me/profile"),
   saveSettings: (settings: Settings) => api.request<Settings>("PUT", "/api/me/settings", settings),
@@ -204,7 +216,7 @@ export const hubApi = (api: NightfallApiClient) => ({
   /** "open": public tables; "mine": tables you host or have a seat at. */
   tables: (scope: "open" | "mine") => api.request<Table[]>("GET", `/api/tables?scope=${scope}`),
   /** isOpen: public (listed) or private (invite link or code only). */
-  createTable: (body: { name: string | null; isOpen: boolean; seats: number }) =>
+  createTable: (body: { name: string | null; isOpen: boolean; seats: number; rules?: TableRules }) =>
     api.request<{ gameId: string }>("POST", "/api/tables", body),
   resolveTable: (code: string) => api.request<{ gameId: string }>("GET", `/api/tables/code/${encodeURIComponent(code)}`),
   tableInfo: (gameId: string) => api.request<TableInfo>("GET", `/api/tables/${gameId}`),

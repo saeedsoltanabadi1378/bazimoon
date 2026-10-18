@@ -4,6 +4,7 @@ import { Bar, Body, IconDisc, RoleTag, Screen } from "../ui/components";
 import { Icon } from "../ui/Icon";
 import { findPlayer, isMafiaRole, playerColor, roleMeta } from "./roles";
 import { ActionError, ReconnectingBanner, useRoleName } from "./parts";
+import { BallotRows } from "./VotingScreen";
 
 /**
  * Verdict after a vote. When the vote ended the game, `onSeeFinal` is set and the footer leads
@@ -38,7 +39,9 @@ export function ResultsScreen({ onSeeFinal }: { onSeeFinal?: () => void }) {
 
   const promotedName = view.players.find((p) => p.wasPromoted && p.isAlive);
   const meta = out?.revealedRole ? roleMeta[out.revealedRole] : null;
-  const headline = out ? t("verdictIn") : tie ? t("tiedVote") : t("noVerdict");
+  // Round 2 is the re-vote between the players tied in round 1.
+  const revote = result?.round === 2;
+  const headline = out ? t("verdictIn") : tie ? (revote ? t("tiedAgain") : t("tiedVote")) : t("noVerdict");
   const tiedNames = (result?.tiedPlayers ?? []).map((id) => name(id));
 
   return (
@@ -55,7 +58,7 @@ export function ResultsScreen({ onSeeFinal }: { onSeeFinal?: () => void }) {
             <span className="avatar display" aria-hidden="true" style={{ width: 96, height: 96, fontSize: 38, fontWeight: 800, background: playerColor(view, out.playerId), filter: "grayscale(0.6)" }}>
               {Array.from(out.telegramUsername)[0]?.toUpperCase()}
             </span>
-            <div style={{ fontSize: 15, color: "var(--text-2)" }}>{t("townVotedOut")}</div>
+            <div style={{ fontSize: 15, color: "var(--text-2)" }}>{revote ? t("roundTwoVotedOut") : t("townVotedOut")}</div>
             <div className="display" style={{ fontSize: 30, lineHeight: 1 }}>{name(out.playerId)}</div>
             {meta && out.revealedRole && <RoleTag icon={meta.icon} bg={meta.bg} fg={meta.fg} label={t("theyWereThe", { role: roleName(out.revealedRole) })} />}
           </section>
@@ -63,9 +66,11 @@ export function ResultsScreen({ onSeeFinal }: { onSeeFinal?: () => void }) {
           <section className="stack center" style={{ gap: 10, padding: "28px 16px", borderRadius: 24, background: "var(--surface)", textAlign: "center" }}>
             <IconDisc icon="scales" size={72} iconSize={32} bg="#2B241B" fg="#F0A83A" strokeWidth={2} />
             <div style={{ fontSize: 18, fontWeight: 600 }}>
-              {tie ? t("tiedBetween", { names: tiedNames.join(t("listAnd")) }) : t("noVotesCast")}
+              {tie
+                ? t(revote ? "bothRoundsTied" : "tiedBetween", { names: tiedNames.join(t("listAnd")) })
+                : t("noVotesCast")}
             </div>
-            <div style={{ fontSize: 14, color: "var(--text-2)" }}>{t("nobodyEliminated")}</div>
+            <div style={{ fontSize: 14, color: "var(--text-2)" }}>{revote ? t("nobodyOutToday") : t("nobodyEliminated")}</div>
           </section>
         )}
 
@@ -81,7 +86,21 @@ export function ResultsScreen({ onSeeFinal }: { onSeeFinal?: () => void }) {
           </div>
         )}
 
-        {tally.length > 0 && (
+        {revote && (
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 8 }}>
+            {[
+              { title: t("roundOne"), ballots: result?.previousBallots ?? [] },
+              { title: t("roundTwo"), ballots },
+            ].map((round) => (
+              <section key={round.title} className="stack" style={{ gap: 8, padding: 12, borderRadius: 16, background: "#1A1611", border: "1px solid #2B241B" }}>
+                <h2 style={{ fontSize: 13, fontWeight: 600, color: "var(--muted)" }}>{round.title}</h2>
+                <BallotRows ballots={round.ballots} name={name} highlightTop />
+              </section>
+            ))}
+          </div>
+        )}
+
+        {!revote && tally.length > 0 && (
           <section className="stack" style={{ gap: 8 }}>
             <h2 style={{ fontSize: 14, fontWeight: 600 }}>{t("finalTally")}</h2>
             {tally.map((row) => (

@@ -5,8 +5,32 @@ import { Icon } from "../ui/Icon";
 import { Banner } from "../ui/components";
 import { roleMeta, eliminatedMeta } from "./roles";
 import { useGame } from "./GameProvider";
+import { useSecondsLeft } from "./timers";
 import { useVoice } from "./VoiceProvider";
 import { haptic } from "../lib/haptics";
+
+/** The countdown strip for a timed night or vote (the table's Night or Voting timer). Shows nothing when untimed. */
+export function PhaseTimer({ deadline, total, label, accent = "#F0A83A", track = "#342C22", bg = "#241D12", edge = "#4A3A22" }: {
+  deadline: string | null | undefined;
+  total: number | null | undefined;
+  label: (seconds: number) => string;
+  accent?: string;
+  track?: string;
+  bg?: string;
+  edge?: string;
+}) {
+  const seconds = useSecondsLeft(deadline);
+  if (seconds === null || !total) return null;
+  return (
+    <div className="row" style={{ gap: 10, padding: "10px 14px", borderRadius: 14, background: bg, border: `1px solid ${edge}` }} role="timer" aria-live="off">
+      <Icon name="clock" size={18} color={accent} />
+      <span className="grow" style={{ fontSize: 14, fontWeight: 600 }}>{label(seconds)}</span>
+      <span style={{ width: 80, height: 6, borderRadius: 999, background: track, overflow: "hidden", flex: "none" }}>
+        <span style={{ display: "block", width: `${Math.min(100, (seconds / total) * 100)}%`, height: 6, background: accent, transition: "width 250ms linear" }} />
+      </span>
+    </div>
+  );
+}
 
 export function useRoleName() {
   const { t } = useLanguage();
