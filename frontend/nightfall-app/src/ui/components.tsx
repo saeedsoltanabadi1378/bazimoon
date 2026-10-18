@@ -1,4 +1,4 @@
-import { useEffect, type CSSProperties, type ReactNode } from "react";
+import { forwardRef, useEffect, type CSSProperties, type ReactNode } from "react";
 import { Icon, type IconName } from "./Icon";
 import { setTelegramColors } from "../lib/telegram";
 import { useLanguage } from "../i18n/LanguageContext";
@@ -27,23 +27,23 @@ export function Bar({ children, row }: { children: ReactNode; row?: boolean }) {
   return <div className={`screen__bar${row ? " screen__bar--row" : ""}`}>{children}</div>;
 }
 
-export function IconButton({ icon, label, onClick, round, disabled, style }: {
+export const IconButton = forwardRef<HTMLButtonElement, {
   icon: IconName;
   label: string;
   onClick?: () => void;
   round?: boolean;
   disabled?: boolean;
   style?: CSSProperties;
-}) {
+}>(function IconButton({ icon, label, onClick, round, disabled, style }, ref) {
   const flip = icon === "back" || icon === "forward" || icon === "prev";
   return (
-    <button type="button" className={`icon-btn${round ? " icon-btn--round" : ""}`} aria-label={label} onClick={onClick} disabled={disabled} style={style}>
+    <button ref={ref} type="button" className={`icon-btn${round ? " icon-btn--round" : ""}`} aria-label={label} onClick={onClick} disabled={disabled} style={style}>
       <span className={flip ? "flip-rtl" : undefined} style={{ display: "flex" }}>
         <Icon name={icon} size={icon === "close" ? 20 : 22} />
       </span>
     </button>
   );
-}
+});
 
 /** Back button + title block used at the top of most sub-screens. */
 export function TopBar({ onBack, backLabel, title, subtitle, right, titleSize = 26 }: {
