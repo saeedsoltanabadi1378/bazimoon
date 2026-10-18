@@ -11,9 +11,9 @@ public static class AuthEndpoints
     {
         var group = app.MapGroup("/api/auth");
 
-        group.MapPost("/guest", async (GuestAuthRequest? request, UserAccountService accounts, AuthSessionFactory sessions) =>
+        group.MapPost("/guest", async (GuestAuthRequest? request, HttpContext http, UserAccountService accounts, AuthSessionFactory sessions) =>
         {
-            var user = await accounts.CreateGuestAsync(request?.DisplayName, request?.Language);
+            var user = await accounts.CreateGuestAsync(request?.DisplayName, request?.Language, http.Request.Headers.UserAgent.ToString());
             return Results.Ok(await sessions.CreateAsync(user));
         })
         .WithName("SignInAsGuest")

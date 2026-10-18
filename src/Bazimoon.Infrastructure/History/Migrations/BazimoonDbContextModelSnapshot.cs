@@ -649,6 +649,17 @@ namespace Bazimoon.Infrastructure.History.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<DateTime?>("BotMarkedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("BotMarkedBy")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<string>("BotReason")
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 

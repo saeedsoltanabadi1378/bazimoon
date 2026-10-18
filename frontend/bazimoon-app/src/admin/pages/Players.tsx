@@ -150,6 +150,14 @@ function PlayerPanel({ d, color, onBotChanged }: { d: PlayerDetail; color: strin
           <span style={{ fontSize: 14, fontWeight: 600 }}>{d.isBot ? t("botMarked") : t("botReal")}</span>
           <button type="button" className={d.isBot ? "adm-btn" : "adm-btn primary"} disabled={busy} onClick={toggleBot}>{d.isBot ? t("unmarkBot") : t("markBot")}</button>
         </div>
+        {d.isBot && d.botReason && (
+          <span className="small text-2" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8FA8FF" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ flex: "none" }}><rect x="5" y="8" width="14" height="11" rx="2" /><path d="M12 4v4M9 13h.01M15 13h.01" /></svg>
+            <span>{d.botReason === "crawler"
+              ? t("botAuto", { date: d.botMarkedAt ? date(d.botMarkedAt) : t("none") })
+              : t("botByAdmin", { name: d.botMarkedBy ?? "admin", date: d.botMarkedAt ? date(d.botMarkedAt) : t("none") })}</span>
+          </span>
+        )}
         <span className="tiny muted" style={{ lineHeight: 1.45 }}>{t("botNote")}</span>
         {error && <span className="tiny" role="alert" style={{ color: "#F08A7A" }}>{error}</span>}
       </div>

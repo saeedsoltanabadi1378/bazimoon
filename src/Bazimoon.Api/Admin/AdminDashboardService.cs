@@ -212,7 +212,7 @@ public sealed class AdminDashboardService
             puzzles.Count(p => p.Solved),
             Progression.CurrentStreak(s.PuzzleStreak, s.LastPuzzleDay, s.StreakFreezes, Today), s.BestPuzzleStreak, s.StreakFreezes,
             s.Language, recent, coupleStatus,
-            MafiaStats.ByRole(rows), MafiaStats.Skills(rows), profile?.IsBot ?? false);
+            MafiaStats.ByRole(rows), MafiaStats.Skills(rows), profile?.IsBot ?? false, profile?.BotReason, profile?.BotMarkedAt, profile?.BotMarkedBy);
     }
 
     /// <summary>Marks a player as a bot or a real player. False when there is no such player.</summary>
@@ -222,6 +222,9 @@ public sealed class AdminDashboardService
         if (user is null) return false;
         if (user.IsBot == isBot) return true;
         user.IsBot = isBot;
+        user.BotReason = isBot ? "admin" : null;
+        user.BotMarkedAt = isBot ? Now.UtcDateTime : null;
+        user.BotMarkedBy = isBot ? actor : null;
         _db.OperationalEvents.Add(new() { Category = "AdminAudit", Message = isBot ? "Player marked as a bot" : "Player marked as not a bot", IsAdminAudit = true,
             TargetType = "Player", TargetId = userId.ToString(), MetadataJson = JsonSerializer.Serialize(new { actor }) });
         await _db.SaveChangesAsync();
@@ -394,7 +397,8 @@ public sealed record AdminCoupleStatusDto(string Status, string? PartnerName, Da
 public sealed record AdminPlayerDetailDto(
     Guid Id, string Name, DateTime Joined, int Level, int Xp, int Rating, string Division, int Tier, int MafiaGames, int MafiaWinRate,
     int PuzzlesSolved, int Streak, int BestStreak, int Freezes, string Language, IReadOnlyList<AdminActivityItemDto> Recent, AdminCoupleStatusDto Couple,
-    IReadOnlyList<RoleStats>? MafiaByRole = null, MafiaSkillStats? MafiaSkills = null, bool IsBot = false);
+    IReadOnlyList<RoleStats>? MafiaByRole = null, MafiaSkillStats? MafiaSkills = null, bool IsBot = false,
+    string? BotReason = null, DateTime? BotMarkedAt = null, string? BotMarkedBy = null);
 public sealed record AdminDailyDto(string Game, string Mode, int Number, int Players, int Solved, int? MedianTimeMs, int? MedianMoves, int? MedianScore);
 public sealed record AdminSeasonDto(int Number, int Day, int Length, DateOnly EndsOn);
 public sealed record AdminDivisionDto(string Name, int Count);

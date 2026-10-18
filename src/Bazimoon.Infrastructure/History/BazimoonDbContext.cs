@@ -33,6 +33,8 @@ public sealed class BazimoonDbContext : DbContext
             b.HasKey(u => u.Id);
             b.Property(u => u.DisplayName).HasMaxLength(64);
             b.Property(u => u.Language).HasMaxLength(8);
+            b.Property(u => u.BotReason).HasMaxLength(16);
+            b.Property(u => u.BotMarkedBy).HasMaxLength(256);
             b.HasIndex(u => new { u.IsGuest, u.LastSeenAt });
         });
 

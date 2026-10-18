@@ -49,9 +49,11 @@ public sealed class UserAccountService
         return user;
     }
 
-    /// <summary>Creates a guest who can play straight away. Without a name they get "Player 1234".</summary>
-    public async Task<UserRecord> CreateGuestAsync(string? displayName, string? language)
+    /// <summary>Creates a guest who can play straight away. Without a name they get "Player 1234".
+    /// A guest created by a crawler or script is marked as a bot straight away.</summary>
+    public async Task<UserRecord> CreateGuestAsync(string? displayName, string? language, string? userAgent = null)
     {
+        bool crawler = BotDetector.IsCrawler(userAgent);
         var now = _clock.GetUtcNow().UtcDateTime;
         var user = new UserRecord
         {
@@ -62,6 +64,9 @@ public sealed class UserAccountService
             Language = language is { } code && code.StartsWith("fa", StringComparison.OrdinalIgnoreCase) ? "fa" : "en",
             CreatedAt = now,
             LastSeenAt = now,
+            IsBot = crawler,
+            BotReason = crawler ? "crawler" : null,
+            BotMarkedAt = crawler ? now : null,
         };
         _db.Users.Add(user);
         await _db.SaveChangesAsync();

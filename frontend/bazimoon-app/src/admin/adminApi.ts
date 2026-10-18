@@ -161,6 +161,10 @@ export interface PlayerDetail {
   mafiaByRole: { role: string; games: number; winRate: number }[] | null;
   /** Totals over the games that have a log; older games are left out. */
   isBot: boolean;
+  /** "crawler" (the system saw a crawler or script at sign-up) or "admin". */
+  botReason: "crawler" | "admin" | null;
+  botMarkedAt: string | null;
+  botMarkedBy: string | null;
   mafiaSkills: { trackedGames: number; checksMade: number; mafiaFound: number; killsBlocked: number; votesCast: number; votesOnMafia: number } | null;
 }
 
