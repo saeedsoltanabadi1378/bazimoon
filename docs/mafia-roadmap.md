@@ -9,6 +9,9 @@ owner's approval. Every string ships in English and Persian. Nothing here is bui
 The owner's answers to the open questions are recorded under **Decisions** at the end and
 are reflected in each section.
 
+> Written when Bazimoon ran as a Telegram Mini App. The Telegram bot and group chats have since
+> been removed; notes about the bot or `CommandDispatcher` below no longer apply.
+
 ## Progress
 
 | Milestone | Status |
