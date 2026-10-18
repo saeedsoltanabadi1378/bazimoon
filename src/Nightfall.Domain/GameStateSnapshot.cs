@@ -32,7 +32,11 @@ public sealed record GameStateSnapshot(
     DateTimeOffset? AutoStartAt = null,
     IReadOnlyDictionary<Guid, int>? Strikes = null,
     IReadOnlyList<Guid>? LastRemovedForInactivity = null,
-    IReadOnlyList<GameEvent>? Events = null);
+    IReadOnlyList<GameEvent>? Events = null,
+    Guid? SilencedPlayerId = null,
+    Guid? LastSilencedTarget = null,
+    Guid? JokerWinnerId = null,
+    IReadOnlyCollection<Guid>? InquiryRevealed = null);
 
 public sealed record PlayerSnapshot(
     Guid Id,
@@ -42,6 +46,9 @@ public sealed record PlayerSnapshot(
     int? GodfatherRank,
     EliminationCause? EliminatedBy = null,
     int? EliminatedRound = null,
-    bool WasPromoted = false);
+    bool WasPromoted = false,
+    bool Revealed = false,
+    bool AbilityUsed = false,
+    bool InquiryUsed = false);
 
 public sealed record NightActionSnapshot(Guid ActorId, Guid TargetId, NightActionType ActionType);

@@ -28,6 +28,18 @@ public sealed class GameConfig
     /// <summary>Players killed at night also get last words, at the start of the day.</summary>
     public bool LastWordsForNightKills { get; init; }
 
+    /// <summary>Which roles are dealt. Classic is the original rule set.</summary>
+    public RoleSetup Roles { get; init; } = RoleSetup.Classic;
+
+    /// <summary>The Detective's check on the Godfather comes back "not Mafia".</summary>
+    public bool GodfatherAppearsInnocent { get; init; }
+
+    /// <summary>The Joker being voted out ends the game (everyone else loses). Off: the Joker wins and play goes on.</summary>
+    public bool JokerWinEndsGame { get; init; } = true;
+
+    /// <summary>Show a player's role once they are out. Off: roles stay hidden until an Inquiry or the end.</summary>
+    public bool RevealRolesOnDeath { get; init; } = true;
+
     public static GameConfig Default { get; } = new();
 
     public static readonly IReadOnlyList<int> SpeakerChoices = [30, 45, 60, 90];

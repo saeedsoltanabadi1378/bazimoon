@@ -244,6 +244,9 @@ namespace Nightfall.Infrastructure.History.Migrations
                     b.Property<int?>("SavesMade")
                         .HasColumnType("integer");
 
+                    b.Property<bool?>("ShotGodfather")
+                        .HasColumnType("boolean");
+
                     b.Property<bool?>("SurvivedRevote")
                         .HasColumnType("boolean");
 

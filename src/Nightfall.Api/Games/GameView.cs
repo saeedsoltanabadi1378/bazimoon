@@ -40,13 +40,24 @@ public sealed record GameView(
     Guid? ControllerPlayerId = null,
     int YourStrikes = 0,
     IReadOnlyList<Guid>? RemovedForInactivity = null,
-    IReadOnlyList<MvpView>? Mvps = null)
+    IReadOnlyList<MvpView>? Mvps = null,
+    Guid? SilencedPlayerId = null,
+    bool YourAbilityUsed = false,
+    bool YourInquiryUsed = false,
+    bool YouSurvivedTheNight = false,
+    SniperShotView? YourShot = null,
+    Guid? MafiaSilenceTargetId = null,
+    Guid? JokerWinnerId = null,
+    SetupView? Setup = null)
 {
     public static GameView For(GameState game, Guid viewerId)
     {
         var viewer = game.GetPlayer(viewerId);
         bool revealAll = game.CurrentPhase == GamePhase.Ended;
-        bool viewerIsMafia = viewer?.IsMafiaAligned == true;
+        bool hideDead = !game.Config.RevealRolesOnDeath && !revealAll;
+        // At tables that hide roles, a player who is out sees no roles at all, their own included, so they can't leak them.
+        bool viewerBlind = hideDead && viewer is { IsAlive: false };
+        bool viewerIsMafia = viewer?.IsMafiaAligned == true && !viewerBlind;
         var controller = game.Controller;
         bool isController = controller?.Id == viewerId;
         // A player's role is shown after their last words, not while they are still speaking.
@@ -57,12 +68,21 @@ public sealed record GameView(
                 p.Id,
                 p.TelegramUsername,
                 p.IsAlive,
-                RevealedRole: (revealAll || (!p.IsAlive && p.Id != speakingLastWords) || p.Id == viewerId) ? p.Role : null,
+                RevealedRole: RoleShown(p) ? p.Role : null,
                 EliminatedBy: p.EliminatedBy,
                 EliminatedRound: p.EliminatedRound,
                 // Who took over as Godfather is Mafia-only knowledge until the game ends.
-                WasPromoted: p.WasPromoted && (revealAll || viewerIsMafia)))
+                WasPromoted: p.WasPromoted && (revealAll || viewerIsMafia),
+                Revealed: p.Revealed))
             .ToList();
+
+        bool RoleShown(Player p)
+        {
+            if (revealAll) return true;
+            if (viewerBlind) return false;
+            if (p.Id == viewerId || p.Revealed || game.InquiryRevealed.Contains(p.Id)) return true;
+            return !p.IsAlive && p.Id != speakingLastWords && !hideDead;
+        }
 
         DetectiveResultView? investigation = null;
         if (viewer?.Role == Role.Detective &&
@@ -77,14 +97,20 @@ public sealed record GameView(
             ? game.InvestigatedTargets
                 .Select(id => game.GetPlayer(id))
                 .Where(p => p is not null)
-                .Select(p => new DetectiveResultView(p!.Id, p.IsMafiaAligned))
+                .Select(p => new DetectiveResultView(p!.Id, game.LooksMafia(p)))
                 .ToList()
             : null;
 
         EliminationView? nightElimination = game.LastNightResult is null
             ? null
             : new EliminationView(game.LastNightResult.Eliminated, game.LastNightResult.TargetWasSaved,
-                GodfatherPromoted: game.LastNightResult.PromotedGodfatherId.HasValue);
+                GodfatherPromoted: game.LastNightResult.PromotedGodfatherId.HasValue,
+                ShotPlayerId: game.LastNightResult.SniperOutcome switch
+                {
+                    SniperOutcome.Hit => game.LastNightResult.SniperTarget,
+                    SniperOutcome.Backfired => game.Players.FirstOrDefault(p => p.Role == Role.Sniper && p.EliminatedBy == EliminationCause.Night && p.EliminatedRound == game.LastNightResult.NightNumber)?.Id,
+                    _ => null
+                });
 
         EliminationView? votingElimination = game.LastVotingResult is null
             ? null
@@ -128,7 +154,7 @@ public sealed record GameView(
             game.Config.MinPlayers,
             players,
             viewerId,
-            viewer?.Role,
+            viewerBlind ? null : viewer?.Role,
             viewer?.IsAlive ?? false,
             investigation,
             nightElimination,
@@ -159,7 +185,16 @@ public sealed record GameView(
             controller?.Id,
             game.Strikes.GetValueOrDefault(viewerId),
             game.LastRemovedForInactivity.Count > 0 ? game.LastRemovedForInactivity.ToList() : null,
-            game.CurrentPhase == GamePhase.Ended ? MvpView.For(game) : null);
+            game.CurrentPhase == GamePhase.Ended ? MvpView.For(game) : null,
+            game.SilencedPlayerId,
+            viewer?.AbilityUsed ?? false,
+            viewer?.InquiryUsed ?? false,
+            game.LastNightResult?.DieHardSurvived == viewerId && game.CurrentPhase is not (GamePhase.Night or GamePhase.Ended),
+            viewer?.Role == Role.Sniper && game.LastNightResult is { SniperTarget: { } shotAt, SniperOutcome: { } outcome } ? new SniperShotView(shotAt, outcome) : null,
+            viewerIsMafia && game.CurrentPhase == GamePhase.Night
+                ? game.PendingNightActions.FirstOrDefault(a => a.ActionType == NightActionType.Silence)?.TargetId : null,
+            game.JokerWinnerId,
+            SetupView.For(game));
     }
 }
 
@@ -188,7 +223,21 @@ public sealed record PlayerView(
     Role? RevealedRole,
     EliminationCause? EliminatedBy = null,
     int? EliminatedRound = null,
-    bool WasPromoted = false);
+    bool WasPromoted = false,
+    bool Revealed = false);
+
+/// <summary>The Sniper's own shot last night and what it did.</summary>
+public sealed record SniperShotView(Guid TargetPlayerId, SniperOutcome Outcome);
+
+/// <summary>The roles the table's setup deals for the players now in the lobby, or why it can't start.</summary>
+public sealed record SetupView(RolePreset Preset, IReadOnlyList<Role>? Roles, int MinimumPlayers, SetupProblem? Problem)
+{
+    public static SetupView For(GameState game)
+    {
+        var roles = game.Config.Roles.RolesFor(game.Players.Count, out var problem);
+        return new SetupView(game.Config.Roles.Preset, roles, game.Config.Roles.MinimumPlayers(game.Config.MinPlayers), problem);
+    }
+}
 
 public sealed record DetectiveResultView(Guid TargetPlayerId, bool IsMafiaAligned);
 
@@ -200,7 +249,8 @@ public sealed record EliminationView(
     bool GodfatherPromoted = false,
     IReadOnlyList<VoteView>? Ballots = null,
     int Round = 1,
-    IReadOnlyList<VoteView>? PreviousBallots = null);
+    IReadOnlyList<VoteView>? PreviousBallots = null,
+    Guid? ShotPlayerId = null);
 
 /// <summary>The player saying their last words, why they are out, and when their time is up.</summary>
 public sealed record LastWordsView(Guid PlayerId, EliminationCause Cause, DateTimeOffset Deadline, bool YouAreSpeaking);
@@ -208,11 +258,13 @@ public sealed record LastWordsView(Guid PlayerId, EliminationCause Cause, DateTi
 /// <summary>The table's timers (seconds; null night or voting = the creator moves it on) and rule switches.</summary>
 public sealed record RulesView(
     int SpeakerSeconds, int ChallengeSeconds, int DefenceSeconds, int LastWordsSeconds,
-    int? NightSeconds, int? VotingSeconds, bool LastWordsForNightKills)
+    int? NightSeconds, int? VotingSeconds, bool LastWordsForNightKills,
+    RolePreset Preset = RolePreset.Classic, bool GodfatherAppearsInnocent = false, bool JokerWinEndsGame = true, bool RevealRolesOnDeath = true)
 {
     public static RulesView From(GameConfig c) => new(
         c.SpeakerSeconds, c.ChallengeSeconds, c.DefenceSeconds, c.LastWordsSeconds,
-        c.NightSeconds, c.VotingSeconds, c.LastWordsForNightKills);
+        c.NightSeconds, c.VotingSeconds, c.LastWordsForNightKills,
+        c.Roles.Preset, c.GodfatherAppearsInnocent, c.JokerWinEndsGame, c.RevealRolesOnDeath);
 }
 
 public sealed record VoteView(Guid VoterPlayerId, Guid? TargetPlayerId);

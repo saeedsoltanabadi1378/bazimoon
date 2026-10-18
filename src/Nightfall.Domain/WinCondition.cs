@@ -7,5 +7,7 @@ public enum WinCondition
 {
     None,
     VillagersWin,
-    MafiaWin
+    MafiaWin,
+    /// <summary>The Joker was voted out at a table where that ends the game; everyone else loses.</summary>
+    JokerWins
 }

@@ -19,7 +19,7 @@ public static class MafiaStats
     public const int SurvivorTarget = 10;
 
     /// <summary>The Mafia achievements, in the order they are shown.</summary>
-    public static readonly string[] AchievementKeys = ["sharpEye", "guardianAngel", "theDon", "kingslayer", "silverTongue", "survivor"];
+    public static readonly string[] AchievementKeys = ["sharpEye", "guardianAngel", "theDon", "kingslayer", "silverTongue", "survivor", "clutchShot", "jester"];
 
     public static IReadOnlyList<RoleStats> ByRole(IEnumerable<GamePlayerRecord> games) =>
         games.Where(g => g.Role.HasValue).GroupBy(g => g.Role!.Value).OrderBy(g => g.Key)
@@ -60,6 +60,8 @@ public static class MafiaStats
             First("kingslayer", g => g.VotedOutGodfather == true),
             First("silverTongue", g => g.SurvivedRevote == true),
             new AchievementStatus("survivor", tenth?.GameRecord.EndedAt, tenth?.GameRecordId, Math.Min(survived.Count, SurvivorTarget), SurvivorTarget),
+            First("clutchShot", g => g.ShotGodfather == true),
+            First("jester", g => g.Won == true && g.Role == Role.Joker),
         ];
     }
 

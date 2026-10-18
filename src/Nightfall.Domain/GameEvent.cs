@@ -21,7 +21,13 @@ public enum GameEventKind
     Left,
 
     /// <summary>A player was removed for missing two timed turns in a row.</summary>
-    Removed
+    Removed,
+
+    /// <summary>The Mayor revealed themselves.</summary>
+    MayorRevealed,
+
+    /// <summary>The Die Hard called an Inquiry: the roles of everyone out were announced.</summary>
+    Inquiry
 }
 
 /// <summary>
@@ -43,6 +49,11 @@ public enum GameEventKind
 /// <param name="Ballots">Vote: voter → target (null = abstained).</param>
 /// <param name="VotedOut">Vote: who went out.</param>
 /// <param name="Tied">Vote: the players tied for the most votes.</param>
+/// <param name="SniperId">Night: the Sniper who fired.</param>
+/// <param name="ShotTarget">Night: who the Sniper shot.</param>
+/// <param name="ShotOutcome">Night: what the shot did.</param>
+/// <param name="Silenced">Night: who the Silencer silenced for the next day.</param>
+/// <param name="DieHardSurvived">Night: the Die Hard who survived the Mafia's kill.</param>
 public sealed record GameEvent(
     GameEventKind Kind,
     int Round,
@@ -58,4 +69,9 @@ public sealed record GameEvent(
     int VoteRound = 1,
     IReadOnlyDictionary<Guid, Guid?>? Ballots = null,
     Guid? VotedOut = null,
-    IReadOnlyList<Guid>? Tied = null);
+    IReadOnlyList<Guid>? Tied = null,
+    Guid? SniperId = null,
+    Guid? ShotTarget = null,
+    SniperOutcome? ShotOutcome = null,
+    Guid? Silenced = null,
+    Guid? DieHardSurvived = null);

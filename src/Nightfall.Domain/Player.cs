@@ -30,7 +30,29 @@ public sealed class Player
         TelegramUsername = telegramUsername;
     }
 
-    public bool IsMafiaAligned => Role == Nightfall.Domain.Role.Mafia || Role == Nightfall.Domain.Role.Godfather;
+    public bool IsMafiaAligned => Team == Nightfall.Domain.Team.Mafia;
+
+    /// <summary>The player's team; Town before roles are dealt.</summary>
+    public Team Team => Role?.TeamOf() ?? Nightfall.Domain.Team.Town;
+
+    /// <summary>The Mayor revealed themselves: everyone knows, and their vote counts twice.</summary>
+    public bool Revealed { get; private set; }
+
+    /// <summary>Sniper: the one shot is spent. Die Hard: the extra life is spent.</summary>
+    public bool AbilityUsed { get; private set; }
+
+    /// <summary>Die Hard: the Inquiry has been called.</summary>
+    public bool InquiryUsed { get; private set; }
+
+    internal void Reveal() => Revealed = true;
+    internal void UseAbility() => AbilityUsed = true;
+    internal void UseInquiry() => InquiryUsed = true;
+    internal void RestoreAbilities(bool revealed, bool abilityUsed, bool inquiryUsed)
+    {
+        Revealed = revealed;
+        AbilityUsed = abilityUsed;
+        InquiryUsed = inquiryUsed;
+    }
 
     internal void AssignRole(Role role) => Role = role;
 

@@ -197,6 +197,11 @@ public sealed class CommandDispatcher
         Role.Doctor => "💉 You are the *Doctor*. Each night, choose one player to protect from the Mafia's kill.",
         Role.Mafia => "🔪 You are *Mafia*. Work with your team to eliminate the Villagers without being caught.",
         Role.Godfather => "👑 You are the *Godfather*, leader of the Mafia. Choose who dies each night.",
+        Role.Sniper => "🎯 You are the *Sniper*. You have one night shot: hit a Mafia member and they die, hit the town and you die.",
+        Role.DieHard => "🛡 You are the *Die Hard*. You survive the first night kill, and once per game can call an Inquiry.",
+        Role.Silencer => "🤫 You are the *Silencer* (Mafia). Each night, silence one player for the next day.",
+        Role.Joker => "🃏 You are the *Joker*. You win if the town votes you out.",
+        Role.Mayor => "🏛 You are the *Mayor*. Reveal yourself on your turn and your vote counts twice.",
         _ => "Your role hasn't been assigned yet."
     } + "\n\nOpen the Mini App to play.";
 
@@ -282,8 +287,13 @@ public sealed class CommandDispatcher
         if (view.WinCondition == WinCondition.None)
             return;
 
-        string winner = view.WinCondition == WinCondition.VillagersWin ? "The Villagers" : "The Mafia";
-        await _messenger.SendTextAsync(chatId, $"🏆 Game over! {winner} win!");
+        string winner = view.WinCondition switch
+        {
+            WinCondition.VillagersWin => "The Villagers",
+            WinCondition.JokerWins => "The Joker",
+            _ => "The Mafia"
+        };
+        await _messenger.SendTextAsync(chatId, $"🏆 Game over! {winner} {(view.WinCondition == WinCondition.JokerWins ? "wins" : "win")}!");
     }
 
     private async Task HandleMyRoleAsync(long chatId, TelegramIdentity actor)

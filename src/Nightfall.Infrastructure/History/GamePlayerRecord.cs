@@ -34,4 +34,6 @@ public sealed class GamePlayerRecord
     public bool? VotedOutGodfather { get; set; }
     public int? MvpPoints { get; set; }
     public bool IsMvp { get; set; }
+    /// <summary>As Sniper, shot the Godfather.</summary>
+    public bool? ShotGodfather { get; set; }
 }

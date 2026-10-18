@@ -133,6 +133,18 @@ public static class GameEndpoints
             return Results.Ok();
         }).WithName("FinishLastWords");
 
+        group.MapPost("/{gameId:guid}/mayor/reveal", async (Guid gameId, GameService games, HttpContext http) =>
+        {
+            await games.RevealMayorAsync(gameId, http.User.GetTelegramUserId());
+            return Results.Ok();
+        }).WithName("RevealMayor");
+
+        group.MapPost("/{gameId:guid}/inquiry", async (Guid gameId, GameService games, HttpContext http) =>
+        {
+            await games.CallInquiryAsync(gameId, http.User.GetTelegramUserId());
+            return Results.Ok();
+        }).WithName("CallInquiry");
+
         group.MapGet("/{gameId:guid}/voice-token", async (Guid gameId, string channel, GameService games, IAgoraTokenService agoraTokens, HttpContext http) =>
         {
             var game = await games.LoadOrThrowAsync(gameId);
@@ -151,10 +163,11 @@ public static class GameEndpoints
                     // Last words are the one time a player who is out may speak.
                     bool mayTalk = game.CurrentPhase switch
                     {
-                        GamePhase.Day => player.IsAlive && (game.Discussion is null || game.Discussion.ActivePlayerId == player.Id),
+                        // A silenced player only listens all day.
+                        GamePhase.Day => player.IsAlive && player.Id != game.SilencedPlayerId && (game.Discussion is null || game.Discussion.ActivePlayerId == player.Id),
                         GamePhase.Defence => player.IsAlive && game.Discussion?.ActivePlayerId == player.Id,
                         GamePhase.LastWords => game.LastWordsPlayerId == player.Id,
-                        GamePhase.Voting or GamePhase.Results => player.IsAlive,
+                        GamePhase.Voting or GamePhase.Results => player.IsAlive && player.Id != game.SilencedPlayerId,
                         _ => false
                     };
                     role = mayTalk ? AgoraRtcRole.Publisher : AgoraRtcRole.Subscriber;

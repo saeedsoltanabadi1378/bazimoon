@@ -232,6 +232,22 @@ public sealed class GameService
         await SaveAndNotifyAsync(game);
     }
 
+    public async Task RevealMayorAsync(Guid gameId, long telegramUserId)
+    {
+        using var held = await _mutationLock.EnterAsync(gameId);
+        var game = await LoadOrThrowAsync(gameId);
+        game.RevealMayor(PlayerIdentity.DeriveId(gameId, telegramUserId));
+        await SaveAndNotifyAsync(game);
+    }
+
+    public async Task CallInquiryAsync(Guid gameId, long telegramUserId)
+    {
+        using var held = await _mutationLock.EnterAsync(gameId);
+        var game = await LoadOrThrowAsync(gameId);
+        game.CallInquiry(PlayerIdentity.DeriveId(gameId, telegramUserId));
+        await SaveAndNotifyAsync(game);
+    }
+
     /// <summary>Moves a game on when its current turn or phase timer has run out. Called every second
     /// by <see cref="PhaseDeadlineService"/>; finished games are written to history like any other end.</summary>
     public async Task AdvanceExpiredAsync(Guid gameId, DateTimeOffset now, CancellationToken cancellationToken = default)
@@ -328,7 +344,29 @@ public sealed class GameService
             NightSeconds = PickOptional(rules.NightSeconds, GameConfig.NightChoices, "night"),
             VotingSeconds = PickOptional(rules.VotingSeconds, GameConfig.VotingChoices, "voting"),
             LastWordsForNightKills = rules.LastWordsForNightKills ?? false,
+            Roles = BuildSetup(rules),
+            // The Iranian preset turns "Godfather looks innocent" on unless the creator says otherwise.
+            GodfatherAppearsInnocent = rules.GodfatherAppearsInnocent ?? rules.Preset == RolePreset.Iranian,
+            JokerWinEndsGame = rules.JokerWinEndsGame ?? true,
+            RevealRolesOnDeath = rules.RevealRolesOnDeath ?? true,
         };
+    }
+
+    private static RoleSetup BuildSetup(TableRules rules)
+    {
+        switch (rules.Preset ?? RolePreset.Classic)
+        {
+            case RolePreset.Classic: return RoleSetup.Classic;
+            case RolePreset.Iranian: return RoleSetup.Iranian;
+            default:
+                var optional = (rules.OptionalRoles ?? []).Distinct().ToList();
+                if (optional.Any(r => !RoleSetup.OptionalRoles.Contains(r)))
+                    throw new GameException("Only optional roles can be switched on.");
+                int mafia = rules.MafiaCount ?? 1;
+                if (mafia < 1 || mafia > 5)
+                    throw new GameException("A custom setup needs between 1 and 5 Mafia players.");
+                return new RoleSetup(RolePreset.Custom, mafia, optional);
+        }
     }
 
     private static int Pick(int? value, IReadOnlyList<int> choices, int fallback, string name) =>
@@ -354,9 +392,17 @@ public sealed record TableRules(
     int? LastWordsSeconds = null,
     int? NightSeconds = null,
     int? VotingSeconds = null,
-    bool? LastWordsForNightKills = null)
+    bool? LastWordsForNightKills = null,
+    RolePreset? Preset = null,
+    int? MafiaCount = null,
+    IReadOnlyList<Role>? OptionalRoles = null,
+    bool? GodfatherAppearsInnocent = null,
+    bool? JokerWinEndsGame = null,
+    bool? RevealRolesOnDeath = null)
 {
     public static TableRules From(GameConfig config) => new(
         config.SpeakerSeconds, config.ChallengeSeconds, config.DefenceSeconds, config.LastWordsSeconds,
-        config.NightSeconds, config.VotingSeconds, config.LastWordsForNightKills);
+        config.NightSeconds, config.VotingSeconds, config.LastWordsForNightKills,
+        config.Roles.Preset, config.Roles.MafiaCount, config.Roles.Optional,
+        config.GodfatherAppearsInnocent, config.JokerWinEndsGame, config.RevealRolesOnDeath);
 }

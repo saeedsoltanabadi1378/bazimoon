@@ -15,7 +15,9 @@ public sealed record PlayerGameStats(
     bool SurvivedRevote,
     bool VotedOutGodfather,
     int Points,
-    bool IsMvp);
+    bool IsMvp,
+    bool Won = false,
+    bool ShotGodfather = false);
 
 /// <summary>Turns a finished game's log into per-player stats and picks the MVP. No voting: the MVP
 /// is the player on the winning team with the most points; everyone tied on points is MVP.</summary>
@@ -28,11 +30,10 @@ public static class MafiaScoring
     public const int PointsVoteOnMafiaOut = 2;
     public const int PointsNightSurvived = 1;
 
-    public static IReadOnlyList<PlayerGameStats> Score(GameState game) =>
-        Score(game.Players, game.Events, game.CheckWinCondition());
-
-    public static IReadOnlyList<PlayerGameStats> Score(IReadOnlyList<Player> players, IReadOnlyList<GameEvent> events, WinCondition result)
+    public static IReadOnlyList<PlayerGameStats> Score(GameState game)
     {
+        var players = game.Players;
+        var events = game.Events;
         bool IsMafia(Guid id) => players.FirstOrDefault(p => p.Id == id)?.IsMafiaAligned == true;
         bool WasGodfather(Guid id, int round) =>
             players.FirstOrDefault(p => p.Id == id) is { Role: Role.Godfather } p &&
@@ -47,7 +48,9 @@ public static class MafiaScoring
             int found = nights.Count(n => n.DetectiveId == id && n.CheckedIsMafia == true);
             int saves = nights.Count(n => n.DoctorId == id && n.Saved.HasValue);
             int blocked = nights.Count(n => n.DoctorId == id && n.Saved.HasValue && n.Saved == n.KillTarget && n.Killed is null);
-            int kills = nights.Count(n => n.KillerId == id && n.Killed.HasValue);
+            int kills = nights.Count(n => n.KillerId == id && n.Killed.HasValue)
+                + nights.Count(n => n.SniperId == id && n.ShotOutcome == SniperOutcome.Hit);
+            bool shotGodfather = nights.Any(n => n.SniperId == id && n.ShotOutcome == SniperOutcome.Hit && n.ShotTarget is { } t && WasGodfather(t, n.Round));
             var ballots = votes.Where(v => v.Ballots?.TryGetValue(id, out var t) == true && t.HasValue)
                 .Select(v => (Vote: v, Target: v.Ballots![id]!.Value)).ToList();
             int onMafia = ballots.Count(b => IsMafia(b.Target));
@@ -55,10 +58,10 @@ public static class MafiaScoring
             bool kingslayer = ballots.Any(b => b.Vote.VotedOut == b.Target && WasGodfather(b.Target, b.Vote.Round));
             bool revote = votes.Any(v => v.VoteRound == 2 && WasRunoffCandidate(votes, v, id) && v.VotedOut != id);
             int survived = nights.Count(n => SurvivedNight(p, n.Round));
-            bool won = result != WinCondition.None && p.EliminatedBy != EliminationCause.Left && p.IsMafiaAligned == (result == WinCondition.MafiaWin);
+            bool won = game.DidWin(p) == true;
             int points = (won ? PointsTeamWon : 0) + found * PointsMafiaFound + blocked * PointsKillBlocked
                 + kills * PointsKillMade + onMafiaOut * PointsVoteOnMafiaOut + survived * PointsNightSurvived;
-            return (Stats: new PlayerGameStats(id, checks, found, saves, blocked, kills, ballots.Count, onMafia, onMafiaOut, survived, revote, kingslayer, points, false), Won: won);
+            return (Stats: new PlayerGameStats(id, checks, found, saves, blocked, kills, ballots.Count, onMafia, onMafiaOut, survived, revote, kingslayer, points, false, won, shotGodfather), Won: won);
         }).ToList();
 
         var winners = raw.Where(r => r.Won).ToList();

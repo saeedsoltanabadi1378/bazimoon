@@ -7,5 +7,7 @@ public enum NightActionType
 {
     Investigate,
     Heal,
-    Kill
+    Kill,
+    Shoot,
+    Silence
 }
