@@ -1,11 +1,41 @@
-import { defineConfig } from 'vite'
+import { defineConfig, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
+import { readFileSync } from 'node:fs'
+
+// Writes /fa/index.html: the same app shell with Persian search and share tags (from seo-fa.html),
+// so Google can index a Persian page. The app opens in Persian on /fa (see LanguageContext).
+function persianLandingPage(): Plugin {
+  return {
+    name: 'bazimoon-persian-landing-page',
+    apply: 'build',
+    enforce: 'post',
+    generateBundle(_, bundle) {
+      const page = bundle['index.html']
+      if (!page || page.type !== 'asset') return
+      const html = String(page.source)
+      const block = /<!-- seo:start[\s\S]*?<!-- seo:end -->/
+      if (!block.test(html)) throw new Error('index.html is missing the seo:start / seo:end markers')
+      const faHead = readFileSync(new URL('./seo-fa.html', import.meta.url), 'utf8').trimEnd()
+      const faHtml = html
+        .replace('<html lang="en">', '<html lang="fa" dir="rtl">')
+        .replace(block, () => faHead.trimStart())
+        .replace(/<noscript>[\s\S]*?<\/noscript>/, `<noscript>
+      <h1>بازیمون</h1>
+      <p>پازل‌های روزانه رایگان (زیپ، ملکه‌ها، سودوکو، کلمه روز)، بازی‌های آرکید، تخته‌نرد و شب‌های مافیا با دوستان، به فارسی و انگلیسی. برای بازی، جاوااسکریپت را روشن کنید.</p>
+    </noscript>`)
+      this.emitFile({ type: 'asset', fileName: 'fa/index.html', source: faHtml })
+      // The English page keeps its markers out of the shipped HTML.
+      page.source = html.replace(/ *<!-- seo:(start|end)[^>]*-->\n?/g, '')
+    },
+  }
+}
 
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [
     react(),
+    persianLandingPage(),
     VitePWA({
       // A new version waits until the player taps "Update now" (see UpdatePrompt).
       registerType: 'prompt',

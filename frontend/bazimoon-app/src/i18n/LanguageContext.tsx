@@ -24,6 +24,8 @@ interface LanguageContextValue {
 const LanguageContext = createContext<LanguageContextValue | null>(null);
 
 function detect(): Language {
+  // The Persian landing page (/fa/) opens in Persian for people who haven't picked a language.
+  if (/^\/fa(\/|$)/.test(window.location.pathname)) return "fa";
   return deviceLanguage();
 }
 
