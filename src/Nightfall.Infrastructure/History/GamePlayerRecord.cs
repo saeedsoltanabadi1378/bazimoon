@@ -20,4 +20,18 @@ public sealed class GamePlayerRecord
     public int? RatingBefore { get; set; }
     public int? RatingDelta { get; set; }
     public bool? Won { get; set; }
+
+    // What the player did, worked out from the game log. Null for games played before the log existed.
+    public int? ChecksMade { get; set; }
+    public int? MafiaFound { get; set; }
+    public int? SavesMade { get; set; }
+    public int? KillsBlocked { get; set; }
+    public int? KillsMade { get; set; }
+    public int? VotesCast { get; set; }
+    public int? VotesOnMafia { get; set; }
+    public int? NightsSurvived { get; set; }
+    public bool? SurvivedRevote { get; set; }
+    public bool? VotedOutGodfather { get; set; }
+    public int? MvpPoints { get; set; }
+    public bool IsMvp { get; set; }
 }

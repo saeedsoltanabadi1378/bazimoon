@@ -118,7 +118,9 @@ public static class Progression
         return (int)Math.Round(RatingK * ((won ? 1.0 : 0.0) - expected));
     }
 
-    public static int MafiaXp(bool won) => won ? 40 : 20;
+    public const int MvpBonusXp = 50;
+
+    public static int MafiaXp(bool won, bool isMvp = false) => (won ? 40 : 20) + (isMvp ? MvpBonusXp : 0);
 
     // ---- solo games ----
 

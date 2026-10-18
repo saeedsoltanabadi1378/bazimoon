@@ -15,6 +15,7 @@ public sealed class GameState
     private readonly HashSet<Guid> _ready = new();
     private readonly Dictionary<Guid, int> _strikes = new();
     private readonly List<Guid> _lastRemoved = new();
+    private readonly List<GameEvent> _events = new();
 
     /// <summary>Seconds between everyone being ready at a full table and the game starting by itself.</summary>
     public const int AutoStartSeconds = 5;
@@ -70,6 +71,9 @@ public sealed class GameState
     /// <summary>Players removed for inactivity when the last timed night or vote closed.</summary>
     public IReadOnlyList<Guid> LastRemovedForInactivity => _lastRemoved;
 
+    /// <summary>What happened so far, for the recap, stats and MVP once the game ends.</summary>
+    public IReadOnlyList<GameEvent> Events => _events;
+
     /// <summary>Who runs the game: the longest-seated player who has not left. Being killed or voted
     /// out does not hand it over; leaving or being removed for inactivity does.</summary>
     public Player? Controller => _players.FirstOrDefault(p => p.EliminatedBy != EliminationCause.Left);
@@ -112,7 +116,8 @@ public sealed class GameState
         _ready.ToList(),
         AutoStartAt,
         new Dictionary<Guid, int>(_strikes),
-        _lastRemoved.ToList());
+        _lastRemoved.ToList(),
+        _events.ToList());
 
     /// <summary>Reconstructs a GameState (including in-flight submissions) from a snapshot, bypassing normal transition guards.</summary>
     public static GameState FromSnapshot(GameStateSnapshot snapshot)
@@ -134,6 +139,7 @@ public sealed class GameState
         if (snapshot.ReadyPlayers is { } ready) game._ready.UnionWith(ready);
         if (snapshot.Strikes is { } strikes) foreach (var (id, n) in strikes) game._strikes[id] = n;
         if (snapshot.LastRemovedForInactivity is { } removed) game._lastRemoved.AddRange(removed);
+        if (snapshot.Events is { } events) game._events.AddRange(events);
         if (snapshot.RunoffCandidates is { } runoff)
             game._runoffCandidates.AddRange(runoff);
 
@@ -372,9 +378,12 @@ public sealed class GameState
 
         NightNumber++;
 
-        Guid? killTarget = ResolveGodfatherKillTarget();
+        bool isNight = CurrentPhase == GamePhase.Night;
+        var (killTarget, killerId) = ResolveGodfatherKillTarget();
         Guid? healTarget = ResolveDoctorHealTarget();
         var (investigateTarget, investigateResult) = ResolveDetectiveInvestigation();
+        Guid? doctorId = healTarget.HasValue ? _players.FirstOrDefault(p => p.IsAlive && p.Role == Role.Doctor)?.Id : null;
+        Guid? detectiveId = investigateTarget.HasValue ? _players.FirstOrDefault(p => p.IsAlive && p.Role == Role.Detective)?.Id : null;
 
         bool wasSaved = killTarget.HasValue && killTarget == healTarget;
         Guid? eliminated = null;
@@ -386,6 +395,9 @@ public sealed class GameState
         }
 
         _nightActions.Clear();
+        if (isNight)
+            _events.Add(new GameEvent(GameEventKind.Night, NightNumber, KillerId: killerId, KillTarget: killTarget, Killed: eliminated,
+                DoctorId: doctorId, Saved: healTarget, DetectiveId: detectiveId, Checked: investigateTarget, CheckedIsMafia: investigateResult));
 
         Guid? promotedId = eliminated.HasValue ? HandlePotentialGodfatherDeath(eliminated.Value) : null;
 
@@ -417,13 +429,14 @@ public sealed class GameState
             .All(player => _nightActions.ContainsKey(player.Id));
     }
 
-    private Guid? ResolveGodfatherKillTarget()
+    /// <summary>Who the Mafia kill tonight, and the Mafia member whose pick decided it.</summary>
+    private (Guid? Target, Guid? KillerId) ResolveGodfatherKillTarget()
     {
         var godfather = _players.FirstOrDefault(p => p.IsAlive && p.Role == Role.Godfather);
         if (godfather is null)
-            return null;
+            return (null, null);
         if (_nightActions.TryGetValue(godfather.Id, out var action) && action.ActionType == NightActionType.Kill)
-            return action.TargetId;
+            return (action.TargetId, godfather.Id);
         // The Godfather did nothing: the kill goes to the living target the other Mafia suggested most.
         // A tie between suggestions, or none at all, means nobody dies.
         var top = _nightActions.Values
@@ -434,8 +447,9 @@ public sealed class GameState
             .Take(2)
             .ToList();
         if (top.Count == 0 || (top.Count == 2 && top[0].Count == top[1].Count))
-            return null;
-        return top[0].Target;
+            return (null, null);
+        var suggester = _nightActions.Values.First(a => a.ActionType == NightActionType.Kill && a.TargetId == top[0].Target).ActorId;
+        return (top[0].Target, suggester);
     }
 
     private Guid? ResolveDoctorHealTarget()
@@ -510,6 +524,7 @@ public sealed class GameState
         {
             var noVotesResult = new VotingResult(null, false, Array.Empty<Guid>(), null, ballots, round, previous);
             LastVotingResult = noVotesResult;
+            LogVote(noVotesResult);
             EndRunoff();
             AdvancePhaseAfterResolution(GamePhase.Results);
             return noVotesResult;
@@ -522,6 +537,7 @@ public sealed class GameState
         {
             var tieResult = new VotingResult(null, true, topVoted, null, ballots, round, previous);
             LastVotingResult = tieResult;
+            LogVote(tieResult);
             if (round == 1)
             {
                 StartRunoff(topVoted, at);
@@ -540,6 +556,7 @@ public sealed class GameState
 
         var result = new VotingResult(victim.Id, false, topVoted, promotedId, ballots, round, previous);
         LastVotingResult = result;
+        LogVote(result);
         EndRunoff();
         EnterLastWords(victim.Id, GamePhase.Results, at);
         return result;
@@ -558,6 +575,7 @@ public sealed class GameState
             player.Eliminate(EliminationCause.Left, NightNumber);
             _strikes.Remove(id);
             _lastRemoved.Add(id);
+            _events.Add(new GameEvent(GameEventKind.Removed, NightNumber, PlayerId: id));
             HandlePotentialGodfatherDeath(id);
         }
     }
@@ -570,6 +588,7 @@ public sealed class GameState
             throw new GameException("You can only leave a game that is under way.");
         var player = GetAliveOrThrow(playerId, "Player");
         player.Eliminate(EliminationCause.Left, NightNumber);
+        _events.Add(new GameEvent(GameEventKind.Left, NightNumber, PlayerId: playerId));
         _votes.Remove(playerId);
         _nightActions.Remove(playerId);
         _strikes.Remove(playerId);
@@ -610,8 +629,13 @@ public sealed class GameState
         _runoffCandidates.Clear();
     }
 
+    private void LogVote(VotingResult result) =>
+        _events.Add(new GameEvent(GameEventKind.Vote, NightNumber, VoteRound: result.Round, Ballots: result.Votes,
+            VotedOut: result.Eliminated, Tied: result.TiedPlayers.ToList()));
+
     private void EnterLastWords(Guid playerId, GamePhase next, DateTimeOffset now)
     {
+        _events.Add(new GameEvent(GameEventKind.LastWords, NightNumber, PlayerId: playerId));
         CurrentPhase = GamePhase.LastWords;
         Discussion = null;
         LastWordsPlayerId = playerId;
@@ -836,7 +860,10 @@ public sealed class GameState
         var eliminated = GetPlayer(eliminatedId)!;
         if (eliminated.Role != Role.Godfather)
             return null;
-        return PromoteGodfather()?.Id;
+        var promoted = PromoteGodfather();
+        if (promoted is not null)
+            _events.Add(new GameEvent(GameEventKind.Promoted, NightNumber, PlayerId: promoted.Id));
+        return promoted?.Id;
     }
 
     private void AdvancePhaseAfterResolution(GamePhase nextPhaseIfContinuing)

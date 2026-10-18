@@ -156,6 +156,9 @@ export interface PlayerDetail {
   language: string;
   recent: ActivityItem[];
   couple: { status: "none" | "pending" | "active"; partnerName: string | null; since: string | null };
+  mafiaByRole: { role: string; games: number; winRate: number }[] | null;
+  /** Totals over the games that have a log; older games are left out. */
+  mafiaSkills: { trackedGames: number; checksMade: number; mafiaFound: number; killsBlocked: number; votesCast: number; votesOnMafia: number } | null;
 }
 
 export interface ChatRow {

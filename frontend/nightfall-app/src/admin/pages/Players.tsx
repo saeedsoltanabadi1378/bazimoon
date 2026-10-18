@@ -148,6 +148,7 @@ function PlayerPanel({ d, color }: { d: PlayerDetail; color: string }) {
     const delta = a.ratingDelta == null ? t("none") : `${a.ratingDelta >= 0 ? "+" : "−"}${n(Math.abs(a.ratingDelta))}`;
     return (a.won ? t("actMafiaWon", { role: roleName(a.role, lang) ?? "", delta }) : t("actMafiaLost", { role: roleName(a.role, lang) ?? "", delta }));
   };
+  const pct = (part: number, whole: number) => (whole === 0 ? t("none") : `${n(Math.round((100 * part) / whole))}${lang === "fa" ? "٪" : "%"}`);
   const couple = d.couple.status === "active" ? t("coupleActive", { name: d.couple.partnerName ?? "?", date: d.couple.since ? date(d.couple.since) : t("none") })
     : d.couple.status === "pending" ? t("couplePending") : t("coupleNone");
 
@@ -168,6 +169,31 @@ function PlayerPanel({ d, color }: { d: PlayerDetail; color: string }) {
           </div>
         ))}
       </div>
+      {d.mafiaByRole && d.mafiaByRole.length > 0 && (
+        <div style={{ display: "flex", flexDirection: "column" }}>
+          <span className="small" style={{ fontWeight: 600, paddingBottom: 6 }}>{t("mafiaByRole")}</span>
+          {d.mafiaByRole.map((r) => (
+            <div key={r.role} className="adm-row num" style={{ minHeight: 34, justifyContent: "space-between", fontSize: 13 }}>
+              <span>{roleName(r.role, lang) ?? r.role}</span>
+              <span className="muted">{t("roleGamesWon", { games: n(r.games), rate: n(r.winRate) })}</span>
+            </div>
+          ))}
+          {d.mafiaSkills && d.mafiaSkills.trackedGames > 0 && (
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 8, paddingTop: 8 }}>
+              {[
+                [pct(d.mafiaSkills.mafiaFound, d.mafiaSkills.checksMade), t("skillDetective")],
+                [n(d.mafiaSkills.killsBlocked), t("skillDoctor")],
+                [pct(d.mafiaSkills.votesOnMafia, d.mafiaSkills.votesCast), t("skillVote")],
+              ].map(([v, l]) => (
+                <div key={l} style={{ padding: 8, borderRadius: 10, background: "#0B0D1A", textAlign: "center" }}>
+                  <div className="num" style={{ fontSize: 15, fontWeight: 700 }}>{v}</div>
+                  <div className="tiny muted">{l}</div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
       <div style={{ display: "flex", flexDirection: "column" }}>
         <span className="small" style={{ fontWeight: 600, paddingBottom: 6 }}>{t("recentActivity")}</span>
         {d.recent.length === 0 && <span className="small muted">{t("noActivity")}</span>}

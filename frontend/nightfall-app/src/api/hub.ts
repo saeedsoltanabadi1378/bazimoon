@@ -32,6 +32,82 @@ export interface Profile {
   settings: Settings;
 }
 
+export interface AchievementStatus {
+  key: string;
+  earnedAt: string | null;
+  gameId: string | null;
+  /** Counted achievements (Survivor): how far along you are. */
+  progress: number | null;
+  target: number | null;
+}
+
+export interface MafiaStats {
+  games: number;
+  byRole: { role: Role; games: number; winRate: number }[];
+  /** Totals over the games that have a log (trackedGames); older games are left out. */
+  skills: {
+    trackedGames: number;
+    checksMade: number;
+    mafiaFound: number;
+    doctorNights: number;
+    killsBlocked: number;
+    votesCast: number;
+    votesOnMafia: number;
+    nightsSurvived: number;
+    mvpCount: number;
+  };
+  achievements: AchievementStatus[];
+  recent: {
+    gameId: string;
+    role: Role | null;
+    won: boolean;
+    isMvp: boolean;
+    endedAt: string;
+    players: number;
+    tableName: string | null;
+    ratingDelta: number | null;
+    hasRecap: boolean;
+  }[];
+}
+
+export type GameEventKind = "Night" | "Vote" | "LastWords" | "Promoted" | "Left" | "Removed";
+
+export interface GameEvent {
+  kind: GameEventKind;
+  round: number;
+  playerId: string | null;
+  killerId: string | null;
+  killTarget: string | null;
+  killed: string | null;
+  doctorId: string | null;
+  saved: string | null;
+  detectiveId: string | null;
+  checked: string | null;
+  checkedIsMafia: boolean | null;
+  voteRound: number;
+  ballots: Record<string, string | null> | null;
+  votedOut: string | null;
+  tied: string[] | null;
+}
+
+export interface GameRecap {
+  gameId: string;
+  tableName: string | null;
+  endedAt: string;
+  result: "None" | "VillagersWin" | "MafiaWin";
+  players: {
+    playerId: string;
+    name: string;
+    role: Role | null;
+    eliminatedBy: "Night" | "Vote" | "Left" | null;
+    eliminatedRound: number | null;
+    wasPromoted: boolean;
+    isMvp: boolean;
+    points: number | null;
+  }[];
+  events: GameEvent[];
+}
+
 export interface DailyStatus {
   game: string;
   number: number;
@@ -209,6 +285,8 @@ export interface TableRules {
 
 export const hubApi = (api: NightfallApiClient) => ({
   profile: () => api.request<Profile>("GET", "/api/me/profile"),
+  mafiaStats: () => api.request<MafiaStats>("GET", "/api/me/mafia-stats"),
+  recap: (gameId: string) => api.request<GameRecap>("GET", `/api/hub/games/${gameId}/recap`),
   saveSettings: (settings: Settings) => api.request<Settings>("PUT", "/api/me/settings", settings),
   /** Games an admin switched off; the app hides them. */
   config: () => api.request<{ disabledGames: string[] }>("GET", "/api/hub/config"),

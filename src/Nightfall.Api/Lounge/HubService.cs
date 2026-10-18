@@ -48,17 +48,20 @@ public sealed class HubService
         int? bestZip = puzzles.Where(r => r.Game == "zip" && r.Solved && r.TimeMs.HasValue).Select(r => r.TimeMs).Min();
         int streak = Progression.CurrentStreak(stats.PuzzleStreak, stats.LastPuzzleDay, stats.StreakFreezes, today);
 
+        var achievements = MafiaStats.Achievements(await MafiaRowsAsync(userId));
         var badges = new List<BadgeDto>
         {
             new("firstWin", mafiaGames.Any(g => g.Won == true)),
             new("lifeSaver", mafiaGames.Any(g => g.Won == true && g.Role == Role.Doctor)),
-            new("sharpEye", mafiaGames.Any(g => g.Won == true && g.Role == Role.Detective)),
-            new("theDon", mafiaGames.Any(g => g.Won == true && g.Role == Role.Godfather)),
+        };
+        badges.AddRange(achievements.Select(a => new BadgeDto(a.Key, a.EarnedAt.HasValue)));
+        badges.AddRange(new List<BadgeDto>
+        {
             new("streak7", stats.BestPuzzleStreak >= 7),
             new("streak30", stats.BestPuzzleStreak >= 30),
             new("solved100", puzzles.Count(p => p.Solved) >= 100),
             new("gold", stats.Rating >= 1550),
-        };
+        });
 
         return new ProfileDto(
             stats.Username,
@@ -98,7 +101,41 @@ public sealed class HubService
             .FirstOrDefaultAsync(p => p.GameRecordId == gameId && p.TelegramUserId == userId);
         if (row is null || row.Won is null) return null;
         int rating = (row.RatingBefore ?? Progression.StartingRating) + (row.RatingDelta ?? 0);
-        return new MyGameResultDto(row.Won.Value, rating, row.RatingDelta ?? 0);
+        var earnedHere = MafiaStats.Achievements(await MafiaRowsAsync(userId))
+            .Where(a => a.GameId == gameId).Select(a => a.Key).ToList();
+        return new MyGameResultDto(row.Won.Value, rating, row.RatingDelta ?? 0, row.IsMvp, earnedHere);
+    }
+
+    /// <summary>Your finished, rated Mafia games with their game record, oldest first.</summary>
+    private async Task<List<GamePlayerRecord>> MafiaRowsAsync(long userId) =>
+        await _db.GamePlayers.AsNoTracking().Include(p => p.GameRecord)
+            .Where(p => p.TelegramUserId == userId && p.Won != null && p.GameRecord.Status == "Completed")
+            .OrderBy(p => p.GameRecord.EndedAt)
+            .ToListAsync();
+
+    public async Task<MafiaStatsDto> GetMafiaStatsAsync(long userId)
+    {
+        var rows = await MafiaRowsAsync(userId);
+        var recentIds = rows.OrderByDescending(r => r.GameRecord.EndedAt).Take(20).Select(r => r.GameRecordId).ToList();
+        var counts = await _db.GamePlayers.Where(p => recentIds.Contains(p.GameRecordId))
+            .GroupBy(p => p.GameRecordId).Select(g => new { g.Key, Count = g.Count() }).ToDictionaryAsync(x => x.Key, x => x.Count);
+        var names = await _db.MafiaTables.Where(t => recentIds.Contains(t.GameId)).ToDictionaryAsync(t => t.GameId, t => t.Name);
+        var recent = rows.OrderByDescending(r => r.GameRecord.EndedAt).Take(20).Select(r => new MafiaRecentGameDto(
+            r.GameRecordId, r.Role, r.Won == true, r.IsMvp, r.GameRecord.EndedAt, counts.GetValueOrDefault(r.GameRecordId),
+            names.GetValueOrDefault(r.GameRecordId), r.RatingDelta, r.GameRecord.EventsJson is not null)).ToList();
+        return new MafiaStatsDto(rows.Count, MafiaStats.ByRole(rows), MafiaStats.Skills(rows), MafiaStats.Achievements(rows), recent);
+    }
+
+    /// <summary>The timeline of a finished game, with every role shown. Null when the game is unknown or has no log.</summary>
+    public async Task<GameRecapDto?> GetRecapAsync(Guid gameId)
+    {
+        var game = await _db.Games.AsNoTracking().Include(g => g.Players).FirstOrDefaultAsync(g => g.Id == gameId);
+        if (game?.EventsJson is null) return null;
+        var events = System.Text.Json.JsonSerializer.Deserialize<List<GameEvent>>(game.EventsJson) ?? [];
+        string? name = await _db.MafiaTables.Where(t => t.GameId == gameId).Select(t => t.Name).FirstOrDefaultAsync();
+        return new GameRecapDto(game.Id, name, game.EndedAt, game.Result,
+            game.Players.Select(p => new RecapPlayerDto(p.PlayerId, p.TelegramUsername, p.Role, p.EliminatedBy, p.EliminatedRound, p.WasPromoted, p.IsMvp, p.MvpPoints)).ToList(),
+            events);
     }
 
     private record RatedGame(Role? Role, bool? Won, DateTime EndedAt, int? RatingDelta);

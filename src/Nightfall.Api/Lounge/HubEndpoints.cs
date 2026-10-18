@@ -1,5 +1,6 @@
 using Nightfall.Api.Auth;
 using Nightfall.Domain;
+using Nightfall.Infrastructure.Hub;
 
 namespace Nightfall.Api.Lounge;
 
@@ -19,10 +20,16 @@ public static class HubEndpoints
             await hub.GetMyGameResultAsync(http.User.GetTelegramUserId(), gameId) is { } result ? Results.Ok(result) : Results.NotFound())
             .WithName("GetMyGameResult");
 
+        me.MapGet("/mafia-stats", (HubService hub, HttpContext http) =>
+            hub.GetMafiaStatsAsync(http.User.GetTelegramUserId())).WithName("GetMafiaStats");
+
         var hubGroup = app.MapGroup("/api/hub").RequireAuthorization();
 
         hubGroup.MapGet("/config", async (Nightfall.Infrastructure.Admin.IBotSettingsService settings) =>
             new AppConfigDto((await settings.GetAsync()).DisabledGames?.ToList() ?? [])).WithName("GetAppConfig");
+
+        hubGroup.MapGet("/games/{gameId:guid}/recap", async (Guid gameId, HubService hub) =>
+            await hub.GetRecapAsync(gameId) is { } recap ? Results.Ok(recap) : Results.NotFound()).WithName("GetGameRecap");
 
         hubGroup.MapGet("/home", (HubService hub, HttpContext http) =>
             hub.GetHomeAsync(http.User.GetTelegramUserId(), http.User.GetTelegramUsername())).WithName("GetHome");
@@ -73,7 +80,11 @@ public sealed record PuzzleProfileDto(int Streak, int BestStreak, int Solved, in
 public sealed record ProfileDto(
     string Name, int Level, int XpIntoLevel, int XpForNext, int Xp, string Division, int Tier,
     MafiaProfileDto Mafia, PuzzleProfileDto Puzzles, IReadOnlyList<BadgeDto> Badges, SettingsDto Settings);
-public sealed record MyGameResultDto(bool Won, int Rating, int RatingDelta);
+public sealed record MyGameResultDto(bool Won, int Rating, int RatingDelta, bool IsMvp = false, IReadOnlyList<string>? NewAchievements = null);
+public sealed record MafiaRecentGameDto(Guid GameId, Role? Role, bool Won, bool IsMvp, DateTime EndedAt, int Players, string? TableName, int? RatingDelta, bool HasRecap);
+public sealed record MafiaStatsDto(int Games, IReadOnlyList<RoleStats> ByRole, MafiaSkillStats Skills, IReadOnlyList<AchievementStatus> Achievements, IReadOnlyList<MafiaRecentGameDto> Recent);
+public sealed record RecapPlayerDto(Guid PlayerId, string Name, Role? Role, EliminationCause? EliminatedBy, int? EliminatedRound, bool WasPromoted, bool IsMvp, int? Points);
+public sealed record GameRecapDto(Guid GameId, string? TableName, DateTime EndedAt, WinCondition Result, IReadOnlyList<RecapPlayerDto> Players, IReadOnlyList<GameEvent> Events);
 
 public sealed record DailyStatusDto(string Game, int Number, bool Played, bool Solved, int? TimeMs, int? Moves);
 public sealed record LeagueSummaryDto(int Season, int DaysLeft, string Division, int Tier, int? Rank, int PlayerCount, string? Zone);

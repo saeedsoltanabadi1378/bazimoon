@@ -31,7 +31,8 @@ public sealed record GameStateSnapshot(
     IReadOnlyCollection<Guid>? ReadyPlayers = null,
     DateTimeOffset? AutoStartAt = null,
     IReadOnlyDictionary<Guid, int>? Strikes = null,
-    IReadOnlyList<Guid>? LastRemovedForInactivity = null);
+    IReadOnlyList<Guid>? LastRemovedForInactivity = null,
+    IReadOnlyList<GameEvent>? Events = null);
 
 public sealed record PlayerSnapshot(
     Guid Id,

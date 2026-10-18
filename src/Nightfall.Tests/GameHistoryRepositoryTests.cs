@@ -132,4 +132,43 @@ public class GameHistoryRepositoryTests : IDisposable
         Assert.False(players.Single(p => p.PlayerId == leaver.Id).Won);
         Assert.True(players.Single(p => p.PlayerId == ps.Detective().Id).Won);
     }
+
+    [Fact]
+    public async Task SaveCompletedGameAsync_StoresTheLogAndWhatEachPlayerDid()
+    {
+        var game = EndedGame(out var players);
+
+        await _repository.SaveCompletedGameAsync(game);
+
+        var record = await _repository.GetAsync(game.GameId);
+        var events = System.Text.Json.JsonSerializer.Deserialize<List<GameEvent>>(record!.EventsJson!);
+        Assert.Equal(game.Events.Count, events!.Count);
+        var detective = record.Players.Single(p => p.PlayerId == players.Detective().Id);
+        Assert.Equal(1, detective.VotesOnMafia);
+        Assert.True(detective.VotedOutGodfather);
+        Assert.NotNull(detective.MvpPoints);
+        Assert.Contains(record.Players, p => p.IsMvp);
+        Assert.All(record.Players.Where(p => p.IsMvp), p => Assert.True(p.Won));
+    }
+
+    [Fact]
+    public void Achievements_AreDatedByTheGameThatFirstEarnedThem_AndOldGamesStillCount()
+    {
+        var day1 = new GameRecord { Id = Guid.NewGuid(), EndedAt = new DateTime(2026, 9, 1) };
+        var day2 = new GameRecord { Id = Guid.NewGuid(), EndedAt = new DateTime(2026, 9, 2) };
+        var rows = new List<GamePlayerRecord>
+        {
+            // Before the log: won as Detective counts for Sharp eye.
+            new() { GameRecord = day1, GameRecordId = day1.Id, Role = Role.Detective, Won = true, SurvivedToEnd = true },
+            new() { GameRecord = day2, GameRecordId = day2.Id, Role = Role.Doctor, Won = false, KillsBlocked = 1, MvpPoints = 4, SurvivedToEnd = true },
+        };
+
+        var a = Nightfall.Infrastructure.Hub.MafiaStats.Achievements(rows).ToDictionary(x => x.Key);
+        Assert.Equal(day1.Id, a["sharpEye"].GameId);
+        Assert.Equal(day2.Id, a["guardianAngel"].GameId);
+        Assert.Null(a["theDon"].EarnedAt);
+        Assert.Equal(2, a["survivor"].Progress);
+        Assert.Null(a["survivor"].EarnedAt);
+        Assert.Equal(1, Nightfall.Infrastructure.Hub.MafiaStats.Skills(rows).TrackedGames);
+    }
 }

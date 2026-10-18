@@ -194,6 +194,9 @@ namespace Nightfall.Infrastructure.History.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<int?>("ChecksMade")
+                        .HasColumnType("integer");
+
                     b.Property<string>("EliminatedBy")
                         .HasMaxLength(16)
                         .HasColumnType("character varying(16)");
@@ -205,6 +208,24 @@ namespace Nightfall.Infrastructure.History.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<int?>("GodfatherRank")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("IsMvp")
+                        .HasColumnType("boolean");
+
+                    b.Property<int?>("KillsBlocked")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("KillsMade")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("MafiaFound")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("MvpPoints")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("NightsSurvived")
                         .HasColumnType("integer");
 
                     b.Property<Guid>("PlayerId")
@@ -220,6 +241,12 @@ namespace Nightfall.Infrastructure.History.Migrations
                         .HasMaxLength(32)
                         .HasColumnType("character varying(32)");
 
+                    b.Property<int?>("SavesMade")
+                        .HasColumnType("integer");
+
+                    b.Property<bool?>("SurvivedRevote")
+                        .HasColumnType("boolean");
+
                     b.Property<bool>("SurvivedToEnd")
                         .HasColumnType("boolean");
 
@@ -230,6 +257,15 @@ namespace Nightfall.Infrastructure.History.Migrations
                         .IsRequired()
                         .HasMaxLength(256)
                         .HasColumnType("character varying(256)");
+
+                    b.Property<bool?>("VotedOutGodfather")
+                        .HasColumnType("boolean");
+
+                    b.Property<int?>("VotesCast")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("VotesOnMafia")
+                        .HasColumnType("integer");
 
                     b.Property<bool>("WasPromoted")
                         .HasColumnType("boolean");
@@ -260,6 +296,9 @@ namespace Nightfall.Infrastructure.History.Migrations
 
                     b.Property<DateTime>("EndedAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("EventsJson")
+                        .HasColumnType("text");
 
                     b.Property<string>("Result")
                         .IsRequired()

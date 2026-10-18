@@ -16,5 +16,7 @@ public sealed class GameRecord
     public WinCondition Result { get; set; }
     public string Status { get; set; } = "Completed";
     public string? CancellationReason { get; set; }
+    /// <summary>The game's event log as JSON (a list of GameEvent), for the recap. Null for games played before the log existed.</summary>
+    public string? EventsJson { get; set; }
     public List<GamePlayerRecord> Players { get; set; } = new();
 }

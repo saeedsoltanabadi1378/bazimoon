@@ -39,7 +39,8 @@ public sealed record GameView(
     DateTimeOffset? AutoStartAt = null,
     Guid? ControllerPlayerId = null,
     int YourStrikes = 0,
-    IReadOnlyList<Guid>? RemovedForInactivity = null)
+    IReadOnlyList<Guid>? RemovedForInactivity = null,
+    IReadOnlyList<MvpView>? Mvps = null)
 {
     public static GameView For(GameState game, Guid viewerId)
     {
@@ -157,8 +158,27 @@ public sealed record GameView(
             game.AutoStartAt,
             controller?.Id,
             game.Strikes.GetValueOrDefault(viewerId),
-            game.LastRemovedForInactivity.Count > 0 ? game.LastRemovedForInactivity.ToList() : null);
+            game.LastRemovedForInactivity.Count > 0 ? game.LastRemovedForInactivity.ToList() : null,
+            game.CurrentPhase == GamePhase.Ended ? MvpView.For(game) : null);
     }
+}
+
+/// <summary>One point source for the MVP: what it was, how many times, and the points it gave.</summary>
+public sealed record MvpPointsView(string Kind, int Count, int Points);
+
+/// <summary>A player the game picked as MVP, with where their points came from.</summary>
+public sealed record MvpView(Guid PlayerId, int Points, IReadOnlyList<MvpPointsView> Breakdown)
+{
+    public static IReadOnlyList<MvpView> For(GameState game) =>
+        MafiaScoring.Score(game).Where(s => s.IsMvp).Select(s => new MvpView(s.PlayerId, s.Points, new List<MvpPointsView>
+        {
+            new("teamWon", 1, MafiaScoring.PointsTeamWon),
+            new("mafiaFound", s.MafiaFound, s.MafiaFound * MafiaScoring.PointsMafiaFound),
+            new("killBlocked", s.KillsBlocked, s.KillsBlocked * MafiaScoring.PointsKillBlocked),
+            new("killMade", s.KillsMade, s.KillsMade * MafiaScoring.PointsKillMade),
+            new("voteOnMafiaOut", s.VotesOnMafiaOut, s.VotesOnMafiaOut * MafiaScoring.PointsVoteOnMafiaOut),
+            new("nightSurvived", s.NightsSurvived, s.NightsSurvived * MafiaScoring.PointsNightSurvived),
+        }.Where(l => l.Count > 0).ToList())).ToList();
 }
 
 public sealed record PlayerView(

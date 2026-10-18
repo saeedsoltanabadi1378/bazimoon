@@ -131,6 +131,16 @@ export interface GameView {
   yourStrikes: number;
   /** Players removed for inactivity when the last timed night or vote closed. */
   removedForInactivity: string[] | null;
+  /** Once the game has ended: the MVPs the game worked out (several on a tie). */
+  mvps: MvpView[] | null;
+}
+
+export type MvpPointsKind = "teamWon" | "mafiaFound" | "killBlocked" | "killMade" | "voteOnMafiaOut" | "nightSurvived";
+
+export interface MvpView {
+  playerId: string;
+  points: number;
+  breakdown: { kind: MvpPointsKind; count: number; points: number }[];
 }
 
 /** Your rating outcome for a finished game (from the history service). */
@@ -138,6 +148,9 @@ export interface MyGameResult {
   won: boolean;
   rating: number;
   ratingDelta: number;
+  isMvp: boolean;
+  /** Achievement keys this game earned you for the first time. */
+  newAchievements: string[] | null;
 }
 
 export interface DiscussionView {

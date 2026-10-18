@@ -11,6 +11,8 @@ import { WelcomeScreen, WELCOMED_KEY } from "./hub/WelcomeScreen";
 import { SoloScreen } from "./hub/SoloScreen";
 import { LeagueScreen } from "./hub/LeagueScreen";
 import { ProfileScreen } from "./hub/ProfileScreen";
+import { MafiaStatsScreen } from "./hub/MafiaStatsScreen";
+import { RecapScreen } from "./mafia/RecapScreen";
 import { GameRoute } from "./games/GameRoute";
 import { CoupleRoute } from "./couple/CoupleRoute";
 import { HubDataProvider } from "./hub/HubData";
@@ -49,6 +51,10 @@ function CurrentScreen() {
       return route.gameId ? <MafiaRoute gameId={route.gameId} /> : <MafiaTablesScreen code={route.code} />;
     case "createTable":
       return <CreateTableScreen />;
+    case "mafiaStats":
+      return <MafiaStatsScreen />;
+    case "recap":
+      return <RecapScreen gameId={route.gameId} />;
     case "game":
       return <GameRoute route={route} />;
     case "couple":

@@ -1,8 +1,10 @@
 import { useState, type ReactNode } from "react";
-import { useLanguage, type TranslationKey } from "../i18n/LanguageContext";
+import { useLanguage } from "../i18n/LanguageContext";
+import { badgeMeta } from "./badges";
+import { useNavigation } from "../app/router";
 import { useSession } from "../app/session";
 import { Body, ProgressBar, Screen, Switch } from "../ui/components";
-import { Icon, type IconName } from "../ui/Icon";
+import { Icon } from "../ui/Icon";
 import { TabBar } from "../ui/TabBar";
 import { useHub } from "./HubData";
 import { roman } from "./HomeScreen";
@@ -11,21 +13,12 @@ import { shareToTelegram } from "../lib/telegram";
 import { botLink } from "../lib/links";
 import { haptic } from "../lib/haptics";
 
-const badgeMeta: Record<string, { icon: IconName; bg: string; fg: string; name: TranslationKey }> = {
-  firstWin: { icon: "trophy", bg: "#3A2A16", fg: "#F0A83A", name: "badgeFirstWin" },
-  lifeSaver: { icon: "shield", bg: "#3D2328", fg: "#F08A7A", name: "badgeLifeSaver" },
-  sharpEye: { icon: "detective", bg: "#1B2A44", fg: "#8FA8FF", name: "badgeSharpEye" },
-  theDon: { icon: "godfather", bg: "#3A1C1A", fg: "#F08A7A", name: "badgeTheDon" },
-  streak7: { icon: "flame", bg: "#2A2113", fg: "#F0A83A", name: "badgeStreak7" },
-  streak30: { icon: "flame", bg: "#3A2A16", fg: "#F6C377", name: "badgeStreak30" },
-  solved100: { icon: "zip", bg: "#13302C", fg: "#5FD0BE", name: "badgeSolved100" },
-  gold: { icon: "star", bg: "#2A2113", fg: "#F0A83A", name: "badgeGold" },
-};
 
 export function ProfileScreen() {
   const { t, n, language, setLanguage } = useLanguage();
   const session = useSession();
   const { profile, saveSettings } = useHub();
+  const { push } = useNavigation();
   const [editingTime, setEditingTime] = useState(false);
 
   if (!profile) {
@@ -93,6 +86,10 @@ export function ProfileScreen() {
               <span className="num" style={{ width: 78, textAlign: "end", fontSize: 13 }}>{t("pctGames", { pct: side.pct, games: side.games })}</span>
             </div>
           ))}
+          <button type="button" className="row row--between" onClick={() => push({ name: "mafiaStats" })} style={{ minHeight: 44, padding: "0 12px", border: 0, borderRadius: 12, background: "#2E1C21", color: "var(--text)", font: "inherit", fontSize: 14, fontWeight: 600, cursor: "pointer", textAlign: "start" }}>
+            {t("mafiaStatsLink")}
+            <Icon name="forward" size={16} color="#B9A6A9" className="flip-rtl" />
+          </button>
         </section>
 
         <section className="stack">

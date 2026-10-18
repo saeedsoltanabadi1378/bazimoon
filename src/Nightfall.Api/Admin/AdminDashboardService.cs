@@ -182,6 +182,7 @@ public sealed class AdminDashboardService
         var profile = await _db.UserProfiles.AsNoTracking().FirstOrDefaultAsync(u => u.TelegramUserId == userId);
         var games = await _db.GamePlayers.AsNoTracking().Where(p => p.TelegramUserId == userId && p.GameRecord.Status == "Completed")
             .Select(p => new { p.Role, p.Won, p.RatingDelta, p.GameRecord.EndedAt, p.GameRecordId }).ToListAsync();
+        var rows = await _db.GamePlayers.AsNoTracking().Where(p => p.TelegramUserId == userId && p.Won != null && p.GameRecord.Status == "Completed").ToListAsync();
         var puzzles = await _db.PuzzleResults.AsNoTracking().Where(r => r.TelegramUserId == userId)
             .OrderByDescending(r => r.CreatedAt).Select(r => new { r.Game, r.Mode, r.PuzzleNumber, r.Solved, r.TimeMs, r.Score, r.Moves, r.CreatedAt }).ToListAsync();
 
@@ -211,7 +212,8 @@ public sealed class AdminDashboardService
             games.Count, games.Count == 0 ? 0 : (int)Math.Round(100.0 * wins / games.Count),
             puzzles.Count(p => p.Solved),
             Progression.CurrentStreak(s.PuzzleStreak, s.LastPuzzleDay, s.StreakFreezes, Today), s.BestPuzzleStreak, s.StreakFreezes,
-            s.Language, recent, coupleStatus);
+            s.Language, recent, coupleStatus,
+            MafiaStats.ByRole(rows), MafiaStats.Skills(rows));
     }
 
     public async Task<AdminPageDto<AdminChatRowDto>> GetChatsAsync(int page, int size, string? search)
@@ -401,7 +403,8 @@ public sealed record AdminActivityItemDto(string Kind, DateTime At, string? Game
 public sealed record AdminCoupleStatusDto(string Status, string? PartnerName, DateTime? Since);
 public sealed record AdminPlayerDetailDto(
     long Id, string Name, DateTime Joined, int Level, int Xp, int Rating, string Division, int Tier, int MafiaGames, int MafiaWinRate,
-    int PuzzlesSolved, int Streak, int BestStreak, int Freezes, string Language, IReadOnlyList<AdminActivityItemDto> Recent, AdminCoupleStatusDto Couple);
+    int PuzzlesSolved, int Streak, int BestStreak, int Freezes, string Language, IReadOnlyList<AdminActivityItemDto> Recent, AdminCoupleStatusDto Couple,
+    IReadOnlyList<RoleStats>? MafiaByRole = null, MafiaSkillStats? MafiaSkills = null);
 public sealed record AdminChatRowDto(long Id, string? Title, int Members, int Games, string? LivePhase, DateTime? LastGame);
 public sealed record AdminDailyDto(string Game, string Mode, int Number, int Players, int Solved, int? MedianTimeMs, int? MedianMoves, int? MedianScore);
 public sealed record AdminSeasonDto(int Number, int Day, int Length, DateOnly EndsOn);

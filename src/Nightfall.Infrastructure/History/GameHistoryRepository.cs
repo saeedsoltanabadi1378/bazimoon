@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Nightfall.Domain;
 using Nightfall.Infrastructure.Hub;
@@ -23,6 +24,7 @@ public sealed class GameHistoryRepository : IGameHistoryRepository
 
         var roster = _rosterStore is null ? [] : await _rosterStore.GetAsync(game.GameId);
         var result = game.CheckWinCondition();
+        var scores = MafiaScoring.Score(game).ToDictionary(x => x.PlayerId);
         var record = new GameRecord
         {
             Id = game.GameId,
@@ -31,6 +33,7 @@ public sealed class GameHistoryRepository : IGameHistoryRepository
             CreatedAt = game.CreatedAt.UtcDateTime,
             EndedAt = DateTime.UtcNow,
             Result = result,
+            EventsJson = JsonSerializer.Serialize(game.Events),
             Players = game.Players.Select(p => new GamePlayerRecord
             {
                 Id = Guid.NewGuid(),
@@ -44,7 +47,19 @@ public sealed class GameHistoryRepository : IGameHistoryRepository
                 EliminatedRound = p.EliminatedRound,
                 WasPromoted = p.WasPromoted,
                 // Leaving mid-game, or being removed for inactivity, is always a loss.
-                Won = result == WinCondition.None ? null : p.EliminatedBy != EliminationCause.Left && p.IsMafiaAligned == (result == WinCondition.MafiaWin)
+                Won = result == WinCondition.None ? null : p.EliminatedBy != EliminationCause.Left && p.IsMafiaAligned == (result == WinCondition.MafiaWin),
+                ChecksMade = scores[p.Id].ChecksMade,
+                MafiaFound = scores[p.Id].MafiaFound,
+                SavesMade = scores[p.Id].SavesMade,
+                KillsBlocked = scores[p.Id].KillsBlocked,
+                KillsMade = scores[p.Id].KillsMade,
+                VotesCast = scores[p.Id].VotesCast,
+                VotesOnMafia = scores[p.Id].VotesOnMafia,
+                NightsSurvived = scores[p.Id].NightsSurvived,
+                SurvivedRevote = scores[p.Id].SurvivedRevote,
+                VotedOutGodfather = scores[p.Id].VotedOutGodfather,
+                MvpPoints = scores[p.Id].Points,
+                IsMvp = scores[p.Id].IsMvp
             }).ToList()
         };
 
@@ -79,7 +94,7 @@ public sealed class GameHistoryRepository : IGameHistoryRepository
             p.RatingBefore = s.Rating;
             p.RatingDelta = delta;
             s.Rating += delta;
-            s.Xp += Progression.MafiaXp(p.Won.Value);
+            s.Xp += Progression.MafiaXp(p.Won.Value, p.IsMvp);
             s.UpdatedAt = DateTime.UtcNow;
         }
     }
