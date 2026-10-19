@@ -15,7 +15,8 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
     const body = await response.json().catch(() => ({}));
     throw new AdminApiError(response.status, body.detail ?? `Request failed (${response.status})`);
   }
-  return response.status === 204 ? (undefined as T) : response.json();
+  const text = await response.text();
+  return text ? JSON.parse(text) : (undefined as T);
 }
 
 export const adminApi = {
@@ -129,7 +130,7 @@ export interface PlayerRow {
 }
 
 export interface ActivityItem {
-  kind: "mafia" | "puzzle";
+  kind: "mafia" | "puzzle" | "admin";
   at: string;
   game: string | null;
   number: number | null;
@@ -138,6 +139,10 @@ export interface ActivityItem {
   ratingDelta: number | null;
   timeMs: number | null;
   score: number | null;
+  /** "admin" kind only: what the admin audit log recorded. */
+  message: string | null;
+  /** "admin" kind only: who made the change, or null for the system. */
+  actor: string | null;
 }
 
 export interface PlayerDetail {
@@ -156,7 +161,6 @@ export interface PlayerDetail {
   bestStreak: number;
   freezes: number;
   language: string;
-  recent: ActivityItem[];
   couple: { status: "none" | "pending" | "active"; partnerName: string | null; since: string | null };
   mafiaByRole: { role: string; games: number; winRate: number }[] | null;
   /** Totals over the games that have a log; older games are left out. */

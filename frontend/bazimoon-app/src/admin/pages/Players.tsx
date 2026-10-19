@@ -4,6 +4,9 @@ import type { ActivityItem, Page, PlayerDetail, PlayerRow } from "../adminApi";
 import { useAdminI18n } from "../i18n";
 import { AVATAR_COLORS, divisionName, Header, PageState, Search, Svg, ICONS, formatDuration, gameName, initial, roleName, useAdminData } from "../ui";
 
+const ACTIVITY_FILTERS = [null, "mafia", "puzzle", "admin"] as const;
+const ACTIVITY_PAGE = 10;
+
 export function PlayersPage() {
   const { t, n, ago, lang } = useAdminI18n();
   const [search, setSearch] = useState("");
@@ -100,7 +103,7 @@ export function PlayersPage() {
 const roman = (tier: number) => ["", "I", "II", "III"][tier] ?? "";
 
 function PlayerPanel({ d, color, onBotChanged }: { d: PlayerDetail; color: string; onBotChanged: () => void }) {
-  const { t, n, date, ago, lang } = useAdminI18n();
+  const { t, n, date, lang } = useAdminI18n();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const toggleBot = async () => {
@@ -123,15 +126,6 @@ function PlayerPanel({ d, color, onBotChanged }: { d: PlayerDetail; color: strin
     [n(d.freezes), t("statFreezes")],
     [n(d.xp), t("statXp")],
   ];
-  const activity = (a: ActivityItem) => {
-    if (a.kind === "puzzle") {
-      const label = { game: gameName(a.game, lang), number: a.number ? ` #${n(a.number)}` : "" };
-      const text = a.won ? t("actPuzzleSolved", label) : t("actPuzzleFailed", label);
-      return a.won && a.timeMs ? `${text} · ${formatDuration(a.timeMs, n)}` : text;
-    }
-    const delta = a.ratingDelta == null ? t("none") : `${a.ratingDelta >= 0 ? "+" : "−"}${n(Math.abs(a.ratingDelta))}`;
-    return (a.won ? t("actMafiaWon", { role: roleName(a.role, lang) ?? "", delta }) : t("actMafiaLost", { role: roleName(a.role, lang) ?? "", delta }));
-  };
   const pct = (part: number, whole: number) => (whole === 0 ? t("none") : `${n(Math.round((100 * part) / whole))}${lang === "fa" ? "٪" : "%"}`);
   const couple = d.couple.status === "active" ? t("coupleActive", { name: d.couple.partnerName ?? "?", date: d.couple.since ? date(d.couple.since) : t("none") })
     : d.couple.status === "pending" ? t("couplePending") : t("coupleNone");
@@ -194,20 +188,85 @@ function PlayerPanel({ d, color, onBotChanged }: { d: PlayerDetail; color: strin
           )}
         </div>
       )}
-      <div style={{ display: "flex", flexDirection: "column" }}>
-        <span className="small" style={{ fontWeight: 600, paddingBottom: 6 }}>{t("recentActivity")}</span>
-        {d.recent.length === 0 && <span className="small muted">{t("noActivity")}</span>}
-        {d.recent.map((a, i) => (
-          <div key={i} className="adm-row" style={{ minHeight: 38, justifyContent: "space-between", fontSize: 13 }}>
-            <span>{activity(a)}</span>
-            <span className="muted" style={{ whiteSpace: "nowrap" }}>{ago(a.at)}</span>
-          </div>
-        ))}
-      </div>
+      <ActivityLog playerId={d.id} />
       <div className="adm-note">
         <Svg d={ICONS.lock} size={16} stroke="#F2A7C3" />
         <span>{couple}</span>
       </div>
     </>
+  );
+}
+
+function ActivityLog({ playerId }: { playerId: string }) {
+  const { t, n, ago, lang } = useAdminI18n();
+  const [kind, setKind] = useState<(typeof ACTIVITY_FILTERS)[number]>(null);
+  const [items, setItems] = useState<ActivityItem[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const [error, setError] = useState<string | null>(null);
+  const [loaded, setLoaded] = useState(false);
+
+  async function load(nextPage: number) {
+    try {
+      const q = new URLSearchParams({ page: String(nextPage), pageSize: String(ACTIVITY_PAGE) });
+      if (kind) q.set("kind", kind);
+      const res = await adminApi.get<Page<ActivityItem>>(`/players/${playerId}/activity?${q}`);
+      setItems((old) => (nextPage === 1 ? res.items : [...old, ...res.items]));
+      setTotal(res.total);
+      setPage(nextPage);
+      setError(null);
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setLoaded(true);
+    }
+  }
+
+  useEffect(() => {
+    setLoaded(false);
+    void load(1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [playerId, kind]);
+
+  const filterLabel = (f: (typeof ACTIVITY_FILTERS)[number]) =>
+    f === "mafia" ? t("mafia") : f === "puzzle" ? t("puzzles") : f === "admin" ? t("activityAdmin") : t("filterAll");
+
+  const describe = (a: ActivityItem) => {
+    if (a.kind === "puzzle") {
+      const label = { game: gameName(a.game, lang), number: a.number ? ` #${n(a.number)}` : "" };
+      const text = a.won ? t("actPuzzleSolved", label) : t("actPuzzleFailed", label);
+      return a.won && a.timeMs ? `${text} · ${formatDuration(a.timeMs, n)}` : text;
+    }
+    if (a.kind === "mafia") {
+      const delta = a.ratingDelta == null ? t("none") : `${a.ratingDelta >= 0 ? "+" : "−"}${n(Math.abs(a.ratingDelta))}`;
+      return a.won ? t("actMafiaWon", { role: roleName(a.role, lang) ?? "", delta }) : t("actMafiaLost", { role: roleName(a.role, lang) ?? "", delta });
+    }
+    return a.message ?? "";
+  };
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+        <span className="small" style={{ fontWeight: 600 }}>{t("activityLog")}</span>
+        <div role="radiogroup" aria-label={t("activityLog")} style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+          {ACTIVITY_FILTERS.map((f) => (
+            <button key={f ?? "all"} type="button" role="radio" className="adm-chip" aria-checked={kind === f} onClick={() => setKind(f)}>{filterLabel(f)}</button>
+          ))}
+        </div>
+      </div>
+      {!loaded ? <span className="small muted">{t("loading")}</span> : error ? <PageState error={error} onRetry={() => void load(1)} /> : items.length === 0 ? <span className="small muted">{t("noActivity")}</span> : (
+        <>
+          {items.map((a, i) => (
+            <div key={i} className="adm-row" style={{ minHeight: 38, justifyContent: "space-between", gap: 10, fontSize: 13 }}>
+              <span dir="auto">{describe(a)}{a.kind === "admin" && a.actor ? ` · ${a.actor}` : ""}</span>
+              <span className="muted" style={{ whiteSpace: "nowrap" }}>{ago(a.at)}</span>
+            </div>
+          ))}
+          {items.length < total && (
+            <button type="button" className="adm-btn" style={{ alignSelf: "center", minHeight: 36, fontSize: 13 }} onClick={() => void load(page + 1)}>{t("loadOlder")}</button>
+          )}
+        </>
+      )}
+    </div>
   );
 }

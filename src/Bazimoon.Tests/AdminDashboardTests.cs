@@ -66,4 +66,28 @@ public class AdminDashboardTests : IClassFixture<BazimoonApiFactory>, IAsyncLife
         var live = await admin.GetFromJsonAsync<JsonElement>("/api/admin/games?status=active");
         Assert.True(live.GetProperty("total").GetInt32() >= 1);
     }
+
+    [Fact]
+    public async Task PlayerActivity_CombinesGamesPuzzlesAndAdminAudit_AndFiltersByKind()
+    {
+        var player = await AuthTestHelper.CreateAuthenticatedClientAsync(_factory, 870003, "activityplayer");
+        (await player.PostAsJsonAsync("/api/puzzles/results", new PuzzleSubmitRequest("zip", "daily", null, true, 40_000, null, null, null, 0))).EnsureSuccessStatusCode();
+
+        var client = _factory.CreateClient();
+        (await client.PostAsJsonAsync("/api/admin/auth/login", new LoginRequest(BazimoonApiFactory.AdminUsername, BazimoonApiFactory.AdminPassword))).EnsureSuccessStatusCode();
+        var csrf = await client.GetFromJsonAsync<JsonElement>("/api/admin/auth/csrf");
+        client.DefaultRequestHeaders.Add("X-CSRF-Token", csrf.GetProperty("token").GetString());
+
+        var players = await client.GetFromJsonAsync<AdminPageDto<AdminPlayerRowDto>>("/api/admin/players?search=activityplayer");
+        var id = Assert.Single(players!.Items).Id;
+        (await client.PutAsJsonAsync($"/api/admin/players/{id}/bot", new BotRequest(true))).EnsureSuccessStatusCode();
+
+        var all = await client.GetFromJsonAsync<AdminPageDto<AdminActivityItemDto>>($"/api/admin/players/{id}/activity");
+        Assert.Contains(all!.Items, a => a.Kind == "puzzle");
+        Assert.Contains(all.Items, a => a.Kind == "admin" && a.Message == "Player marked as a bot" && a.Actor == "admin");
+
+        var puzzleOnly = await client.GetFromJsonAsync<AdminPageDto<AdminActivityItemDto>>($"/api/admin/players/{id}/activity?kind=puzzle");
+        Assert.All(puzzleOnly!.Items, a => Assert.Equal("puzzle", a.Kind));
+        Assert.DoesNotContain(puzzleOnly.Items, a => a.Kind == "admin");
+    }
 }

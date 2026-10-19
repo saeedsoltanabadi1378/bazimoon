@@ -67,6 +67,8 @@ public static class AdminEndpoints
         });
         group.MapGet("/players/{id:guid}", async (Guid id, AdminDashboardService dash) =>
             await dash.GetPlayerAsync(id) is { } player ? Results.Ok(player) : Results.NotFound());
+        group.MapGet("/players/{id:guid}/activity", async (Guid id, string? kind, int? page, int? pageSize, AdminDashboardService dash) =>
+            Results.Ok(await dash.GetPlayerActivityAsync(id, kind, Math.Max(1, page ?? 1), Math.Clamp(pageSize ?? 10, 1, 50))));
         group.MapGet("/puzzles", async (AdminDashboardService dash) => Results.Ok(await dash.GetPuzzlesAsync()));
         group.MapGet("/events", async (string? level, long? before, int? pageSize, AdminDashboardService dash) =>
             Results.Ok(await dash.GetEventsAsync(level, before, Math.Clamp(pageSize ?? 25, 1, 100))));
