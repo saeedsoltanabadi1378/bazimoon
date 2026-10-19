@@ -1,0 +1,36 @@
+# Bazimoon
+
+Bazimoon is a free online game hub in English and Persian. It offers daily logic puzzles, word games, classic games, party games, Mafia with voice chat, and games for couples. Games run in a web browser without a download.
+
+## Main pages
+
+- English games: https://bazimoon.com/en/
+- بازی‌های فارسی: https://bazimoon.com/fa/
+- XML sitemap: https://bazimoon.com/sitemap.xml
+
+## Persian game pages
+
+- پازل زیپ: https://bazimoon.com/fa/zip/
+- ملکه‌ها: https://bazimoon.com/fa/queens/
+- سودوکو: https://bazimoon.com/fa/sudoku/
+- کلمه روز: https://bazimoon.com/fa/daily-word/
+- اسم فامیل: https://bazimoon.com/fa/esm-famil/
+- مافیا آنلاین: https://bazimoon.com/fa/mafia/
+- بازی جاسوس: https://bazimoon.com/fa/spy/
+- کوییز زوج‌ها: https://bazimoon.com/fa/couple-quiz/
+- تخته‌نرد: https://bazimoon.com/fa/backgammon/
+- دوز: https://bazimoon.com/fa/tic-tac-toe/
+- بازی حافظه: https://bazimoon.com/fa/memory/
+- بازی مار: https://bazimoon.com/fa/snake/
+
+## English game pages
+
+- Daily puzzles: https://bazimoon.com/en/sudoku/ and https://bazimoon.com/en/zip/
+- Daily Word: https://bazimoon.com/en/daily-word/
+- Mafia: https://bazimoon.com/en/mafia/
+- Esm-Famil: https://bazimoon.com/en/esm-famil/
+- Backgammon: https://bazimoon.com/en/backgammon/
+
+## Language support
+
+Every major page has English and Persian versions. Persian pages use right-to-left layout and Persian game instructions. Equivalent language versions are connected with reciprocal hreflang links.
