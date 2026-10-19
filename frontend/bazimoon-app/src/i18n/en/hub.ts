@@ -176,6 +176,8 @@ export const hub = {
 
   playTogether: "Play together",
   playTogetherSubtitle: "Games for you and the people you play with",
+  gameGuides: "Game guides",
+  gameGuidesSubtitle: "Learn the rules, roles and strategies",
   mafiaTables: "Mafia tables",
   whichTables: "Which tables",
   openTables: "Public tables",

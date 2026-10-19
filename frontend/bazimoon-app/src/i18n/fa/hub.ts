@@ -177,6 +177,8 @@ export const hub: Record<keyof typeof en, string> = {
 
   playTogether: "بازی با هم",
   playTogetherSubtitle: "بازی برای تو و کسانی که با آن‌ها بازی می‌کنی",
+  gameGuides: "آموزش بازی‌ها",
+  gameGuidesSubtitle: "قوانین، نقش‌ها و نکته‌های بازی را یاد بگیر",
   mafiaTables: "میزهای مافیا",
   whichTables: "کدام میزها",
   openTables: "میزهای عمومی",

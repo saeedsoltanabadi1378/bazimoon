@@ -1,5 +1,6 @@
 // Builds the static search pages from seo/content.ts. Called by vite.config.ts at build time.
 import { appGame, games, site, type Game, type Lang } from './content.ts'
+import { guideHub, guides, type Guide } from './guides.ts'
 
 const ORIGIN = 'https://bazimoon.com'
 const langs: Lang[] = ['en', 'fa']
@@ -10,6 +11,8 @@ const digits = (lang: Lang, s: string) => (lang === 'fa' ? s.replace(/[0-9]/g, (
 
 export const landingPath = (lang: Lang) => `/${lang}/`
 export const gamePath = (lang: Lang, slug: string) => `/${lang}/${slug}/`
+export const guidesPath = (lang: Lang) => `/${lang}/guides/`
+export const guidePath = (lang: Lang, slug: string) => `${guidesPath(lang)}${slug}/`
 const playHref = (lang: Lang, slug?: string) => (slug ? `/play/${appGame[slug]}?lang=${lang}` : `/?lang=${lang}`)
 
 const css = `
@@ -51,6 +54,8 @@ html[dir=rtl] .chev{transform:scaleX(-1)}
 .box .num{background:#0B0D1A;width:26px;height:26px;font-size:13px}
 .faq{border-bottom:1px solid #1E2138;padding-bottom:10px}
 .faq h3{margin-bottom:4px}
+.article{gap:16px}.article p{color:#C9C8DC}.article ul{margin:0;padding-inline-start:20px;display:flex;flex-direction:column;gap:7px;color:#C9C8DC}
+.byline{font-size:13px;color:#9A9CB8}.guide-card{align-items:flex-start}.guide-card .tile{margin-top:2px}
 ul.feat{margin:0;padding-inline-start:20px;display:flex;flex-direction:column;gap:6px;font-size:14px;color:#C9C8DC}
 .chips{display:flex;flex-wrap:wrap;gap:8px}
 .chips a{min-height:44px;display:flex;align-items:center;padding:0 14px;border-radius:999px;background:#151829;color:#EDEBF5;font-size:14px;text-decoration:none}
@@ -111,7 +116,7 @@ function foot(lang: Lang, otherPath: string, extra = '') {
   return `</main>
 <footer><div class="wrap">
 <div>${esc(s.footer)}</div>
-<div class="links"><a href="${landingPath(lang)}">${esc(s.allGames)}</a><a href="${landingPath(lang)}#install">${esc(s.install)}</a><a href="${otherPath}" hreflang="${other(lang)}" lang="${other(lang)}">${esc(s.otherLangLong)}</a><a href="${playHref(lang)}">${esc(s.open)}</a>${extra}</div>
+<div class="links"><a href="${landingPath(lang)}">${esc(s.allGames)}</a><a href="${guidesPath(lang)}">${esc(s.guides)}</a><a href="${landingPath(lang)}#install">${esc(s.install)}</a><a href="${otherPath}" hreflang="${other(lang)}" lang="${other(lang)}">${esc(s.otherLangLong)}</a><a href="${playHref(lang)}">${esc(s.open)}</a>${extra}</div>
 </div></footer>
 </body>
 </html>
@@ -152,6 +157,10 @@ function landing(lang: Lang) {
 <p class="note">${esc(s.ctaNote)}</p>
 </section>
 ${groups.join('\n')}
+<section>
+<h2>${esc(s.guides)}</h2>
+${guides.map((g) => `<a class="card guide-card" href="${guidePath(lang, g.slug)}"><span class="tile" aria-hidden="true" style="background:${g.bg};color:${g.fg}">${esc(g[lang].label.charAt(0))}</span><span class="t"><span class="n">${esc(g[lang].h1)}</span><span class="l">${esc(g[lang].description)}</span></span>${chevron}</a>`).join('\n')}
+</section>
 <section>
 <h2>${esc(s.whyTitle)}</h2>
 ${s.why.map(([t, d]) => `<div class="box"><h3>${esc(t)}</h3><p class="muted">${esc(d)}</p></div>`).join('\n')}
@@ -218,12 +227,93 @@ ${faqHtml(p.faq)}
 ` + foot(lang, otherPath)
 }
 
+function guidesLanding(lang: Lang) {
+  const s = site[lang]
+  const p = guideHub[lang]
+  const path = guidesPath(lang)
+  const otherPath = guidesPath(other(lang))
+  const ld = [
+    {
+      '@context': 'https://schema.org', '@type': 'CollectionPage', name: p.h1, url: `${ORIGIN}${path}`,
+      inLanguage: lang, description: p.description,
+    },
+    {
+      '@context': 'https://schema.org', '@type': 'BreadcrumbList',
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: s.home, item: `${ORIGIN}${landingPath(lang)}` },
+        { '@type': 'ListItem', position: 2, name: p.label, item: `${ORIGIN}${path}` },
+      ],
+    },
+  ]
+  return head(lang, path, otherPath, p.title, p.description, ld) + `
+<nav class="crumb" aria-label="${esc(s.crumbLabel)}"><a href="${landingPath(lang)}">${esc(s.home)}</a> / ${esc(p.label)}</nav>
+<section>
+<h1>${esc(p.h1)}</h1>
+<p class="lead">${esc(p.intro)}</p>
+</section>
+<section>
+${guides.map((g) => `<a class="card guide-card" href="${guidePath(lang, g.slug)}"><span class="tile" aria-hidden="true" style="background:${g.bg};color:${g.fg}">${esc(g[lang].label.charAt(0))}</span><span class="t"><span class="n">${esc(g[lang].h1)}</span><span class="l">${esc(g[lang].description)}</span><span class="l" style="color:${g.fg}">${esc(g[lang].readTime)} · ${esc(p.read)}</span></span>${chevron}</a>`).join('\n')}
+</section>
+` + foot(lang, otherPath)
+}
+
+function guidePage(lang: Lang, guide: Guide) {
+  const s = site[lang]
+  const hub = guideHub[lang]
+  const p = guide[lang]
+  const path = guidePath(lang, guide.slug)
+  const otherPath = guidePath(other(lang), guide.slug)
+  const published = '2026-10-19'
+  const ld = [
+    {
+      '@context': 'https://schema.org', '@type': 'Article', headline: p.h1, description: p.description,
+      url: `${ORIGIN}${path}`, mainEntityOfPage: `${ORIGIN}${path}`, inLanguage: lang,
+      datePublished: published, dateModified: published,
+      author: { '@type': 'Organization', name: 'Bazimoon' },
+      publisher: { '@type': 'Organization', name: 'Bazimoon', url: ORIGIN },
+      image: `${ORIGIN}/og-image.png`,
+    },
+    {
+      '@context': 'https://schema.org', '@type': 'BreadcrumbList',
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: s.home, item: `${ORIGIN}${landingPath(lang)}` },
+        { '@type': 'ListItem', position: 2, name: hub.label, item: `${ORIGIN}${guidesPath(lang)}` },
+        { '@type': 'ListItem', position: 3, name: p.label, item: `${ORIGIN}${path}` },
+      ],
+    },
+    faqLd(p.faq),
+  ]
+  const related = guides.filter((g) => g.slug !== guide.slug)
+  return head(lang, path, otherPath, p.title, p.description, ld) + `
+<nav class="crumb" aria-label="${esc(s.crumbLabel)}"><a href="${landingPath(lang)}">${esc(s.home)}</a> / <a href="${guidesPath(lang)}">${esc(hub.label)}</a> / ${esc(p.label)}</nav>
+<article class="article">
+<section>
+<h1>${esc(p.h1)}</h1>
+<p class="byline">${esc(p.readTime)}</p>
+<p class="lead">${esc(p.intro)}</p>
+<a class="btn" href="${playHref(lang, p.gameSlug)}" style="background:${guide.fg}">${esc(p.playLabel)}</a>
+</section>
+${p.sections.map((section) => `<section><h2>${esc(section.heading)}</h2>${section.paragraphs.map((paragraph) => `<p>${esc(paragraph)}</p>`).join('')}${section.bullets ? `<ul>${section.bullets.map((item) => `<li>${esc(item)}</li>`).join('')}</ul>` : ''}</section>`).join('\n')}
+<section>
+<h2>${esc(s.faqTitle)}</h2>
+${faqHtml(p.faq)}
+</section>
+<section>
+<a class="btn" href="${playHref(lang, p.gameSlug)}" style="background:${guide.fg}">${esc(p.playLabel)}</a>
+</section>
+</article>
+${related.length ? `<section><h2>${esc(hub.h1)}</h2><div class="chips">${related.map((g) => `<a href="${guidePath(lang, g.slug)}">${esc(g[lang].label)}</a>`).join('')}</div></section>` : ''}
+` + foot(lang, otherPath, `<a href="${gamePath(lang, p.gameSlug)}">${esc(games.find((g) => g.slug === p.gameSlug)?.[lang].name ?? p.label)}</a>`)
+}
+
 /** Every search page as [file name in dist, html]. */
 export function searchPages(): [string, string][] {
   const out: [string, string][] = []
   for (const lang of langs) {
     out.push([`${lang}/index.html`, landing(lang)])
     for (const g of games) out.push([`${lang}/${g.slug}/index.html`, gamePage(lang, g)])
+    out.push([`${lang}/guides/index.html`, guidesLanding(lang)])
+    for (const guide of guides) out.push([`${lang}/guides/${guide.slug}/index.html`, guidePage(lang, guide)])
   }
   return out
 }
@@ -245,6 +335,8 @@ export function sitemap(): string {
   </url>`]
   for (const lang of langs) urls.push(entry(landingPath(lang), landingPath('en'), landingPath('fa'), '1.0'))
   for (const g of games) for (const lang of langs) urls.push(entry(gamePath(lang, g.slug), gamePath('en', g.slug), gamePath('fa', g.slug), '0.9'))
+  for (const lang of langs) urls.push(entry(guidesPath(lang), guidesPath('en'), guidesPath('fa'), '0.8'))
+  for (const guide of guides) for (const lang of langs) urls.push(entry(guidePath(lang, guide.slug), guidePath('en', guide.slug), guidePath('fa', guide.slug), '0.8'))
   return `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
 ${urls.join('\n')}

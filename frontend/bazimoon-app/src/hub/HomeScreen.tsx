@@ -198,7 +198,7 @@ export function roman(tier: number) {
 
 /** Home's "Play together": equal Mafia and Couple Quiz tiles, so neither leads the hub. */
 function PlayTogether({ data }: { data: Home | null }) {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const { push } = useNavigation();
   const couple = useCoupleSummary();
   const { isGameOn } = useHub();
@@ -248,6 +248,21 @@ function PlayTogether({ data }: { data: Home | null }) {
           )}
         </button>}
       </div>
+      <a
+        href={`/${language}/guides/`}
+        onClick={() => haptic.tap()}
+        className="row"
+        style={{ gap: 10, minHeight: 52, padding: "8px 12px", borderRadius: 14, border: "1.5px dashed #3A3F52", color: "var(--text)", textDecoration: "none" }}
+      >
+        <span style={{ width: 34, height: 34, flex: "none", borderRadius: 10, background: "#1E2138", color: "#C3B9FF", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <Icon name="info" size={18} />
+        </span>
+        <span className="grow" style={{ minWidth: 0 }}>
+          <span style={{ display: "block", fontSize: 14, fontWeight: 600 }}>{t("gameGuides")}</span>
+          <span className="tiny muted" style={{ display: "block" }}>{t("gameGuidesSubtitle")}</span>
+        </span>
+        <span className="flip-rtl" style={{ display: "flex", color: "var(--muted)" }}><Icon name="forward" size={16} /></span>
+      </a>
     </section>
   );
 }

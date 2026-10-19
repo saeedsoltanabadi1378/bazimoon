@@ -421,6 +421,7 @@ export interface SiteText {
   moreTitle: string
   allGames: string
   install: string
+  guides: string
 }
 
 export const site: Record<Lang, SiteText> = {
@@ -442,7 +443,7 @@ export const site: Record<Lang, SiteText> = {
     faq: [['Is Bazimoon free?', 'Yes, every game is free.'], ['Do I need to install anything?', 'No. Open it in your phone or computer browser. Installing to the home screen is optional.'], ['Can I play without an account?', 'Yes, you start as a guest. Sign in with Google to keep your progress on every device.'], ['How many people can play Mafia?', '3 to 12, with voice chat in the game.']],
     footer: 'Bazimoon · free online games in English and Persian',
     home: 'Games', crumbLabel: 'Breadcrumb', play: (n) => `Play ${n}`, howTitle: (n) => `How to play ${n}`,
-    featTitle: 'Features', moreTitle: 'More games', allGames: 'All games', install: 'Add to home screen',
+    featTitle: 'Features', moreTitle: 'More games', allGames: 'All games', install: 'Add to home screen', guides: 'Game guides',
   },
   fa: {
     brand: 'بازیمون', open: 'باز کردن بازیمون', otherLang: 'English', otherLangLong: 'English version',
@@ -462,6 +463,6 @@ export const site: Record<Lang, SiteText> = {
     faq: [['بازیمون رایگان است؟', 'بله، همه بازی‌ها رایگان هستند.'], ['باید چیزی نصب کنم؟', 'نه. در مرورگر گوشی یا کامپیوتر باز کنید. نصب روی صفحه اصلی اختیاری است.'], ['بدون ثبت‌نام می‌شود بازی کرد؟', 'بله، به‌عنوان مهمان شروع می‌کنید. با ورود با گوگل پیشرفتتان روی همه دستگاه‌ها می‌ماند.'], ['مافیا را چند نفره بازی کنیم؟', 'از ۳ تا ۱۲ نفر، با گفت‌وگوی صوتی داخل بازی.']],
     footer: 'بازیمون · بازی‌های آنلاین رایگان به فارسی و انگلیسی',
     home: 'بازی‌ها', crumbLabel: 'مسیر صفحه', play: (n) => `شروع ${n}`, howTitle: (n) => `آموزش ${n}`,
-    featTitle: 'ویژگی‌ها', moreTitle: 'بازی‌های دیگر', allGames: 'همه بازی‌ها', install: 'نصب روی صفحه اصلی',
+    featTitle: 'ویژگی‌ها', moreTitle: 'بازی‌های دیگر', allGames: 'همه بازی‌ها', install: 'نصب روی صفحه اصلی', guides: 'آموزش بازی‌ها',
   },
 }
