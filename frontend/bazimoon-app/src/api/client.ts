@@ -9,6 +9,7 @@ import type {
   VoiceTokenResponse,
   VotingResult,
 } from "./types";
+import type { AcquisitionAttribution } from "../lib/attribution";
 
 export class ApiError extends Error {
   readonly status: number;
@@ -117,12 +118,12 @@ export class BazimoonApiClient {
     return text.length > 0 ? (JSON.parse(text) as T) : (undefined as T);
   }
 
-  signInAsGuest(language: string) {
-    return this.request<AuthSession>("POST", "/api/auth/guest", { language });
+  signInAsGuest(language: string, attribution: AcquisitionAttribution) {
+    return this.request<AuthSession>("POST", "/api/auth/guest", { language, attribution });
   }
 
-  signInWithGoogle(idToken: string, nonce: string, language: string) {
-    return this.request<AuthSession>("POST", "/api/auth/google", { idToken, nonce, language });
+  signInWithGoogle(idToken: string, nonce: string, language: string, attribution: AcquisitionAttribution) {
+    return this.request<AuthSession>("POST", "/api/auth/google", { idToken, nonce, language, attribution });
   }
 
   linkGoogle(idToken: string, nonce: string) {

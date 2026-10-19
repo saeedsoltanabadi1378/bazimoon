@@ -15,6 +15,7 @@ public sealed class BazimoonDbContext : DbContext
     public DbSet<GamePlayerRecord> GamePlayers => Set<GamePlayerRecord>();
     public DbSet<AppSettingsRecord> AppSettings => Set<AppSettingsRecord>();
     public DbSet<UserRecord> Users => Set<UserRecord>();
+    public DbSet<UserAcquisitionRecord> UserAcquisitions => Set<UserAcquisitionRecord>();
     public DbSet<UserIdentityRecord> UserIdentities => Set<UserIdentityRecord>();
     public DbSet<RefreshTokenRecord> RefreshTokens => Set<RefreshTokenRecord>();
     public DbSet<PushSubscriptionRecord> PushSubscriptions => Set<PushSubscriptionRecord>();
@@ -48,6 +49,23 @@ public sealed class BazimoonDbContext : DbContext
             b.HasIndex(i => new { i.Provider, i.ProviderUserId }).IsUnique();
             b.HasIndex(i => i.UserId);
             b.HasOne<UserRecord>().WithMany().HasForeignKey(i => i.UserId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<UserAcquisitionRecord>(b =>
+        {
+            b.ToTable("user_acquisitions");
+            b.HasKey(a => a.UserId);
+            b.Property(a => a.Source).HasMaxLength(100);
+            b.Property(a => a.Medium).HasMaxLength(100);
+            b.Property(a => a.Campaign).HasMaxLength(200);
+            b.Property(a => a.Term).HasMaxLength(200);
+            b.Property(a => a.Content).HasMaxLength(200);
+            b.Property(a => a.Referrer).HasMaxLength(2048);
+            b.Property(a => a.LandingPath).HasMaxLength(2048);
+            b.Property(a => a.Gclid).HasMaxLength(256);
+            b.HasIndex(a => new { a.Source, a.Medium });
+            b.HasIndex(a => a.FirstSeenAt);
+            b.HasOne<UserRecord>().WithOne().HasForeignKey<UserAcquisitionRecord>(a => a.UserId).OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<PushSubscriptionRecord>(b =>

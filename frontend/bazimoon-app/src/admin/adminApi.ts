@@ -127,6 +127,27 @@ export interface PlayerRow {
   language: string;
   lastSeen: string;
   isBot: boolean;
+  source: string;
+  medium: string;
+  campaign: string | null;
+}
+
+export interface AcquisitionSummary {
+  total: number;
+  sources: { value: string; players: number }[];
+  campaigns: { value: string; players: number }[];
+}
+
+export interface PlayerAcquisition {
+  source: string;
+  medium: string;
+  campaign: string | null;
+  term: string | null;
+  content: string | null;
+  referrer: string | null;
+  landingPath: string | null;
+  gclid: string | null;
+  firstSeenAt: string;
 }
 
 export interface ActivityItem {
@@ -170,6 +191,7 @@ export interface PlayerDetail {
   botMarkedAt: string | null;
   botMarkedBy: string | null;
   mafiaSkills: { trackedGames: number; checksMade: number; mafiaFound: number; killsBlocked: number; votesCast: number; votesOnMafia: number } | null;
+  acquisition: PlayerAcquisition | null;
 }
 
 export interface Daily {

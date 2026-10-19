@@ -49,7 +49,55 @@ public class AuthFlowTests : IClassFixture<BazimoonApiFactory>, IAsyncLifetime
         Assert.StartsWith("Player ", session.User.DisplayName);
         Assert.Equal("fa", session.User.Language);
         Assert.False(string.IsNullOrEmpty(session.RefreshToken));
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var acquisition = await scope.ServiceProvider.GetRequiredService<BazimoonDbContext>()
+                .UserAcquisitions.SingleAsync(x => x.UserId == session.User.Id);
+            Assert.Equal("direct", acquisition.Source);
+            Assert.Equal("none", acquisition.Medium);
+        }
         (await ClientWith(session.AccessToken).GetAsync("/api/me/profile")).EnsureSuccessStatusCode();
+    }
+
+    [Fact]
+    public async Task Guest_StoresFirstTouchAttribution_AndClassifiesKnownReferrers()
+    {
+        var tagged = await PostAsync("/api/auth/guest", new GuestAuthRequest(
+            Attribution: new AttributionRequest("ChatGPT", "AI_Referral", "launch", Referrer: "https://chatgpt.com/c/secret?token=private", LandingPath: "/fa/play", Gclid: " click-123 ")));
+        var inferred = await PostAsync("/api/auth/guest", new GuestAuthRequest(
+            Attribution: new AttributionRequest(Referrer: "https://gemini.google.com/app/abc?private=yes", LandingPath: "/")));
+
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<BazimoonDbContext>();
+        var taggedTouch = await db.UserAcquisitions.SingleAsync(x => x.UserId == tagged.User.Id);
+        var inferredTouch = await db.UserAcquisitions.SingleAsync(x => x.UserId == inferred.User.Id);
+
+        Assert.Equal("chatgpt", taggedTouch.Source);
+        Assert.Equal("ai_referral", taggedTouch.Medium);
+        Assert.Equal("launch", taggedTouch.Campaign);
+        Assert.Equal("https://chatgpt.com/c/secret", taggedTouch.Referrer);
+        Assert.Equal("/fa/play", taggedTouch.LandingPath);
+        Assert.Equal("click-123", taggedTouch.Gclid);
+        Assert.Equal("gemini", inferredTouch.Source);
+        Assert.Equal("referral", inferredTouch.Medium);
+        Assert.Equal("https://gemini.google.com/app/abc", inferredTouch.Referrer);
+    }
+
+    [Fact]
+    public async Task ExistingGoogleUser_KeepsOriginalAttribution()
+    {
+        var first = await PostAsync("/api/auth/google", new GoogleAuthRequest(
+            FakeGoogleTokenValidator.Token("g-attribution", "Sara"),
+            Attribution: new AttributionRequest("google", "organic")));
+        await PostAsync("/api/auth/google", new GoogleAuthRequest(
+            FakeGoogleTokenValidator.Token("g-attribution", "Sara"),
+            Attribution: new AttributionRequest("gemini", "ai_referral")));
+
+        using var scope = _factory.Services.CreateScope();
+        var touch = await scope.ServiceProvider.GetRequiredService<BazimoonDbContext>()
+            .UserAcquisitions.SingleAsync(x => x.UserId == first.User.Id);
+        Assert.Equal("google", touch.Source);
+        Assert.Equal("organic", touch.Medium);
     }
 
     [Fact]

@@ -13,7 +13,8 @@ public static class AuthEndpoints
 
         group.MapPost("/guest", async (GuestAuthRequest? request, HttpContext http, UserAccountService accounts, AuthSessionFactory sessions) =>
         {
-            var user = await accounts.CreateGuestAsync(request?.DisplayName, request?.Language, http.Request.Headers.UserAgent.ToString());
+            var user = await accounts.CreateGuestAsync(request?.DisplayName, request?.Language,
+                http.Request.Headers.UserAgent.ToString(), request?.Attribution?.ToData());
             return Results.Ok(await sessions.CreateAsync(user));
         })
         .WithName("SignInAsGuest")
@@ -24,7 +25,8 @@ public static class AuthEndpoints
         {
             if (await google.ValidateAsync(request.IdToken, request.Nonce) is not { } identity)
                 return Results.Unauthorized();
-            var user = await accounts.FindOrCreateAsync(IdentityProviders.Google, identity.Subject, identity.Name ?? "Player", request.Language, identity.Email);
+            var user = await accounts.FindOrCreateAsync(IdentityProviders.Google, identity.Subject, identity.Name ?? "Player",
+                request.Language, identity.Email, request.Attribution?.ToData());
             return Results.Ok(await sessions.CreateAsync(user));
         })
         .WithName("SignInWithGoogle")
@@ -91,9 +93,15 @@ public sealed class AuthSessionFactory
         new AuthUserDto(user.Id, user.DisplayName, user.IsGuest, user.Language));
 }
 
-public sealed record GuestAuthRequest(string? DisplayName = null, string? Language = null);
+public sealed record GuestAuthRequest(string? DisplayName = null, string? Language = null, AttributionRequest? Attribution = null);
 
-public sealed record GoogleAuthRequest(string IdToken, string? Language = null, string? Nonce = null);
+public sealed record GoogleAuthRequest(string IdToken, string? Language = null, string? Nonce = null, AttributionRequest? Attribution = null);
+
+public sealed record AttributionRequest(string? Source = null, string? Medium = null, string? Campaign = null,
+    string? Term = null, string? Content = null, string? Referrer = null, string? LandingPath = null, string? Gclid = null)
+{
+    public AcquisitionData ToData() => new(Source, Medium, Campaign, Term, Content, Referrer, LandingPath, Gclid);
+}
 
 public sealed record RefreshRequest(string? RefreshToken);
 

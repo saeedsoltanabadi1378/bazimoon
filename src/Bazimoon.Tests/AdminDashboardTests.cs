@@ -1,7 +1,9 @@
 using System.Net;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 using Bazimoon.Api.Admin;
+using Bazimoon.Api.Auth;
 using Bazimoon.Api.Lounge;
 
 namespace Bazimoon.Tests;
@@ -50,9 +52,17 @@ public class AdminDashboardTests : IClassFixture<BazimoonApiFactory>, IAsyncLife
 
         var players = await admin.GetFromJsonAsync<AdminPageDto<AdminPlayerRowDto>>("/api/admin/players?search=dashplayer");
         var row = Assert.Single(players!.Items);
+        Assert.Equal("direct", row.Source);
+        Assert.Equal("none", row.Medium);
         var detail = await admin.GetFromJsonAsync<AdminPlayerDetailDto>($"/api/admin/players/{row.Id}");
         Assert.Equal(1, detail!.PuzzlesSolved);
         Assert.Equal("none", detail.Couple.Status);
+        Assert.Equal("direct", detail.Acquisition!.Source);
+
+        var directPlayers = await admin.GetFromJsonAsync<AdminPageDto<AdminPlayerRowDto>>("/api/admin/players?source=direct");
+        Assert.Contains(directPlayers!.Items, p => p.Id == row.Id);
+        var acquisition = await admin.GetFromJsonAsync<AdminAcquisitionSummaryDto>("/api/admin/players/acquisition");
+        Assert.Contains(acquisition!.Sources, s => s.Value == "direct" && s.Players >= 1);
 
         var puzzles = await admin.GetFromJsonAsync<AdminPuzzlesDto>("/api/admin/puzzles");
         var zip = Assert.Single(puzzles!.Dailies, d => d.Game == "zip");
@@ -89,5 +99,30 @@ public class AdminDashboardTests : IClassFixture<BazimoonApiFactory>, IAsyncLife
         var puzzleOnly = await client.GetFromJsonAsync<AdminPageDto<AdminActivityItemDto>>($"/api/admin/players/{id}/activity?kind=puzzle");
         Assert.All(puzzleOnly!.Items, a => Assert.Equal("puzzle", a.Kind));
         Assert.DoesNotContain(puzzleOnly.Items, a => a.Kind == "admin");
+    }
+
+    [Fact]
+    public async Task Players_CanBeReportedAndFilteredByAcquisitionSourceAndCampaign()
+    {
+        var player = _factory.CreateClient();
+        var authResponse = await player.PostAsJsonAsync("/api/auth/guest", new GuestAuthRequest("utmplayer",
+            Attribution: new AttributionRequest("chatgpt", "ai_referral", "autumn-launch", LandingPath: "/games")));
+        authResponse.EnsureSuccessStatusCode();
+        var session = await authResponse.Content.ReadFromJsonAsync<AuthSessionResponse>();
+        player.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", session!.AccessToken);
+        (await player.PostAsJsonAsync("/api/puzzles/results", new PuzzleSubmitRequest("zip", "daily", null, true, 45_000, null, null, null, 0))).EnsureSuccessStatusCode();
+
+        var admin = await AdminAsync();
+        var filtered = await admin.GetFromJsonAsync<AdminPageDto<AdminPlayerRowDto>>(
+            "/api/admin/players?source=chatgpt&campaign=autumn-launch");
+        var row = Assert.Single(filtered!.Items, p => p.Id == session.User.Id);
+        Assert.Equal("ai_referral", row.Medium);
+        Assert.Equal("autumn-launch", row.Campaign);
+
+        var detail = await admin.GetFromJsonAsync<AdminPlayerDetailDto>($"/api/admin/players/{session.User.Id}");
+        Assert.Equal("/games", detail!.Acquisition!.LandingPath);
+        var summary = await admin.GetFromJsonAsync<AdminAcquisitionSummaryDto>("/api/admin/players/acquisition");
+        Assert.Contains(summary!.Sources, x => x.Value == "chatgpt" && x.Players >= 1);
+        Assert.Contains(summary.Campaigns, x => x.Value == "autumn-launch" && x.Players >= 1);
     }
 }

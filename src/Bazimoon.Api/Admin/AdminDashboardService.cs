@@ -153,25 +153,57 @@ public sealed class AdminDashboardService
 
     // ------------------------------------------------------------------ players
 
-    public async Task<AdminPageDto<AdminPlayerRowDto>> GetPlayersAsync(int page, int size, string? search, bool bots = false)
+    public async Task<AdminPageDto<AdminPlayerRowDto>> GetPlayersAsync(int page, int size, string? search, bool bots = false,
+        string? source = null, string? campaign = null)
     {
         var stats = await _db.PlayerStats.AsNoTracking().ToListAsync();
         var seen = await _db.Users.AsNoTracking().ToDictionaryAsync(u => u.Id, u => u.LastSeenAt);
+        var acquisitions = await _db.UserAcquisitions.AsNoTracking().ToDictionaryAsync(a => a.UserId);
         var botIds = await BotIdsAsync();
+        source = string.IsNullOrWhiteSpace(source) ? null : source.Trim();
+        campaign = string.IsNullOrWhiteSpace(campaign) ? null : campaign.Trim();
         int today = Today;
         var rows = stats
             .Where(s => botIds.Contains(s.UserId) == bots && Matches(search, s.UserId.ToString(), null, new[] { s.Username }))
+            .Where(s => source is null || string.Equals(acquisitions.GetValueOrDefault(s.UserId)?.Source ?? "unknown", source, StringComparison.OrdinalIgnoreCase))
+            .Where(s => campaign is null || string.Equals(acquisitions.GetValueOrDefault(s.UserId)?.Campaign, campaign, StringComparison.OrdinalIgnoreCase))
             .Select(s =>
             {
                 var (division, tier) = Progression.Division(s.Rating);
                 var last = seen.TryGetValue(s.UserId, out var l) && l > s.UpdatedAt ? l : s.UpdatedAt;
+                var acquisition = acquisitions.GetValueOrDefault(s.UserId);
                 return new AdminPlayerRowDto(s.UserId, s.Username, Progression.Level(s.Xp).Level, s.Rating, division, tier,
-                    Progression.CurrentStreak(s.PuzzleStreak, s.LastPuzzleDay, s.StreakFreezes, today), s.Language, last, bots);
+                    Progression.CurrentStreak(s.PuzzleStreak, s.LastPuzzleDay, s.StreakFreezes, today), s.Language, last, bots,
+                    acquisition?.Source ?? "unknown", acquisition?.Medium ?? "none", acquisition?.Campaign);
             })
             .OrderByDescending(r => r.LastSeen)
             .ToList();
+        int botCount = stats.Count(s => botIds.Contains(s.UserId));
+        int realCount = stats.Count - botCount;
         return new AdminPageDto<AdminPlayerRowDto>(rows.Skip((page - 1) * size).Take(size).ToList(), rows.Count, page, size,
-            bots ? stats.Count - rows.Count : botIds.Count(stats.Select(s => s.UserId).ToHashSet().Contains));
+            bots ? realCount : botCount);
+    }
+
+    public async Task<AdminAcquisitionSummaryDto> GetAcquisitionSummaryAsync(bool bots = false)
+    {
+        var playerIds = await _db.PlayerStats.AsNoTracking().Select(s => s.UserId).ToListAsync();
+        var botIds = await BotIdsAsync();
+        var included = playerIds.Where(id => botIds.Contains(id) == bots).ToHashSet();
+        var acquisitions = await _db.UserAcquisitions.AsNoTracking().Where(a => included.Contains(a.UserId)).ToListAsync();
+        int missing = included.Count - acquisitions.Count;
+
+        var sources = acquisitions.GroupBy(a => a.Source)
+            .Select(g => new AdminAcquisitionBucketDto(g.Key, g.Count()))
+            .Append(new AdminAcquisitionBucketDto("unknown", missing))
+            .Where(x => x.Players > 0)
+            .GroupBy(x => x.Value, StringComparer.OrdinalIgnoreCase)
+            .Select(g => new AdminAcquisitionBucketDto(g.Key, g.Sum(x => x.Players)))
+            .OrderByDescending(x => x.Players).ThenBy(x => x.Value).ToList();
+        var campaigns = acquisitions.Where(a => a.Campaign != null).GroupBy(a => a.Campaign!, StringComparer.OrdinalIgnoreCase)
+            .Select(g => new AdminAcquisitionBucketDto(g.First().Campaign!, g.Count()))
+            .OrderByDescending(x => x.Players).ThenBy(x => x.Value).ToList();
+
+        return new AdminAcquisitionSummaryDto(included.Count, sources, campaigns);
     }
 
     public async Task<AdminPlayerDetailDto?> GetPlayerAsync(Guid userId)
@@ -179,6 +211,7 @@ public sealed class AdminDashboardService
         var s = await _db.PlayerStats.AsNoTracking().FirstOrDefaultAsync(x => x.UserId == userId);
         if (s is null) return null;
         var profile = await _db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == userId);
+        var acquisition = await _db.UserAcquisitions.AsNoTracking().FirstOrDefaultAsync(a => a.UserId == userId);
         var games = await _db.GamePlayers.AsNoTracking().Where(p => p.UserId == userId && p.GameRecord.Status == "Completed")
             .Select(p => new { p.Role, p.Won, p.RatingDelta, p.GameRecord.EndedAt, p.GameRecordId }).ToListAsync();
         var rows = await _db.GamePlayers.AsNoTracking().Where(p => p.UserId == userId && p.Won != null && p.GameRecord.Status == "Completed").ToListAsync();
@@ -208,7 +241,9 @@ public sealed class AdminDashboardService
             puzzles.Count(p => p.Solved),
             Progression.CurrentStreak(s.PuzzleStreak, s.LastPuzzleDay, s.StreakFreezes, Today), s.BestPuzzleStreak, s.StreakFreezes,
             s.Language, coupleStatus,
-            MafiaStats.ByRole(rows), MafiaStats.Skills(rows), profile?.IsBot ?? false, profile?.BotReason, profile?.BotMarkedAt, profile?.BotMarkedBy);
+            MafiaStats.ByRole(rows), MafiaStats.Skills(rows), profile?.IsBot ?? false, profile?.BotReason, profile?.BotMarkedAt, profile?.BotMarkedBy,
+            acquisition is null ? null : new AdminPlayerAcquisitionDto(acquisition.Source, acquisition.Medium, acquisition.Campaign,
+                acquisition.Term, acquisition.Content, acquisition.Referrer, acquisition.LandingPath, acquisition.Gclid, acquisition.FirstSeenAt));
     }
 
     /// <summary>A player's activity log: completed Mafia games, puzzle results and admin audit entries made against
@@ -415,14 +450,19 @@ public sealed record AdminOverviewDto(
     int RangeDays, int LiveGames, int NightGames, int ActivePlayers, int ActivePlayersBefore, int DailySolves, string? TopDailyGame,
     int ActiveCouples, int CouplesBothToday, IReadOnlyList<AdminActivityDayDto> Activity, IReadOnlyList<AdminServiceDto> Services,
     IReadOnlyList<AdminLiveGameDto> Live, IReadOnlyList<AdminEventDto> Events);
-public sealed record AdminPlayerRowDto(Guid Id, string Name, int Level, int Rating, string Division, int Tier, int Streak, string Language, DateTime LastSeen, bool IsBot = false);
+public sealed record AdminPlayerRowDto(Guid Id, string Name, int Level, int Rating, string Division, int Tier, int Streak, string Language,
+    DateTime LastSeen, bool IsBot = false, string Source = "unknown", string Medium = "none", string? Campaign = null);
+public sealed record AdminAcquisitionBucketDto(string Value, int Players);
+public sealed record AdminAcquisitionSummaryDto(int Total, IReadOnlyList<AdminAcquisitionBucketDto> Sources, IReadOnlyList<AdminAcquisitionBucketDto> Campaigns);
+public sealed record AdminPlayerAcquisitionDto(string Source, string Medium, string? Campaign, string? Term, string? Content,
+    string? Referrer, string? LandingPath, string? Gclid, DateTime FirstSeenAt);
 public sealed record AdminActivityItemDto(string Kind, DateTime At, string? Game, int? Number, bool? Won, string? Role, int? RatingDelta, int? TimeMs, int? Score, string? Message = null, string? Actor = null);
 public sealed record AdminCoupleStatusDto(string Status, string? PartnerName, DateTime? Since);
 public sealed record AdminPlayerDetailDto(
     Guid Id, string Name, DateTime Joined, int Level, int Xp, int Rating, string Division, int Tier, int MafiaGames, int MafiaWinRate,
     int PuzzlesSolved, int Streak, int BestStreak, int Freezes, string Language, AdminCoupleStatusDto Couple,
     IReadOnlyList<RoleStats>? MafiaByRole = null, MafiaSkillStats? MafiaSkills = null, bool IsBot = false,
-    string? BotReason = null, DateTime? BotMarkedAt = null, string? BotMarkedBy = null);
+    string? BotReason = null, DateTime? BotMarkedAt = null, string? BotMarkedBy = null, AdminPlayerAcquisitionDto? Acquisition = null);
 public sealed record AdminDailyDto(string Game, string Mode, int Number, int Players, int Solved, int? MedianTimeMs, int? MedianMoves, int? MedianScore);
 public sealed record AdminSeasonDto(int Number, int Day, int Length, DateOnly EndsOn);
 public sealed record AdminDivisionDto(string Name, int Count);

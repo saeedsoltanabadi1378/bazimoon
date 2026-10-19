@@ -58,8 +58,10 @@ public static class AdminEndpoints
             return past is not null ? Results.Ok(past) : Results.NotFound();
         });
         group.MapPost("/games/{id:guid}/cancel", async (Guid id, CancelRequest request, HttpContext http, GameService games) => { if (!ValidCsrf(http)) return Results.BadRequest(new { detail = "Invalid CSRF token." }); if (string.IsNullOrWhiteSpace(request.Reason)) return Results.BadRequest(new { detail = "A cancellation reason is required." }); return await games.CancelByAdminAsync(id, request.Reason, http.User.Identity?.Name ?? "admin") ? Results.Ok() : Results.NotFound(); });
-        group.MapGet("/players", async (int? page, int? pageSize, string? search, bool? bots, AdminDashboardService dash) =>
-            Results.Ok(await dash.GetPlayersAsync(Math.Max(1, page ?? 1), Math.Clamp(pageSize ?? 25, 1, 100), search, bots ?? false)));
+        group.MapGet("/players", async (int? page, int? pageSize, string? search, bool? bots, string? source, string? campaign, AdminDashboardService dash) =>
+            Results.Ok(await dash.GetPlayersAsync(Math.Max(1, page ?? 1), Math.Clamp(pageSize ?? 25, 1, 100), search, bots ?? false, source, campaign)));
+        group.MapGet("/players/acquisition", async (bool? bots, AdminDashboardService dash) =>
+            Results.Ok(await dash.GetAcquisitionSummaryAsync(bots ?? false)));
         group.MapPut("/players/{id:guid}/bot", async (Guid id, BotRequest request, HttpContext http, AdminDashboardService dash) =>
         {
             if (!ValidCsrf(http)) return Results.BadRequest(new { detail = "Invalid CSRF token." });

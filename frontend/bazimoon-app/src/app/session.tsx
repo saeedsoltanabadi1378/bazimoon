@@ -5,6 +5,7 @@ import { useLanguage } from "../i18n/LanguageContext";
 import { readLocal, removeLocal, writeLocal } from "../lib/storage";
 import { disablePush, refreshPushSubscription } from "../lib/push";
 import { readGoogleReturn, startGoogleSignIn, type GoogleReturn } from "../lib/google";
+import { getFirstTouchAttribution } from "../lib/attribution";
 
 export type SessionStatus = "loading" | "ready" | "signed-out" | "offline" | "error";
 
@@ -66,7 +67,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const startGuest = useCallback(async () => {
     setStatus("loading");
     try {
-      api.useSession(await api.signInAsGuest(language));
+      api.useSession(await api.signInAsGuest(language, getFirstTouchAttribution()));
       setStatus("ready");
     } catch (err) {
       setStatus(err instanceof ApiError && err.status === 0 ? "offline" : "error");
@@ -82,7 +83,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         api.useSession(await api.linkGoogle(ret.idToken, ret.nonce));
         setGoogleStage("linked");
       } else {
-        api.useSession(await api.signInWithGoogle(ret.idToken, ret.nonce, language));
+        api.useSession(await api.signInWithGoogle(ret.idToken, ret.nonce, language, getFirstTouchAttribution()));
         setGoogleStage("signed-in");
       }
       setStatus("ready");
@@ -128,7 +129,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     const ret = googleReturn.current;
     if (!ret) return;
     setGoogleStage("linking");
-    const next = await api.signInWithGoogle(ret.idToken, ret.nonce, language).catch(() => null);
+    const next = await api.signInWithGoogle(ret.idToken, ret.nonce, language, getFirstTouchAttribution()).catch(() => null);
     if (!next) {
       setGoogleStage("error");
       return;

@@ -20,6 +20,22 @@ public sealed class UserRecord
     public DateTime LastSeenAt { get; set; } = DateTime.UtcNow;
 }
 
+/// <summary>The first acquisition touch that created a Bazimoon user. Values come from the
+/// landing page and are analytics data only; they must never be trusted for authorization.</summary>
+public sealed class UserAcquisitionRecord
+{
+    public Guid UserId { get; set; }
+    public string Source { get; set; } = "direct";
+    public string Medium { get; set; } = "none";
+    public string? Campaign { get; set; }
+    public string? Term { get; set; }
+    public string? Content { get; set; }
+    public string? Referrer { get; set; }
+    public string? LandingPath { get; set; }
+    public string? Gclid { get; set; }
+    public DateTime FirstSeenAt { get; set; } = DateTime.UtcNow;
+}
+
 /// <summary>A sign-in method linked to a user: one row per (provider, the provider's user id).</summary>
 public sealed class UserIdentityRecord
 {

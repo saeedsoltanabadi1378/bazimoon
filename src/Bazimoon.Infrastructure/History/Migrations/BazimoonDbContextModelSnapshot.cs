@@ -605,6 +605,57 @@ namespace Bazimoon.Infrastructure.History.Migrations
                     b.ToTable("refresh_tokens", (string)null);
                 });
 
+            modelBuilder.Entity("Bazimoon.Infrastructure.Identity.UserAcquisitionRecord", b =>
+                {
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Campaign")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("Content")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateTime>("FirstSeenAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Gclid")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<string>("LandingPath")
+                        .HasMaxLength(2048)
+                        .HasColumnType("character varying(2048)");
+
+                    b.Property<string>("Medium")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Referrer")
+                        .HasMaxLength(2048)
+                        .HasColumnType("character varying(2048)");
+
+                    b.Property<string>("Source")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Term")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.HasKey("UserId");
+
+                    b.HasIndex("FirstSeenAt");
+
+                    b.HasIndex("Source", "Medium");
+
+                    b.ToTable("user_acquisitions", (string)null);
+                });
+
             modelBuilder.Entity("Bazimoon.Infrastructure.Identity.UserIdentityRecord", b =>
                 {
                     b.Property<long>("Id")
@@ -714,6 +765,15 @@ namespace Bazimoon.Infrastructure.History.Migrations
                     b.HasOne("Bazimoon.Infrastructure.Identity.UserRecord", null)
                         .WithMany()
                         .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Bazimoon.Infrastructure.Identity.UserAcquisitionRecord", b =>
+                {
+                    b.HasOne("Bazimoon.Infrastructure.Identity.UserRecord", null)
+                        .WithOne()
+                        .HasForeignKey("Bazimoon.Infrastructure.Identity.UserAcquisitionRecord", "UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });

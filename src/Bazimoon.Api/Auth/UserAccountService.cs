@@ -20,7 +20,8 @@ public sealed class UserAccountService
 
     /// <summary>Returns the user linked to this identity, creating a non-guest user on first sign-in.
     /// The display name and language are only set when the user is created; later the player owns them.</summary>
-    public async Task<UserRecord> FindOrCreateAsync(string provider, string providerUserId, string displayName, string? language, string? email = null)
+    public async Task<UserRecord> FindOrCreateAsync(string provider, string providerUserId, string displayName, string? language,
+        string? email = null, AcquisitionData? acquisition = null)
     {
         var now = _clock.GetUtcNow().UtcDateTime;
         var userId = await _db.UserIdentities
@@ -45,13 +46,15 @@ public sealed class UserAccountService
         };
         _db.Users.Add(user);
         _db.UserIdentities.Add(new UserIdentityRecord { UserId = user.Id, Provider = provider, ProviderUserId = providerUserId, Email = email, CreatedAt = now });
+        _db.UserAcquisitions.Add(ToRecord(user.Id, acquisition, now));
         await _db.SaveChangesAsync();
         return user;
     }
 
     /// <summary>Creates a guest who can play straight away. Without a name they get "Player 1234".
     /// A guest created by a crawler or script is marked as a bot straight away.</summary>
-    public async Task<UserRecord> CreateGuestAsync(string? displayName, string? language, string? userAgent = null)
+    public async Task<UserRecord> CreateGuestAsync(string? displayName, string? language, string? userAgent = null,
+        AcquisitionData? acquisition = null)
     {
         bool crawler = BotDetector.IsCrawler(userAgent);
         var now = _clock.GetUtcNow().UtcDateTime;
@@ -69,6 +72,7 @@ public sealed class UserAccountService
             BotMarkedAt = crawler ? now : null,
         };
         _db.Users.Add(user);
+        _db.UserAcquisitions.Add(ToRecord(user.Id, acquisition, now));
         await _db.SaveChangesAsync();
         return user;
     }
@@ -98,7 +102,78 @@ public sealed class UserAccountService
         if (trimmed.Length == 0) return "Player";
         return trimmed.Length <= MaxDisplayNameLength ? trimmed : trimmed[..MaxDisplayNameLength];
     }
+
+    private static UserAcquisitionRecord ToRecord(Guid userId, AcquisitionData? input, DateTime now)
+    {
+        var referrer = CleanReferrer(input?.Referrer);
+        var source = CleanToken(input?.Source, 100);
+        var medium = CleanToken(input?.Medium, 100);
+        var gclid = Clean(input?.Gclid, 256);
+
+        if (gclid is not null)
+        {
+            source ??= "google";
+            medium ??= "cpc";
+        }
+
+        if (source is null && referrer is not null && Uri.TryCreate(referrer, UriKind.Absolute, out var uri))
+        {
+            source = CleanToken(ClassifyReferrer(uri.Host), 100);
+            medium ??= "referral";
+        }
+
+        source ??= "direct";
+        medium ??= source == "direct" ? "none" : "referral";
+
+        return new UserAcquisitionRecord
+        {
+            UserId = userId,
+            Source = source,
+            Medium = medium,
+            Campaign = Clean(input?.Campaign, 200),
+            Term = Clean(input?.Term, 200),
+            Content = Clean(input?.Content, 200),
+            Referrer = referrer,
+            LandingPath = CleanLandingPath(input?.LandingPath),
+            Gclid = gclid,
+            FirstSeenAt = now,
+        };
+    }
+
+    private static string ClassifyReferrer(string host)
+    {
+        host = host.ToLowerInvariant();
+        if (host.StartsWith("www.")) host = host[4..];
+        if (host is "chatgpt.com" or "chat.openai.com" || host.EndsWith(".chatgpt.com")) return "chatgpt";
+        if (host == "gemini.google.com" || host.EndsWith(".gemini.google.com")) return "gemini";
+        if (host == "google.com" || host.StartsWith("google.") || host.Contains(".google.")) return "google";
+        return host;
+    }
+
+    private static string? CleanReferrer(string? value)
+    {
+        if (!Uri.TryCreate(value, UriKind.Absolute, out var uri) || uri.Scheme is not ("http" or "https")) return null;
+        return Clean(uri.GetLeftPart(UriPartial.Authority) + uri.AbsolutePath, 2048);
+    }
+
+    private static string? CleanLandingPath(string? value)
+    {
+        var cleaned = Clean(value, 2048);
+        return cleaned is not null && cleaned.StartsWith('/') ? cleaned : null;
+    }
+
+    private static string? CleanToken(string? value, int maxLength) => Clean(value, maxLength)?.ToLowerInvariant();
+
+    private static string? Clean(string? value, int maxLength)
+    {
+        var trimmed = value?.Trim();
+        if (string.IsNullOrEmpty(trimmed)) return null;
+        return trimmed.Length <= maxLength ? trimmed : trimmed[..maxLength];
+    }
 }
+
+public sealed record AcquisitionData(string? Source = null, string? Medium = null, string? Campaign = null,
+    string? Term = null, string? Content = null, string? Referrer = null, string? LandingPath = null, string? Gclid = null);
 
 public enum LinkOutcome { Linked, AlreadyLinkedElsewhere, NotAGuest, UserNotFound }
 
