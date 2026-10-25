@@ -214,11 +214,18 @@ export interface ActivityFeedItem {
   name: string;
   userId: string | null;
   userName: string | null;
+  /** Extra detail for this step (game, score, round, …), as a raw JSON object string, or null. */
+  propertiesJson: string | null;
 }
 
-/** The four tracked flows, in the order the Activity page shows them. */
+/** The four tracked flows, in the order the Activity page's funnel tabs show them. */
 export const FUNNEL_FLOWS = ["signup", "mafia", "puzzle", "couple"] as const;
 export type FunnelFlow = (typeof FUNNEL_FLOWS)[number];
+
+/** Every flow the activity feed can show, including "navigation" (every screen view — not a funnel,
+ * just the raw log) which the feed filters by but the funnel tabs above don't cover. */
+export const FEED_FLOWS = [...FUNNEL_FLOWS, "navigation"] as const;
+export type FeedFlow = (typeof FEED_FLOWS)[number];
 
 export interface Daily {
   game: string;

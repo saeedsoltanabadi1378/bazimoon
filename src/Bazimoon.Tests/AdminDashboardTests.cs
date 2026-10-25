@@ -137,6 +137,8 @@ public class AdminDashboardTests : IClassFixture<BazimoonApiFactory>, IAsyncLife
 
         var looker = await AuthTestHelper.CreateAuthenticatedClientAsync(_factory, 870005, "funnellooker");
         (await looker.PostAsJsonAsync("/api/events", new { name = "puzzle_intro_viewed", flow = "puzzle", properties = new { game = "zip" } })).EnsureSuccessStatusCode();
+        (await looker.PostAsJsonAsync("/api/events", new { name = "screen_viewed", flow = "navigation", properties = new { screen = "home", previousScreen = (string?)null } })).EnsureSuccessStatusCode();
+        (await looker.PostAsJsonAsync("/api/events", new { name = "screen_left", flow = "navigation", properties = new { screen = "home", timeOnScreenMs = 4200 } })).EnsureSuccessStatusCode();
 
         var admin = await AdminAsync();
         var funnel = await admin.GetFromJsonAsync<AdminFunnelDto>("/api/admin/funnels/puzzle?days=7");
@@ -151,9 +153,15 @@ public class AdminDashboardTests : IClassFixture<BazimoonApiFactory>, IAsyncLife
         Assert.Contains(feed!.Items, e => e.Name == "puzzle_completed" && e.UserName == "funnelfinisher");
         Assert.All(feed.Items, e => Assert.Equal("puzzle", e.Flow));
 
-        // An unknown event name is refused rather than silently accepted.
+        var navFeed = await admin.GetFromJsonAsync<AdminPageDto<AdminActivityFeedItemDto>>("/api/admin/activity?flow=navigation&pageSize=50");
+        Assert.Contains(navFeed!.Items, e => e.Name == "screen_viewed" && e.PropertiesJson != null && e.PropertiesJson.Contains("home"));
+        Assert.Contains(navFeed.Items, e => e.Name == "screen_left" && e.PropertiesJson != null && e.PropertiesJson.Contains("4200"));
+
+        // An unknown event name is refused rather than silently accepted, even a real one from another flow.
         var rejected = await finisher.PostAsJsonAsync("/api/events", new { name = "made_up_event" });
         Assert.Equal(HttpStatusCode.BadRequest, rejected.StatusCode);
+        var alsoRejected = await finisher.PostAsJsonAsync("/api/events", new { name = "mafia_game_ended" });
+        Assert.Equal(HttpStatusCode.BadRequest, alsoRejected.StatusCode);
     }
 
     [Fact]
@@ -170,5 +178,9 @@ public class AdminDashboardTests : IClassFixture<BazimoonApiFactory>, IAsyncLife
         var funnel = await admin.GetFromJsonAsync<AdminFunnelDto>("/api/admin/funnels/mafia?days=7");
         Assert.Equal(["mafia_lobby_joined", "mafia_game_started", "mafia_game_ended"], funnel!.Steps.Select(s => s.Name));
         Assert.True(funnel.Steps[0].Users >= 2);
+
+        var feed = await admin.GetFromJsonAsync<AdminPageDto<AdminActivityFeedItemDto>>("/api/admin/activity?flow=mafia&pageSize=50");
+        var joined = Assert.Single(feed!.Items, e => e.Name == "mafia_lobby_joined" && e.PropertiesJson != null && e.PropertiesJson.Contains("\"host\":true") && e.PropertiesJson.Contains(gameId.ToString()));
+        Assert.Contains("\"seats\"", joined.PropertiesJson);
     }
 }

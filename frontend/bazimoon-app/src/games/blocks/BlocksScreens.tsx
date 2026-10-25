@@ -13,7 +13,7 @@ import { appLink } from "../../lib/links";
 import { roman } from "../../hub/HomeScreen";
 import { IntroScreen, PreviewGrid } from "../shared/IntroScreen";
 import { XpCard } from "../shared/ResultScreen";
-import { parseXp, useSavedState, type ResultParams } from "../shared/play";
+import { parseXp, useSavedState, useTrackStarted, type ResultParams } from "../shared/play";
 import {
   ADVENTURE_LEVELS, SHAPES, SIZE, adventureLevel, anyFit, dealTray, emptyGrid, fits, place, shapeSize, trayRng,
   type Grid, type Piece,
@@ -149,6 +149,7 @@ export function BlocksPlay({ mode, level = 1 }: { mode: BlocksMode; level?: numb
   const { t, n } = useLanguage();
   const { back, replace } = useNavigation();
   const { api, submitResult } = useHub();
+  useTrackStarted("blocks");
   const stats = useLoad(() => api.stats("blocks"), [api]).data;
   const number = dailyNumber("blocks", puzzleToday());
   const storageKey = mode === "daily" ? `bazimoon-blocks-daily-${number}` : mode === "adventure" ? `bazimoon-blocks-adventure-${level}` : "bazimoon-blocks-classic";

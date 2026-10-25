@@ -11,7 +11,7 @@ import { IntroScreen } from "../shared/IntroScreen";
 import { ResultScreen } from "../shared/ResultScreen";
 import { PassPhone, Stepper } from "../shared/party";
 import { bumpPartyStats, readPartyStats } from "../shared/partyStats";
-import type { ResultParams } from "../shared/play";
+import { useTrackStarted, type ResultParams } from "../shared/play";
 import { packWords, spyWords, type SpyPack } from "./words";
 
 const ACCENT = "#F08A7A";
@@ -115,6 +115,7 @@ type Phase =
 export function SpyPlay({ pack, players, spies, minutes }: { pack: SpyPack; players: number; spies: number; minutes: number }) {
   const { t, n, language } = useLanguage();
   const { back, replace } = useNavigation();
+  useTrackStarted("spy");
   const game = useMemo(() => {
     const rng = seeded(`spy-${randomSeed()}`);
     const words = packWords(pack);

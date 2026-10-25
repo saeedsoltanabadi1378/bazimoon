@@ -353,7 +353,7 @@ public sealed class AdminDashboardService
         var userIds = rows.Where(r => r.UserId != null).Select(r => r.UserId!.Value).Distinct().ToList();
         var names = await _db.PlayerStats.AsNoTracking().Where(s => userIds.Contains(s.UserId)).ToDictionaryAsync(s => s.UserId, s => s.Username);
         var items = rows.Select(e => new AdminActivityFeedItemDto(e.Id, e.CreatedAt, e.Flow, e.Name, e.UserId,
-            e.UserId is { } id ? names.GetValueOrDefault(id) : null)).ToList();
+            e.UserId is { } id ? names.GetValueOrDefault(id) : null, e.PropertiesJson)).ToList();
         return new AdminPageDto<AdminActivityFeedItemDto>(items, total, 1, size);
     }
 
@@ -538,6 +538,6 @@ public sealed record AdminSkippedQuestionDto(int SetId, int Question, int Rate);
 public sealed record AdminCoupleStatsDto(int Active, int BothToday, int AverageMatch, int InvitesWaiting, IReadOnlyList<AdminSkippedQuestionDto> Skipped);
 public sealed record AdminFunnelStepDto(string Name, int Users, int PctOfFirst, int PctOfPrevious);
 public sealed record AdminFunnelDto(string Flow, int Days, IReadOnlyList<AdminFunnelStepDto> Steps);
-public sealed record AdminActivityFeedItemDto(long Id, DateTime At, string Flow, string Name, Guid? UserId, string? UserName);
+public sealed record AdminActivityFeedItemDto(long Id, DateTime At, string Flow, string Name, Guid? UserId, string? UserName, string? PropertiesJson = null);
 public sealed record AdminPuzzlesDto(DateOnly Date, IReadOnlyList<AdminDailyDto> Dailies, AdminSeasonDto Season, IReadOnlyList<AdminDivisionDto> Divisions,
     IReadOnlyList<AdminLeaderDto> Leaders, AdminCoupleStatsDto Couples);

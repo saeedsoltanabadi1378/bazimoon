@@ -325,7 +325,11 @@ public sealed class HubService
             Solved = request.Solved, TimeMs = request.TimeMs, Score = request.Score, Moves = request.Moves, Detail = request.Detail,
             Hints = Math.Max(0, request.Hints), XpGained = xp, Points = points
         });
-        _activity.Track(userId, ActivityEvents.Puzzle, ActivityEvents.PuzzleCompleted, new { game = request.Game, solved = request.Solved });
+        _activity.Track(userId, ActivityEvents.Puzzle, ActivityEvents.PuzzleCompleted, new
+        {
+            game = request.Game, mode, number, solved = request.Solved, timeMs = request.TimeMs, moves = request.Moves,
+            hints = Math.Max(0, request.Hints), newBest, streakExtended, xp, countsAsDaily,
+        });
         await _db.SaveChangesAsync();
 
         int? percentile = null;

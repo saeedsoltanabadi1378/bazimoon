@@ -13,7 +13,7 @@ import { appLink } from "../../lib/links";
 import { roman } from "../../hub/HomeScreen";
 import { IntroScreen } from "../shared/IntroScreen";
 import { XpCard } from "../shared/ResultScreen";
-import { parseXp, type ResultParams } from "../shared/play";
+import { parseXp, useTrackStarted, type ResultParams } from "../shared/play";
 
 const ACCENT = "#5FD0BE";
 const INK = "#0B1F1B";
@@ -144,6 +144,7 @@ export function StackPlay({ mode }: { mode: StackMode }) {
   const { t, n, language } = useLanguage();
   const { back, replace } = useNavigation();
   const { api, submitResult } = useHub();
+  useTrackStarted("stack");
   const stats = useLoad(() => api.stats("stack"), [api]).data;
   const number = dailyNumber("stack", puzzleToday());
   const colors = useRef(palette(mode, number)).current;

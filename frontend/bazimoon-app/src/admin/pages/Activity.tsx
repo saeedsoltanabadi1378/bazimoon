@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { adminApi } from "../adminApi";
 import type { ActivityFeedItem, Funnel, Page } from "../adminApi";
-import { FUNNEL_FLOWS, type FunnelFlow } from "../adminApi";
+import { FEED_FLOWS, FUNNEL_FLOWS, type FeedFlow, type FunnelFlow } from "../adminApi";
 import { useAdminI18n } from "../i18n";
 import { Header, PageState, useAdminData } from "../ui";
 
@@ -44,11 +44,27 @@ export function ActivityPage() {
   );
 }
 
-/** Step names come from the server as plain strings; the `step_<name>` i18n keys cover every one
- * the backend can send (see ActivityEvents on the server), so this cast is safe. */
-function stepLabel(t: ReturnType<typeof useAdminI18n>["t"], name: string): string {
-  const key = `step_${name}` as unknown as Parameters<typeof t>[0];
+/** Step/flow names come from the server as plain strings; the `step_<name>`/`flow_<name>` i18n keys
+ * cover every one the backend can send (see ActivityEvents on the server), so this cast is safe. */
+function dynamicLabel(t: ReturnType<typeof useAdminI18n>["t"], prefix: "step" | "flow", name: string): string {
+  const key = `${prefix}_${name}` as unknown as Parameters<typeof t>[0];
   return t(key);
+}
+const stepLabel = (t: ReturnType<typeof useAdminI18n>["t"], name: string) => dynamicLabel(t, "step", name);
+
+/** The event's own extra detail, compacted to "key: value, key: value" — not translated (it's raw
+ * data from whatever step logged it), skipping anything falsy or too long to stay readable inline. */
+function propertiesText(json: string | null): string | null {
+  if (!json) return null;
+  try {
+    const obj = JSON.parse(json) as Record<string, unknown>;
+    const parts = Object.entries(obj)
+      .filter(([, v]) => v !== null && v !== undefined && v !== "")
+      .map(([k, v]) => `${k}: ${v}`);
+    return parts.length > 0 ? parts.join(", ") : null;
+  } catch {
+    return null;
+  }
 }
 
 function FunnelChart({ funnel }: { funnel: Funnel }) {
@@ -78,7 +94,7 @@ function FunnelChart({ funnel }: { funnel: Funnel }) {
 
 function ActivityFeed() {
   const { t, n, ago } = useAdminI18n();
-  const [flow, setFlow] = useState<FunnelFlow | null>(null);
+  const [flow, setFlow] = useState<FeedFlow | null>(null);
   const [items, setItems] = useState<ActivityFeedItem[]>([]);
   const [total, setTotal] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -106,7 +122,7 @@ function ActivityFeed() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [flow]);
 
-  const flowLabel = (f: FunnelFlow | null) => (f ? t(`flow_${f}` as const) : t("filterAll"));
+  const feedFlowLabel = (f: FeedFlow | null) => (f ? dynamicLabel(t, "flow", f) : t("filterAll"));
 
   return (
     <section className="adm-panel flush" aria-labelledby="activity-log-title">
@@ -114,8 +130,8 @@ function ActivityFeed() {
         <h2 id="activity-log-title">{t("activityLog")}</h2>
         <div role="radiogroup" aria-label={t("activityLog")} style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
           <button type="button" role="radio" className="adm-chip" aria-checked={flow === null} onClick={() => setFlow(null)}>{t("filterAll")}</button>
-          {FUNNEL_FLOWS.map((f) => (
-            <button key={f} type="button" role="radio" className="adm-chip" aria-checked={flow === f} onClick={() => setFlow(f)}>{flowLabel(f)}</button>
+          {FEED_FLOWS.map((f) => (
+            <button key={f} type="button" role="radio" className="adm-chip" aria-checked={flow === f} onClick={() => setFlow(f)}>{feedFlowLabel(f)}</button>
           ))}
         </div>
       </div>
@@ -134,8 +150,11 @@ function ActivityFeed() {
               {items.map((e) => (
                 <tr key={e.id}>
                   <td className="text-2 num" style={{ whiteSpace: "nowrap" }}>{ago(e.at)}</td>
-                  <td><span className="adm-tag" style={{ background: "#1E2138", color: "#9C8CFF" }}>{flowLabel(e.flow as FunnelFlow)}</span></td>
-                  <td dir="auto">{stepLabel(t, e.name)}</td>
+                  <td><span className="adm-tag" style={{ background: "#1E2138", color: "#9C8CFF" }}>{dynamicLabel(t, "flow", e.flow)}</span></td>
+                  <td dir="auto">
+                    {stepLabel(t, e.name)}
+                    {propertiesText(e.propertiesJson) && <div className="tiny muted" dir="ltr" style={{ marginTop: 2 }}>{propertiesText(e.propertiesJson)}</div>}
+                  </td>
                   <td className="text-2" dir="auto">{e.userName ?? t("none")}</td>
                 </tr>
               ))}

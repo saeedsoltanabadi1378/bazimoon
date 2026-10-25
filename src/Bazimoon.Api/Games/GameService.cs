@@ -55,7 +55,7 @@ public sealed class GameService
         await _sessionStore.SaveAsync(game);
         await _rosterStore.AddAsync(game.GameId, creatorUserId, creatorUsername);
         await TrackActivityAsync(creatorUserId);
-        _activity.Track(creatorUserId, ActivityEvents.Mafia, ActivityEvents.MafiaLobbyJoined);
+        _activity.Track(creatorUserId, ActivityEvents.Mafia, ActivityEvents.MafiaLobbyJoined, new { gameId = game.GameId, seats, host = true });
         _db.MafiaTables.Add(new()
         {
             GameId = game.GameId,
@@ -83,7 +83,7 @@ public sealed class GameService
             await SaveAndNotifyAsync(game);
             await _rosterStore.AddAsync(gameId, userId, username);
             await TrackActivityAsync(userId);
-            _activity.Track(userId, ActivityEvents.Mafia, ActivityEvents.MafiaLobbyJoined);
+            _activity.Track(userId, ActivityEvents.Mafia, ActivityEvents.MafiaLobbyJoined, new { gameId, seats = game.Config.MaxPlayers, host = false });
             await _db.SaveChangesAsync();
         }
     }
@@ -123,7 +123,7 @@ public sealed class GameService
         else
         {
             game.LeaveMidGame(playerId, DateTimeOffset.UtcNow);
-            _activity.Track(userId, ActivityEvents.Mafia, ActivityEvents.MafiaLeftEarly);
+            _activity.Track(userId, ActivityEvents.Mafia, ActivityEvents.MafiaLeftEarly, new { gameId, phase = game.CurrentPhase.ToString(), round = game.NightNumber });
         }
         await SaveAndNotifyAsync(game);
         await _db.SaveChangesAsync();
@@ -142,7 +142,7 @@ public sealed class GameService
         var game = await LoadOrThrowAsync(gameId);
         EnsureController(game, userId);
         game.AssignRoles();
-        foreach (var p in await _rosterStore.GetAsync(gameId)) _activity.Track(p.UserId, ActivityEvents.Mafia, ActivityEvents.MafiaGameStarted);
+        foreach (var p in await _rosterStore.GetAsync(gameId)) _activity.Track(p.UserId, ActivityEvents.Mafia, ActivityEvents.MafiaGameStarted, new { gameId, seats = game.Config.MaxPlayers });
         await _db.SaveChangesAsync();
         await SaveAndNotifyAsync(game);
         await NotifyGameStartedAsync(game, userId);
@@ -362,7 +362,8 @@ public sealed class GameService
 
         if (game.CurrentPhase == GamePhase.Ended)
         {
-            foreach (var p in await _rosterStore.GetAsync(game.GameId)) _activity.Track(p.UserId, ActivityEvents.Mafia, ActivityEvents.MafiaGameEnded);
+            foreach (var p in await _rosterStore.GetAsync(game.GameId))
+                _activity.Track(p.UserId, ActivityEvents.Mafia, ActivityEvents.MafiaGameEnded, new { gameId = game.GameId, round = game.NightNumber, result = game.CheckWinCondition().ToString() });
             await _db.SaveChangesAsync();
             await _historyRepository.SaveCompletedGameAsync(game);
             await _rosterStore.RemoveAsync(game.GameId);

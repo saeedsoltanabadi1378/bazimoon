@@ -1,4 +1,5 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useHub } from "../hub/HubData";
 
 export type GameKey = "zip" | "queens" | "merge" | "mines" | "memory" | "nard" | "word" | "ladder" | "stack" | "blocks" | "sudoku" | "snake" | "dooz" | "spy" | "esmfamil";
 export type GameScreen = "intro" | "play" | "result" | "archive" | "setup" | "lobby" | "online" | "solo";
@@ -17,6 +18,16 @@ export type Route =
   | { name: "recap"; gameId: string }
   | { name: "game"; game: GameKey; screen: GameScreen; params?: Record<string, string | number | boolean | null> }
   | { name: "couple"; screen: CoupleScreen; token?: string; number?: number };
+
+/** A stable, human-readable key for a route, used only for tracking (never for routing logic). */
+function screenKey(route: Route): string {
+  switch (route.name) {
+    case "game": return `game_${route.game}_${route.screen}`;
+    case "couple": return `couple_${route.screen}`;
+    case "mafia": return route.gameId ? "mafia_table" : "mafia_lobby_list";
+    default: return route.name;
+  }
+}
 
 interface Navigation {
   route: Route;
@@ -65,6 +76,38 @@ export function NavigationProvider({ initial, children }: { initial: Route[]; ch
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [route]);
+
+  // Every screen view, app-wide, logged from this one place rather than from each screen — with how
+  // long the player spent on the screen they just left, so drop-off and dwell time are both visible.
+  const { api } = useHub();
+  const left = useRef<{ screen: string; at: number } | null>(null);
+  useEffect(() => {
+    const screen = screenKey(route);
+    const now = performance.now();
+    api.trackEvent("screen_viewed", "navigation", {
+      screen,
+      previousScreen: left.current?.screen ?? null,
+      timeOnPreviousMs: left.current ? Math.round(now - left.current.at) : null,
+    });
+    left.current = { screen, at: now };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [route]);
+
+  // The player backgrounding or closing the tab never shows up as a navigation, so the current
+  // screen's own view never gets a "previous screen" dwell time from the effect above — this is
+  // also the only signal that a game screen was abandoned (closed without finishing or leaving).
+  useEffect(() => {
+    const onHide = () => {
+      if (document.visibilityState !== "hidden" || !left.current) return;
+      api.trackEvent("screen_left", "navigation", {
+        screen: left.current.screen,
+        timeOnScreenMs: Math.round(performance.now() - left.current.at),
+      });
+    };
+    document.addEventListener("visibilitychange", onHide);
+    return () => document.removeEventListener("visibilitychange", onHide);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const value = useMemo(() => ({ route, depth, push, replace, reset, back }), [route, depth, push, replace, reset, back]);
   return <NavigationContext.Provider value={value}>{children}</NavigationContext.Provider>;
