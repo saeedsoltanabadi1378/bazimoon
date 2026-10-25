@@ -163,6 +163,7 @@ app.MapHubEndpoints();
 app.MapTableEndpoints();
 app.MapCoupleEndpoints();
 app.MapPushEndpoints();
+Bazimoon.Api.Activity.ActivityEndpoints.MapActivityEndpoints(app);
 Bazimoon.Api.EsmFamil.EsmFamilEndpoints.MapEsmFamilEndpoints(app);
 app.MapHub<GameHub>("/hubs/game");
 

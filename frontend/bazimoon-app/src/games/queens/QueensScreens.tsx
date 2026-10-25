@@ -8,7 +8,7 @@ import { dailyNumber, randomSeed } from "../../lib/rng";
 import { haptic } from "../../lib/haptics";
 import { IntroScreen, PreviewGrid } from "../shared/IntroScreen";
 import { GroupBoard, ResultScreen } from "../shared/ResultScreen";
-import { PlayHeader, parseXp, useFinish, useSavedState, useStopwatch, type ResultParams } from "../shared/play";
+import { PlayHeader, parseXp, useFinish, useSavedState, useStopwatch, useTrackStarted, type ResultParams } from "../shared/play";
 import { useCountdown } from "../zip/ZipScreens";
 import { blockedBy, conflicts, generateQueens, hint as hintFor, regionColors, type Mark } from "./logic";
 
@@ -28,6 +28,7 @@ export function QueensIntro() {
 
   return (
     <IntroScreen
+      game="queens"
       title={t("gameQueens")}
       tagline={t("queensIntroTagline", { number })}
       accent={ACCENT}
@@ -86,6 +87,7 @@ export function QueensPlay({ mode, size: sizeParam }: { mode: "daily" | "practic
   const { t, language } = useLanguage();
   const { back } = useNavigation();
   const finish = useFinish("queens");
+  useTrackStarted("queens");
   const today = puzzleToday();
   const number = mode === "daily" ? dailyNumber("queens", today) : null;
   const [seed] = useState(randomSeed);

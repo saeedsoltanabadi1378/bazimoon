@@ -9,7 +9,7 @@ import { dailyNumber, dateOfDaily, randomSeed } from "../../lib/rng";
 import { haptic } from "../../lib/haptics";
 import { generateZip, hint as hintFor, visit, type ZipMessage } from "./logic";
 import { GroupBoard } from "../shared/ResultScreen";
-import { PlayHeader, useFinish, useSavedState, useStopwatch } from "../shared/play";
+import { PlayHeader, useFinish, useSavedState, useStopwatch, useTrackStarted } from "../shared/play";
 
 const BOARD = 300;
 
@@ -25,6 +25,7 @@ export function ZipPlay({ mode, number: archived, seed: seedParam, size: sizePar
   const { back } = useNavigation();
   const { api } = useHub();
   const finish = useFinish("zip");
+  useTrackStarted("zip");
 
   const today = puzzleToday();
   const number = mode === "daily" ? dailyNumber("zip", today) : mode === "archive" ? archived ?? dailyNumber("zip", today) : null;

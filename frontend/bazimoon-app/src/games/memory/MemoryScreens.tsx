@@ -10,7 +10,7 @@ import { shuffle } from "../../lib/rng";
 import { haptic } from "../../lib/haptics";
 import { IntroScreen } from "../shared/IntroScreen";
 import { ResultScreen } from "../shared/ResultScreen";
-import { parseXp, useFinish, useStopwatch, type ResultParams } from "../shared/play";
+import { parseXp, useFinish, useStopwatch, useTrackStarted, type ResultParams } from "../shared/play";
 
 const ACCENT = "#8FA8FF";
 type MemoryMode = "4x4" | "4x5" | "6x6" | "timed";
@@ -96,6 +96,7 @@ export function MemoryIntro() {
 
   return (
     <IntroScreen
+      game="memory"
       title={t("gameMemory")}
       tagline={t("memoryTagline")}
       accent={ACCENT}
@@ -178,6 +179,7 @@ export function MemoryPlay({ mode }: { mode: MemoryMode }) {
   const { t, language, n } = useLanguage();
   const { back } = useNavigation();
   const finish = useFinish("memory");
+  useTrackStarted("memory");
   const { cols, pairs, three } = boards[mode];
   const deal = () => shuffle(Math.random, shuffle(Math.random, faces.map((_, i) => i)).slice(0, pairs).flatMap((f) => [f, f]));
   const [deck, setDeck] = useState(deal);

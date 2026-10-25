@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Bazimoon.Api.Lounge;
 using Bazimoon.Domain;
+using Bazimoon.Infrastructure.Activity;
 using Bazimoon.Infrastructure.Agora;
 using Bazimoon.Infrastructure.History;
 using Bazimoon.Infrastructure.Hub;
@@ -290,6 +291,72 @@ public sealed class AdminDashboardService
         return true;
     }
 
+    // ------------------------------------------------------------------ user activity and funnels
+
+    /// <summary>Flow -> the ordered steps that make up its funnel. "signup" is special-cased in
+    /// <see cref="GetFunnelAsync"/> since a player can sign up two different ways.</summary>
+    private static readonly Dictionary<string, string[]> FunnelSteps = new()
+    {
+        [ActivityEvents.Mafia] = [ActivityEvents.MafiaLobbyJoined, ActivityEvents.MafiaGameStarted, ActivityEvents.MafiaGameEnded],
+        [ActivityEvents.Puzzle] = [ActivityEvents.PuzzleIntroViewed, ActivityEvents.PuzzleStarted, ActivityEvents.PuzzleCompleted],
+        [ActivityEvents.Couple] = [ActivityEvents.CoupleInviteSent, ActivityEvents.CoupleInviteAccepted, ActivityEvents.CoupleQuestionAnswered],
+    };
+
+    /// <summary>Distinct players reaching each step of a flow's funnel in the last <paramref name="days"/>
+    /// days, and what share of step one and of the step before it that is. Not a strict per-user cohort
+    /// (a player counts at a step if they ever reached it in the window, not only if they also reached
+    /// the step before it in order) — simple, but enough to see where a flow is losing people.</summary>
+    public async Task<AdminFunnelDto> GetFunnelAsync(string flow, int days)
+    {
+        var since = Now.UtcDateTime.AddDays(-Math.Clamp(days, 1, 180));
+        var rows = await _db.UserActivityEvents.AsNoTracking().Where(e => e.CreatedAt >= since && e.UserId != null)
+            .Select(e => new { e.UserId, e.Name }).ToListAsync();
+        var bots = await BotIdsAsync();
+        var byUser = rows.Where(r => !bots.Contains(r.UserId!.Value)).ToList();
+
+        var steps = new List<(string Name, HashSet<Guid> Users)>();
+        if (flow == ActivityEvents.SignUp)
+        {
+            steps.Add((ActivityEvents.SignUp, byUser.Where(r => r.Name is ActivityEvents.SignupGuest or ActivityEvents.SignupGoogle).Select(r => r.UserId!.Value).ToHashSet()));
+            var activated = byUser.Where(r => r.Name is ActivityEvents.MafiaLobbyJoined or ActivityEvents.PuzzleIntroViewed or ActivityEvents.CoupleInviteSent)
+                .Select(r => r.UserId!.Value).ToHashSet();
+            steps.Add(("activated", activated));
+        }
+        else if (FunnelSteps.TryGetValue(flow, out var names))
+        {
+            foreach (var name in names) steps.Add((name, byUser.Where(r => r.Name == name).Select(r => r.UserId!.Value).ToHashSet()));
+        }
+
+        int? first = null, previous = null;
+        var result = new List<AdminFunnelStepDto>();
+        foreach (var (name, users) in steps)
+        {
+            int count = users.Count;
+            first ??= count;
+            result.Add(new AdminFunnelStepDto(name, count,
+                first is 0 or null ? 0 : (int)Math.Round(100.0 * count / first.Value),
+                previous is 0 or null ? 100 : (int)Math.Round(100.0 * count / previous.Value)));
+            previous = count;
+        }
+        return new AdminFunnelDto(flow, days, result);
+    }
+
+    /// <summary>Every tracked step any player took, newest first — sign-ups, Mafia games, puzzles and
+    /// Couple Quiz together. Paged by id: pass the last id you have as <paramref name="before"/>.</summary>
+    public async Task<AdminPageDto<AdminActivityFeedItemDto>> GetActivityFeedAsync(string? flow, long? before, int size)
+    {
+        var q = _db.UserActivityEvents.AsNoTracking().AsQueryable();
+        if (!string.IsNullOrWhiteSpace(flow)) q = q.Where(e => e.Flow == flow);
+        int total = await q.CountAsync();
+        if (before is { } b) q = q.Where(e => e.Id < b);
+        var rows = await q.OrderByDescending(e => e.Id).Take(size).ToListAsync();
+        var userIds = rows.Where(r => r.UserId != null).Select(r => r.UserId!.Value).Distinct().ToList();
+        var names = await _db.PlayerStats.AsNoTracking().Where(s => userIds.Contains(s.UserId)).ToDictionaryAsync(s => s.UserId, s => s.Username);
+        var items = rows.Select(e => new AdminActivityFeedItemDto(e.Id, e.CreatedAt, e.Flow, e.Name, e.UserId,
+            e.UserId is { } id ? names.GetValueOrDefault(id) : null)).ToList();
+        return new AdminPageDto<AdminActivityFeedItemDto>(items, total, 1, size);
+    }
+
     // ------------------------------------------------------------------ puzzles, leagues and couples
 
     public async Task<AdminPuzzlesDto> GetPuzzlesAsync()
@@ -469,5 +536,8 @@ public sealed record AdminDivisionDto(string Name, int Count);
 public sealed record AdminLeaderDto(int Rank, string Name, int Points);
 public sealed record AdminSkippedQuestionDto(int SetId, int Question, int Rate);
 public sealed record AdminCoupleStatsDto(int Active, int BothToday, int AverageMatch, int InvitesWaiting, IReadOnlyList<AdminSkippedQuestionDto> Skipped);
+public sealed record AdminFunnelStepDto(string Name, int Users, int PctOfFirst, int PctOfPrevious);
+public sealed record AdminFunnelDto(string Flow, int Days, IReadOnlyList<AdminFunnelStepDto> Steps);
+public sealed record AdminActivityFeedItemDto(long Id, DateTime At, string Flow, string Name, Guid? UserId, string? UserName);
 public sealed record AdminPuzzlesDto(DateOnly Date, IReadOnlyList<AdminDailyDto> Dailies, AdminSeasonDto Season, IReadOnlyList<AdminDivisionDto> Divisions,
     IReadOnlyList<AdminLeaderDto> Leaders, AdminCoupleStatsDto Couples);

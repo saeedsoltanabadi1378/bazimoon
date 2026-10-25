@@ -194,6 +194,32 @@ export interface PlayerDetail {
   acquisition: PlayerAcquisition | null;
 }
 
+export interface FunnelStep {
+  name: string;
+  users: number;
+  pctOfFirst: number;
+  pctOfPrevious: number;
+}
+
+export interface Funnel {
+  flow: string;
+  days: number;
+  steps: FunnelStep[];
+}
+
+export interface ActivityFeedItem {
+  id: number;
+  at: string;
+  flow: string;
+  name: string;
+  userId: string | null;
+  userName: string | null;
+}
+
+/** The four tracked flows, in the order the Activity page shows them. */
+export const FUNNEL_FLOWS = ["signup", "mafia", "puzzle", "couple"] as const;
+export type FunnelFlow = (typeof FUNNEL_FLOWS)[number];
+
 export interface Daily {
   game: string;
   mode: string;

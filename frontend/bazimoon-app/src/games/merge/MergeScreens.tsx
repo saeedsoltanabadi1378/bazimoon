@@ -10,7 +10,7 @@ import { shareLink } from "../../lib/platform";
 import { appLink } from "../../lib/links";
 import { IntroScreen, PreviewGrid } from "../shared/IntroScreen";
 import { XpCard } from "../shared/ResultScreen";
-import { parseXp, useFinish, useSavedState, useStopwatch, type ResultParams } from "../shared/play";
+import { parseXp, useFinish, useSavedState, useStopwatch, useTrackStarted, type ResultParams } from "../shared/play";
 import { canMove, move, newGame, tileStyle, type Dir, type MergeState } from "./logic";
 import { readLocal, removeLocal, writeLocal } from "../../lib/storage";
 import { MergeBoardView, SwipeHint, useMergeTiles } from "./MergeBoard";
@@ -34,6 +34,7 @@ export function MergeIntro() {
 
   return (
     <IntroScreen
+      game="merge"
       title={t("gameMerge")}
       tagline={t("mergeTagline")}
       accent={ACCENT}
@@ -82,6 +83,7 @@ export function MergePlay({ mode }: { mode: MergeMode }) {
   const { back } = useNavigation();
   const { api } = useHub();
   const finish = useFinish("merge");
+  useTrackStarted("merge");
   const size = mode === "big" ? 5 : 4;
   const fresh = (): Saved => ({ ...newGame(size, mode === "timed" ? 0 : 3), over: false, elapsed: 0 });
   // Time attack always starts fresh; classic and big board resume where you left off.

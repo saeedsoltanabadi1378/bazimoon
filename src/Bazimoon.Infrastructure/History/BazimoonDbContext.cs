@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Bazimoon.Infrastructure.Activity;
 using Bazimoon.Infrastructure.Admin;
 using Bazimoon.Infrastructure.Hub;
 using Bazimoon.Infrastructure.Identity;
@@ -25,6 +26,7 @@ public sealed class BazimoonDbContext : DbContext
     public DbSet<CoupleRecord> Couples => Set<CoupleRecord>();
     public DbSet<CoupleAnswerRecord> CoupleAnswers => Set<CoupleAnswerRecord>();
     public DbSet<MafiaTableRecord> MafiaTables => Set<MafiaTableRecord>();
+    public DbSet<UserActivityEventRecord> UserActivityEvents => Set<UserActivityEventRecord>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -165,5 +167,15 @@ public sealed class BazimoonDbContext : DbContext
 
         modelBuilder.Entity<AppSettingsRecord>(b => { b.ToTable("app_settings"); b.HasKey(x => x.Id); b.Property(x => x.DisabledGamesJson).HasDefaultValue("[]"); });
         modelBuilder.Entity<OperationalEventRecord>(b => { b.ToTable("operational_events"); b.HasKey(x => x.Id); b.HasIndex(x => x.CreatedAt); });
+
+        modelBuilder.Entity<UserActivityEventRecord>(b =>
+        {
+            b.ToTable("user_activity_events");
+            b.HasKey(x => x.Id);
+            b.Property(x => x.Flow).HasMaxLength(32);
+            b.Property(x => x.Name).HasMaxLength(64);
+            b.HasIndex(x => new { x.Flow, x.Name, x.CreatedAt });
+            b.HasIndex(x => x.UserId);
+        });
     }
 }

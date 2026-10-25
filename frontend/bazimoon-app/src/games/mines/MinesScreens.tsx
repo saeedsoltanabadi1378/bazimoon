@@ -9,7 +9,7 @@ import { dailyNumber } from "../../lib/rng";
 import { haptic } from "../../lib/haptics";
 import { IntroScreen, PreviewGrid } from "../shared/IntroScreen";
 import { ResultScreen } from "../shared/ResultScreen";
-import { parseXp, useFinish, useStopwatch, type ResultParams } from "../shared/play";
+import { parseXp, useFinish, useStopwatch, useTrackStarted, type ResultParams } from "../shared/play";
 import { blankState, chord, countAround, dailyState, modeConfig, numberColors, open, progress, toggleFlag, type MinesMode, type MinesState } from "./logic";
 
 const ACCENT = "#F08A7A";
@@ -38,6 +38,7 @@ export function MinesIntro() {
 
   return (
     <IntroScreen
+      game="mines"
       title={t("gameMines")}
       tagline={t("minesTagline")}
       accent={ACCENT}
@@ -82,6 +83,7 @@ export function MinesPlay({ mode }: { mode: MinesMode }) {
   const { back } = useNavigation();
   const { api } = useHub();
   const finish = useFinish("mines");
+  useTrackStarted("mines");
   const number = mode === "daily" ? dailyNumber("mines", puzzleToday()) : null;
   const initial = () => (mode === "daily" && number ? dailyState(number) : blankState(mode));
   const [state, setState] = useState<MinesState>(initial);

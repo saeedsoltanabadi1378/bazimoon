@@ -32,6 +32,16 @@ export function useStopwatch(running: boolean, initialMs = 0) {
   return [ms, setMs] as const;
 }
 
+/** Reports that a solo game's Play screen was reached (the step between its intro and a finished
+ * result), for the puzzle funnel. Call once from the top of each game's Play component. */
+export function useTrackStarted(game: GameKey) {
+  const { api } = useHub();
+  useEffect(() => {
+    api.trackEvent("puzzle_started", "puzzle", { game });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [game]);
+}
+
 export type ResultParams = Record<string, string | number | boolean | null>;
 
 /**

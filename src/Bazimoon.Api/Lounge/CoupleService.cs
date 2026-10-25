@@ -1,3 +1,4 @@
+using Bazimoon.Infrastructure.Activity;
 using Bazimoon.Infrastructure.Admin;
 using System.Security.Cryptography;
 using Microsoft.EntityFrameworkCore;
@@ -18,13 +19,15 @@ public sealed class CoupleService
     private readonly IPushNotifier _notifier;
 
     private readonly IAppSettingsService _settings;
+    private readonly IActivityTracker _activity;
 
-    public CoupleService(BazimoonDbContext db, TimeProvider clock, IPushNotifier notifier, IAppSettingsService settings)
+    public CoupleService(BazimoonDbContext db, TimeProvider clock, IPushNotifier notifier, IAppSettingsService settings, IActivityTracker activity)
     {
         _settings = settings;
         _db = db;
         _clock = clock;
         _notifier = notifier;
+        _activity = activity;
     }
 
     private DateTime Now => _clock.GetUtcNow().UtcDateTime;
@@ -105,6 +108,7 @@ public sealed class CoupleService
         _db.Couples.RemoveRange(await _db.Couples.Where(c => c.InviterId == userId && c.PartnerId == null).ToListAsync());
         var couple = new CoupleRecord { InviterId = userId, InviteToken = NewToken(), InviteExpiresAt = Now + CoupleRules.InviteLifetime };
         _db.Couples.Add(couple);
+        _activity.Track(userId, ActivityEvents.Couple, ActivityEvents.CoupleInviteSent);
         await _db.SaveChangesAsync();
         return new CoupleStateDto("pending", new CoupleInviteDto(couple.InviteToken, couple.InviteExpiresAt), null);
     }
@@ -147,6 +151,7 @@ public sealed class CoupleService
         couple.AcceptedAt = Now;
         couple.StartDay = Today;
         couple.Language = (await _db.PlayerStats.FindAsync(couple.InviterId))?.Language ?? "en";
+        _activity.Track(userId, ActivityEvents.Couple, ActivityEvents.CoupleInviteAccepted);
         await _db.SaveChangesAsync();
         await _notifier.NotifyAsync(couple.InviterId, new PushText(
             $"{username} accepted your Couple Quiz invite. Today's questions are ready.",
@@ -165,6 +170,7 @@ public sealed class CoupleService
             throw new GameException("Your answers for today are already locked in.");
 
         _db.CoupleAnswers.Add(new CoupleAnswerRecord { CoupleId = couple.Id, Day = today, UserId = userId, Answers = CoupleRules.Format(request.Answers!) });
+        _activity.Track(userId, ActivityEvents.Couple, ActivityEvents.CoupleQuestionAnswered);
         Guid partnerId = couple.InviterId == userId ? couple.PartnerId!.Value : couple.InviterId;
         var partner = await _db.CoupleAnswers.FirstOrDefaultAsync(a => a.CoupleId == couple.Id && a.Day == today && a.UserId == partnerId);
         if (partner is not null)

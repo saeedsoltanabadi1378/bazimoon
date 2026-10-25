@@ -134,6 +134,12 @@ export class BazimoonApiClient {
     return this.request<{ publicKey: string | null }>("GET", "/api/push/key");
   }
 
+  /** Reports a funnel step the server has no other way to learn about (a screen was seen, a game was
+   * started) — never throws, so a flaky connection never interrupts what the player is doing. */
+  trackEvent(name: string, flow?: string, properties?: Record<string, unknown>) {
+    this.request<void>("POST", "/api/events", { name, flow, properties }).catch(() => undefined);
+  }
+
   subscribePush(endpoint: string, p256dh: string, auth: string) {
     return this.request<void>("POST", "/api/push/subscriptions", { endpoint, keys: { p256dh, auth } });
   }

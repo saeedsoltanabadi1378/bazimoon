@@ -6,7 +6,7 @@ import { Body, IconButton, Screen, Segmented, Switch, TopBar } from "../../ui/co
 import { haptic } from "../../lib/haptics";
 import { readLocal, writeLocal } from "../../lib/storage";
 import { XpCard } from "../shared/ResultScreen";
-import { parseXp, useFinish, useSavedState, type ResultParams } from "../shared/play";
+import { parseXp, useFinish, useSavedState, useTrackStarted, type ResultParams } from "../shared/play";
 import { apply, botPlay, describeBotMove, legal, pips, roll, startPosition, type Difficulty, type Move, type Position } from "./logic";
 
 const SETUP_KEY = "bazimoon-nard-setup";
@@ -184,6 +184,7 @@ export function NardPlay({ resume }: { resume: boolean }) {
   const { t, n } = useLanguage();
   const { back } = useNavigation();
   const finish = useFinish("nard");
+  useTrackStarted("nard");
   const setup = readLocal<Setup>(SETUP_KEY, { difficulty: "medium", length: 3, mars: true });
   useState(() => {
     if (!resume) writeLocal("bazimoon-nard-match", newMatch(setup));

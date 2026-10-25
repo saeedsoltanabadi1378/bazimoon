@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Bazimoon.Domain;
 using Bazimoon.Infrastructure;
+using Bazimoon.Infrastructure.Activity;
 using Bazimoon.Infrastructure.History;
 using Bazimoon.Infrastructure.Hub;
 using Bazimoon.Infrastructure.Sessions;
@@ -14,13 +15,15 @@ public sealed class HubService
     private readonly IGameSessionStore _sessions;
     private readonly TimeProvider _clock;
     private readonly TableService _tables;
+    private readonly IActivityTracker _activity;
 
-    public HubService(BazimoonDbContext db, IGameSessionStore sessions, TimeProvider clock, TableService tables)
+    public HubService(BazimoonDbContext db, IGameSessionStore sessions, TimeProvider clock, TableService tables, IActivityTracker activity)
     {
         _tables = tables;
         _db = db;
         _sessions = sessions;
         _clock = clock;
+        _activity = activity;
     }
 
     private int Today => Progression.PuzzleDay(_clock.GetUtcNow());
@@ -322,6 +325,7 @@ public sealed class HubService
             Solved = request.Solved, TimeMs = request.TimeMs, Score = request.Score, Moves = request.Moves, Detail = request.Detail,
             Hints = Math.Max(0, request.Hints), XpGained = xp, Points = points
         });
+        _activity.Track(userId, ActivityEvents.Puzzle, ActivityEvents.PuzzleCompleted, new { game = request.Game, solved = request.Solved });
         await _db.SaveChangesAsync();
 
         int? percentile = null;

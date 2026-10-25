@@ -1,5 +1,6 @@
 using Bazimoon.Domain;
 using Bazimoon.Infrastructure;
+using Bazimoon.Infrastructure.Activity;
 using Bazimoon.Infrastructure.History;
 using Bazimoon.Infrastructure.Admin;
 using Microsoft.EntityFrameworkCore;
@@ -19,13 +20,14 @@ public sealed class GameService
     private readonly Lounge.IPushNotifier _push;
     private readonly IGraveyardStore _graveyard;
     private readonly TimeProvider _clock;
+    private readonly IActivityTracker _activity;
 
     public GameService(
         IGameSessionStore sessionStore,
         IGameHistoryRepository historyRepository,
         IGameNotifier notifier,
         IGameRosterStore rosterStore, IAppSettingsService settings, BazimoonDbContext db, GameMutationLock mutationLock,
-        Lounge.IPushNotifier push, IGraveyardStore graveyard, TimeProvider clock)
+        Lounge.IPushNotifier push, IGraveyardStore graveyard, TimeProvider clock, IActivityTracker activity)
     {
         _push = push;
         _sessionStore = sessionStore;
@@ -37,6 +39,7 @@ public sealed class GameService
         _mutationLock = mutationLock;
         _graveyard = graveyard;
         _clock = clock;
+        _activity = activity;
     }
 
     /// <summary>Creates a lobby, shared by its table's invite link.</summary>
@@ -52,6 +55,7 @@ public sealed class GameService
         await _sessionStore.SaveAsync(game);
         await _rosterStore.AddAsync(game.GameId, creatorUserId, creatorUsername);
         await TrackActivityAsync(creatorUserId);
+        _activity.Track(creatorUserId, ActivityEvents.Mafia, ActivityEvents.MafiaLobbyJoined);
         _db.MafiaTables.Add(new()
         {
             GameId = game.GameId,
@@ -79,6 +83,7 @@ public sealed class GameService
             await SaveAndNotifyAsync(game);
             await _rosterStore.AddAsync(gameId, userId, username);
             await TrackActivityAsync(userId);
+            _activity.Track(userId, ActivityEvents.Mafia, ActivityEvents.MafiaLobbyJoined);
             await _db.SaveChangesAsync();
         }
     }
@@ -115,8 +120,13 @@ public sealed class GameService
         var game = await LoadOrThrowAsync(gameId);
         var playerId = PlayerIdentity.DeriveId(gameId, userId);
         if (game.CurrentPhase == GamePhase.Lobby) game.RemovePlayer(playerId);
-        else game.LeaveMidGame(playerId, DateTimeOffset.UtcNow);
+        else
+        {
+            game.LeaveMidGame(playerId, DateTimeOffset.UtcNow);
+            _activity.Track(userId, ActivityEvents.Mafia, ActivityEvents.MafiaLeftEarly);
+        }
         await SaveAndNotifyAsync(game);
+        await _db.SaveChangesAsync();
     }
 
     public async Task SetReadyAsync(Guid gameId, Guid userId, bool ready)
@@ -132,6 +142,8 @@ public sealed class GameService
         var game = await LoadOrThrowAsync(gameId);
         EnsureController(game, userId);
         game.AssignRoles();
+        foreach (var p in await _rosterStore.GetAsync(gameId)) _activity.Track(p.UserId, ActivityEvents.Mafia, ActivityEvents.MafiaGameStarted);
+        await _db.SaveChangesAsync();
         await SaveAndNotifyAsync(game);
         await NotifyGameStartedAsync(game, userId);
     }
@@ -350,6 +362,8 @@ public sealed class GameService
 
         if (game.CurrentPhase == GamePhase.Ended)
         {
+            foreach (var p in await _rosterStore.GetAsync(game.GameId)) _activity.Track(p.UserId, ActivityEvents.Mafia, ActivityEvents.MafiaGameEnded);
+            await _db.SaveChangesAsync();
             await _historyRepository.SaveCompletedGameAsync(game);
             await _rosterStore.RemoveAsync(game.GameId);
             await _graveyard.RemoveAsync(game.GameId);

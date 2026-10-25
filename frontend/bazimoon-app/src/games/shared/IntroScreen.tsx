@@ -1,6 +1,7 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useLanguage } from "../../i18n/LanguageContext";
 import { useNavigation } from "../../app/router";
+import { useHub } from "../../hub/HubData";
 import { Body, Screen, Segmented, TopBar } from "../../ui/components";
 
 export interface IntroMode {
@@ -20,7 +21,7 @@ export interface IntroStep {
 /** The shared "how to play" screen every solo game opens with (ZipIntro and siblings in the design). */
 export function IntroScreen({
   title, tagline, accent, heroBg, preview, badge, heroTitle, heroSub, modeTitle, modes, initialMode = 0,
-  stats, steps, rewards, extra, secondary, accentInk = "#0B0D1A",
+  stats, steps, rewards, extra, secondary, accentInk = "#0B0D1A", game,
 }: {
   title: string;
   tagline: string;
@@ -39,11 +40,19 @@ export function IntroScreen({
   rewards?: string[];
   extra?: (mode: string) => ReactNode;
   secondary?: { label: string; onClick: () => void };
+  /** The game's key (e.g. "zip"), so this screen's view can be logged for the puzzle funnel. */
+  game?: string;
 }) {
   const { t, n } = useLanguage();
   const { back } = useNavigation();
+  const { api } = useHub();
   const [modeIndex, setModeIndex] = useState(Math.min(initialMode, modes.length - 1));
   const mode = modes[modeIndex];
+
+  useEffect(() => {
+    if (game) api.trackEvent("puzzle_intro_viewed", "puzzle", { game });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [game]);
 
   return (
     <Screen theme="night">

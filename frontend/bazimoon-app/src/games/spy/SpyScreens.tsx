@@ -46,6 +46,7 @@ export function SpyIntro() {
 
   return (
     <IntroScreen
+      game="spy"
       title={t("gameSpy")}
       tagline={t("spyTagline")}
       accent={ACCENT}

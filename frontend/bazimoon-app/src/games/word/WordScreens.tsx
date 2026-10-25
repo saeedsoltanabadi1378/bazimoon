@@ -10,7 +10,7 @@ import { haptic } from "../../lib/haptics";
 import { IntroScreen, PreviewGrid } from "../shared/IntroScreen";
 import { InGameHelp } from "../shared/InGameHelp";
 import { XpCard } from "../shared/ResultScreen";
-import { parseXp, useFinish, useSavedState, type ResultParams } from "../shared/play";
+import { parseXp, useFinish, useSavedState, useTrackStarted, type ResultParams } from "../shared/play";
 import { answerFor, keyboards, loadDictionary, score, type Score, type WordLang } from "./logic";
 
 const ACCENT = "#9ED98C";
@@ -53,6 +53,7 @@ export function WordIntro() {
 
   return (
     <IntroScreen
+      game="word"
       title={t("gameWord")}
       tagline={t("wordTagline", { number })}
       accent={ACCENT}
@@ -101,6 +102,7 @@ export function WordPlay({ lang }: { lang: WordLang }) {
   const { back } = useNavigation();
   const { highContrast } = useHub();
   const finish = useFinish("word");
+  useTrackStarted("word");
   const today = puzzleToday();
   const number = dailyNumber("word", today);
   const answer = answerFor(lang, number);

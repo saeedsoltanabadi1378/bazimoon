@@ -10,7 +10,7 @@ import { readLocal, writeLocal } from "../../lib/storage";
 import { haptic } from "../../lib/haptics";
 import { IntroScreen } from "../shared/IntroScreen";
 import { ResultScreen } from "../shared/ResultScreen";
-import { parseXp, useFinish, type ResultParams } from "../shared/play";
+import { parseXp, useFinish, useTrackStarted, type ResultParams } from "../shared/play";
 import { canTurn, fruitSequence, SIZE, start, step, stepMs, type Dir, type SnakeMode, type SnakeState } from "./logic";
 
 const ACCENT = "#9ED98C";
@@ -44,6 +44,7 @@ export function SnakeIntro() {
 
   return (
     <IntroScreen
+      game="snake"
       title={t("gameSnake")}
       tagline={t("snakeTagline")}
       accent={ACCENT}
@@ -89,6 +90,7 @@ export function SnakePlay({ mode }: { mode: SnakeMode }) {
   const { t, n, language } = useLanguage();
   const { back } = useNavigation();
   const finish = useFinish("snake");
+  useTrackStarted("snake");
   const number = dailyNumber("snake", puzzleToday());
   const seq = useRef(fruitSequence(mode === "daily" ? `snake-daily-${number}` : `snake-${randomSeed()}`)).current;
   const [state, setState] = useState<SnakeState>(() => start(seq));

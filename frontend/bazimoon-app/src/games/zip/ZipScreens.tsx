@@ -39,6 +39,7 @@ export function ZipIntro() {
 
   return (
     <IntroScreen
+      game="zip"
       title={t("gameZip")}
       tagline={t("zipIntroTagline", { number })}
       accent={ACCENT}

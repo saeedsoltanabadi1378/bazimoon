@@ -61,6 +61,7 @@ export function StackIntro() {
 
   return (
     <IntroScreen
+      game="stack"
       title={t("gameStack")}
       tagline={t("stackTagline")}
       accent={ACCENT}

@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Bazimoon.Infrastructure.Activity;
 using Bazimoon.Infrastructure.History;
 using Bazimoon.Infrastructure.Identity;
 
@@ -11,11 +12,13 @@ public sealed class UserAccountService
 
     private readonly BazimoonDbContext _db;
     private readonly TimeProvider _clock;
+    private readonly IActivityTracker _activity;
 
-    public UserAccountService(BazimoonDbContext db, TimeProvider clock)
+    public UserAccountService(BazimoonDbContext db, TimeProvider clock, IActivityTracker activity)
     {
         _db = db;
         _clock = clock;
+        _activity = activity;
     }
 
     /// <summary>Returns the user linked to this identity, creating a non-guest user on first sign-in.
@@ -47,6 +50,7 @@ public sealed class UserAccountService
         _db.Users.Add(user);
         _db.UserIdentities.Add(new UserIdentityRecord { UserId = user.Id, Provider = provider, ProviderUserId = providerUserId, Email = email, CreatedAt = now });
         _db.UserAcquisitions.Add(ToRecord(user.Id, acquisition, now));
+        _activity.Track(user.Id, ActivityEvents.SignUp, ActivityEvents.SignupGoogle);
         await _db.SaveChangesAsync();
         return user;
     }
@@ -73,6 +77,7 @@ public sealed class UserAccountService
         };
         _db.Users.Add(user);
         _db.UserAcquisitions.Add(ToRecord(user.Id, acquisition, now));
+        _activity.Track(user.Id, ActivityEvents.SignUp, ActivityEvents.SignupGuest, new { crawler });
         await _db.SaveChangesAsync();
         return user;
     }
@@ -92,6 +97,7 @@ public sealed class UserAccountService
         user.IsGuest = false;
         user.LastSeenAt = now;
         if (!string.IsNullOrWhiteSpace(displayName)) user.DisplayName = CleanName(displayName);
+        _activity.Track(user.Id, ActivityEvents.SignUp, ActivityEvents.LinkGoogle);
         await _db.SaveChangesAsync();
         return new LinkResult(LinkOutcome.Linked, user);
     }

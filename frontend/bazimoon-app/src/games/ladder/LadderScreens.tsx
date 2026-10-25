@@ -10,7 +10,7 @@ import { haptic } from "../../lib/haptics";
 import { IntroScreen } from "../shared/IntroScreen";
 import { InGameHelp } from "../shared/InGameHelp";
 import { ResultScreen } from "../shared/ResultScreen";
-import { PlayHeader, parseXp, useFinish, useSavedState, useStopwatch, type ResultParams } from "../shared/play";
+import { PlayHeader, parseXp, useFinish, useSavedState, useStopwatch, useTrackStarted, type ResultParams } from "../shared/play";
 import { dailyLadder, endlessLadder, endlessShape, letterDiff, loadLadderDictionary, shortestPath, type Ladder } from "./logic";
 
 const ACCENT = "#F0A83A";
@@ -79,6 +79,7 @@ export function LadderIntro() {
 
   return (
     <IntroScreen
+      game="ladder"
       title={t("gameLadder")}
       tagline={t("ladderTagline")}
       accent={ACCENT}
@@ -122,6 +123,7 @@ export function LadderPlay({ mode }: { mode: LadderMode }) {
   const { t } = useLanguage();
   const { back, replace } = useNavigation();
   const finish = useFinish("ladder");
+  useTrackStarted("ladder");
   const number = dailyNumber("ladder", puzzleToday());
   const daily = mode === "daily";
   const level = daily ? 0 : readLocal<number>(ENDLESS_LEVEL_KEY, 1);

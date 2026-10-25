@@ -8,7 +8,7 @@ import { dailyNumber, randomSeed } from "../../lib/rng";
 import { haptic } from "../../lib/haptics";
 import { IntroScreen, PreviewGrid } from "../shared/IntroScreen";
 import { GroupBoard, ResultScreen } from "../shared/ResultScreen";
-import { PlayHeader, parseXp, useFinish, useSavedState, useStopwatch, type ResultParams } from "../shared/play";
+import { PlayHeader, parseXp, useFinish, useSavedState, useStopwatch, useTrackStarted, type ResultParams } from "../shared/play";
 import { useCountdown } from "../zip/ZipScreens";
 import { DAILY_LEVEL, LEVEL_GIVENS, PEERS, UNITS, clashes, completeUnits, generateSudoku, type SudokuLevel, type SudokuPuzzle } from "./logic";
 
@@ -28,6 +28,7 @@ export function SudokuIntro() {
 
   return (
     <IntroScreen
+      game="sudoku"
       title={t("gameSudoku")}
       tagline={t("sudokuIntroTagline", { number })}
       accent={ACCENT}
@@ -132,6 +133,7 @@ function SudokuBoard({ puzzle, seedKey, mode, number, level }: { puzzle: SudokuP
   const { t, n, language } = useLanguage();
   const { back } = useNavigation();
   const finish = useFinish("sudoku");
+  useTrackStarted("sudoku");
   const today = puzzleToday();
   const [saved, setSaved, clearSaved] = useSavedState<Saved>(`bazimoon-sudoku-${seedKey}`, fresh);
   const [message, setMessage] = useState<{ text: string; tone: "hint" | "bad" } | null>(null);

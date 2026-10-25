@@ -125,4 +125,50 @@ public class AdminDashboardTests : IClassFixture<BazimoonApiFactory>, IAsyncLife
         Assert.Contains(summary!.Sources, x => x.Value == "chatgpt" && x.Players >= 1);
         Assert.Contains(summary.Campaigns, x => x.Value == "autumn-launch" && x.Players >= 1);
     }
+
+    [Fact]
+    public async Task UserActivity_TracksFunnelStepsAndListsThemInTheFeed()
+    {
+        // Two players: one reaches every step of the puzzle funnel, one only views the intro.
+        var finisher = await AuthTestHelper.CreateAuthenticatedClientAsync(_factory, 870004, "funnelfinisher");
+        (await finisher.PostAsJsonAsync("/api/events", new { name = "puzzle_intro_viewed", flow = "puzzle", properties = new { game = "zip" } })).EnsureSuccessStatusCode();
+        (await finisher.PostAsJsonAsync("/api/events", new { name = "puzzle_started", flow = "puzzle", properties = new { game = "zip" } })).EnsureSuccessStatusCode();
+        (await finisher.PostAsJsonAsync("/api/puzzles/results", new PuzzleSubmitRequest("zip", "daily", null, true, 40_000, null, null, null, 0))).EnsureSuccessStatusCode();
+
+        var looker = await AuthTestHelper.CreateAuthenticatedClientAsync(_factory, 870005, "funnellooker");
+        (await looker.PostAsJsonAsync("/api/events", new { name = "puzzle_intro_viewed", flow = "puzzle", properties = new { game = "zip" } })).EnsureSuccessStatusCode();
+
+        var admin = await AdminAsync();
+        var funnel = await admin.GetFromJsonAsync<AdminFunnelDto>("/api/admin/funnels/puzzle?days=7");
+        Assert.Equal(3, funnel!.Steps.Count);
+        Assert.Equal("puzzle_intro_viewed", funnel.Steps[0].Name);
+        Assert.True(funnel.Steps[0].Users >= 2);
+        Assert.True(funnel.Steps[2].Users >= 1);
+        Assert.True(funnel.Steps[2].Users <= funnel.Steps[0].Users);
+        Assert.Equal(100, funnel.Steps[0].PctOfFirst);
+
+        var feed = await admin.GetFromJsonAsync<AdminPageDto<AdminActivityFeedItemDto>>("/api/admin/activity?flow=puzzle&pageSize=50");
+        Assert.Contains(feed!.Items, e => e.Name == "puzzle_completed" && e.UserName == "funnelfinisher");
+        Assert.All(feed.Items, e => Assert.Equal("puzzle", e.Flow));
+
+        // An unknown event name is refused rather than silently accepted.
+        var rejected = await finisher.PostAsJsonAsync("/api/events", new { name = "made_up_event" });
+        Assert.Equal(HttpStatusCode.BadRequest, rejected.StatusCode);
+    }
+
+    [Fact]
+    public async Task MafiaFunnel_CountsJoinedStartedAndEndedSeparately()
+    {
+        var host = await AuthTestHelper.CreateAuthenticatedClientAsync(_factory, 870006, "funnelhost");
+        var guest = await AuthTestHelper.CreateAuthenticatedClientAsync(_factory, 870007, "funnelguest");
+        var create = await host.PostAsJsonAsync("/api/tables", new { name = "Funnel table", isOpen = true });
+        create.EnsureSuccessStatusCode();
+        var gameId = (await create.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("gameId").GetGuid();
+        (await guest.PostAsJsonAsync($"/api/games/{gameId}/players", new { })).EnsureSuccessStatusCode();
+
+        var admin = await AdminAsync();
+        var funnel = await admin.GetFromJsonAsync<AdminFunnelDto>("/api/admin/funnels/mafia?days=7");
+        Assert.Equal(["mafia_lobby_joined", "mafia_game_started", "mafia_game_ended"], funnel!.Steps.Select(s => s.Name));
+        Assert.True(funnel.Steps[0].Users >= 2);
+    }
 }

@@ -71,6 +71,10 @@ public static class AdminEndpoints
             await dash.GetPlayerAsync(id) is { } player ? Results.Ok(player) : Results.NotFound());
         group.MapGet("/players/{id:guid}/activity", async (Guid id, string? kind, int? page, int? pageSize, AdminDashboardService dash) =>
             Results.Ok(await dash.GetPlayerActivityAsync(id, kind, Math.Max(1, page ?? 1), Math.Clamp(pageSize ?? 10, 1, 50))));
+        group.MapGet("/activity", async (string? flow, long? before, int? pageSize, AdminDashboardService dash) =>
+            Results.Ok(await dash.GetActivityFeedAsync(flow, before, Math.Clamp(pageSize ?? 25, 1, 100))));
+        group.MapGet("/funnels/{flow}", async (string flow, int? days, AdminDashboardService dash) =>
+            Results.Ok(await dash.GetFunnelAsync(flow, days ?? 30)));
         group.MapGet("/puzzles", async (AdminDashboardService dash) => Results.Ok(await dash.GetPuzzlesAsync()));
         group.MapGet("/events", async (string? level, long? before, int? pageSize, AdminDashboardService dash) =>
             Results.Ok(await dash.GetEventsAsync(level, before, Math.Clamp(pageSize ?? 25, 1, 100))));

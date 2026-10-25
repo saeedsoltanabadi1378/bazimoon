@@ -86,6 +86,7 @@ export function BlocksIntro() {
 
   return (
     <IntroScreen
+      game="blocks"
       title={t("gameBlocks")}
       tagline={t("blocksTagline")}
       accent={ACCENT}

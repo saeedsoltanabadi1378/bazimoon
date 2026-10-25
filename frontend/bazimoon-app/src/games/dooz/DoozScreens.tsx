@@ -6,7 +6,7 @@ import { IconButton, Screen } from "../../ui/components";
 import { haptic } from "../../lib/haptics";
 import { IntroScreen } from "../shared/IntroScreen";
 import { ResultScreen } from "../shared/ResultScreen";
-import { parseXp, useFinish, type ResultParams } from "../shared/play";
+import { parseXp, useFinish, useTrackStarted, type ResultParams } from "../shared/play";
 import { boardSize, botMove, full, MAX_ROUNDS, winner, WINS_NEEDED, type Cell, type DoozMode, type Mark } from "./logic";
 
 const ACCENT = "#C3B9FF";
@@ -44,6 +44,7 @@ export function DoozIntro() {
 
   return (
     <IntroScreen
+      game="dooz"
       title={t("gameDooz")}
       tagline={t("doozTagline")}
       accent={ACCENT}
@@ -95,6 +96,7 @@ export function DoozPlay({ mode }: { mode: DoozMode }) {
   const { t, n } = useLanguage();
   const { back, replace } = useNavigation();
   const finish = useFinish("dooz");
+  useTrackStarted("dooz");
   const size = boardSize(mode);
   const vsBot = mode !== "friend";
   const [m, setM] = useState<Match>(() => ({ ...newRound(size, "X"), round: 1, x: 0, o: 0, draws: 0 }));

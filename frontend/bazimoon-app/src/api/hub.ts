@@ -326,4 +326,6 @@ export const hubApi = (api: BazimoonApiClient) => ({
   weekly: (game: string) => api.request<Weekly>("GET", `/api/puzzles/${game}/weekly`),
   archive: (game: string, year: number, month: number) =>
     api.request<Archive>("GET", `/api/puzzles/${game}/archive?year=${year}&month=${month}`),
+  /** Reports a funnel step the server has no other way to learn about; never throws. */
+  trackEvent: (name: string, flow?: string, properties?: Record<string, unknown>) => api.trackEvent(name, flow, properties),
 });
