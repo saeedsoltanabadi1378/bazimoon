@@ -60,8 +60,8 @@ public class GameSwitchTests : IClassFixture<BazimoonApiFactory>, IAsyncLifetime
     }
 
     [Theory]
-    [InlineData("daily", 0, 30)]
-    [InlineData("daily", 2, 20)]
+    [InlineData("level", 0, 30)]
+    [InlineData("level", 2, 20)]
     [InlineData("easy", 0, 15)]
     [InlineData("expert", 1, 35)]
     public void SudokuXp_FollowsTheResultScreen(string mode, int hints, int xp)

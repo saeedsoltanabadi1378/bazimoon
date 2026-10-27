@@ -9,6 +9,8 @@ public static class Progression
     public const int PuzzleQualifyingSolves = 3;
     public const int SeasonLengthDays = 28;
     public const int MaxStreakFreezes = 2;
+    /// <summary>Longest half-finished board the server keeps for a level (characters of JSON).</summary>
+    public const int MaxSavedStateLength = 8000;
 
     /// <summary>Daily puzzles roll over at midnight Tehran time (UTC+03:30, no DST), the same for everyone.</summary>
     public static readonly TimeSpan PuzzleUtcOffset = TimeSpan.FromMinutes(210);
@@ -16,24 +18,34 @@ public static class Progression
     private static readonly DateOnly DayEpoch = new(2026, 1, 1);
     private static readonly DateOnly SeasonEpoch = new(2026, 6, 22); // Season 1 started Monday 22 June 2026.
 
-    /// <summary>First day of each game's daily series, so the design's numbering holds (Zip #142 on 13 Oct 2026).</summary>
+    /// <summary>First day of each game's daily series. Zip, Queens, Sudoku, Word and Ladder have no daily:
+    /// they are played level by level (see LevelGames).</summary>
     private static readonly Dictionary<string, DateOnly> DailyEpochs = new()
     {
-        ["zip"] = new DateOnly(2026, 5, 25),
-        ["queens"] = new DateOnly(2026, 7, 18),
-        ["word"] = new DateOnly(2026, 6, 1),
-        ["ladder"] = new DateOnly(2026, 8, 1),
         ["mines"] = new DateOnly(2026, 9, 1),
         ["stack"] = new DateOnly(2026, 9, 1),
         ["blocks"] = new DateOnly(2026, 9, 1),
-        ["sudoku"] = new DateOnly(2026, 10, 15),
         ["snake"] = new DateOnly(2026, 10, 15),
         ["esmfamil"] = new DateOnly(2026, 10, 15),
     };
 
     public static readonly IReadOnlySet<string> Games = new HashSet<string> { "zip", "queens", "merge", "mines", "memory", "word", "ladder", "stack", "blocks", "sudoku", "snake", "dooz", "esmfamil" };
-    /// <summary>Daily puzzles that count toward the shared puzzle streak.</summary>
-    public static readonly IReadOnlySet<string> StreakGames = new HashSet<string> { "zip", "queens", "word", "ladder", "sudoku" };
+    /// <summary>Puzzles played level by level, from level 1 up, as many a day as the player likes.</summary>
+    public static readonly IReadOnlySet<string> LevelGames = new HashSet<string> { "zip", "queens", "sudoku", "word", "ladder" };
+    /// <summary>Level puzzles that count toward the shared puzzle streak.</summary>
+    public static readonly IReadOnlySet<string> StreakGames = LevelGames;
+
+    public static bool IsDaily(string mode) => mode == "daily" || mode.StartsWith("daily-", StringComparison.Ordinal);
+
+    /// <summary>"level", or a language track such as "level-fa" (Word and Ladder have Persian levels).</summary>
+    public static bool IsLevel(string mode) => mode == "level" || mode.StartsWith("level-", StringComparison.Ordinal);
+
+    /// <summary>The level track a submitted mode belongs to, or null when the mode is not a level.</summary>
+    public static string? LevelTrack(string game, string mode)
+    {
+        if (!LevelGames.Contains(game) || !IsLevel(mode)) return null;
+        return mode == "level-fa" && game is "word" or "ladder" ? "level-fa" : "level";
+    }
 
     public static DateOnly PuzzleDate(DateTimeOffset now) => DateOnly.FromDateTime(now.ToOffset(PuzzleUtcOffset).DateTime);
 
@@ -48,11 +60,8 @@ public static class Progression
         return DateOfDay(day).DayNumber - epoch.DayNumber + 1;
     }
 
-    public static int? DayOfDailyNumber(string game, int number)
-    {
-        if (!DailyEpochs.TryGetValue(game, out var epoch)) return null;
-        return epoch.DayNumber + number - 1 - DayEpoch.DayNumber;
-    }
+    /// <summary>A player's starting level when level play arrived: one past the dailies they had already solved.</summary>
+    public static int StartingLevel(int solvedDailies) => Math.Max(0, solvedDailies) + 1;
 
     // ---- seasons ----
 
@@ -129,12 +138,13 @@ public static class Progression
     /// <summary>XP for a finished solo game, following the rewards each game's intro/result screen states.</summary>
     public static int SoloXp(PuzzleOutcome o, int puzzleStreak, bool newBest)
     {
-        bool daily = o.Mode == "daily" || o.Mode.StartsWith("daily-", StringComparison.Ordinal);
+        // A level's first solve earns what a daily did; replays come in as practice.
+        bool daily = IsDaily(o.Mode) || IsLevel(o.Mode);
         switch (o.Game)
         {
             case "zip":
                 if (!o.Solved) return 5;
-                return daily ? Math.Max(5, Math.Min(100, 20 + 5 * Math.Max(0, puzzleStreak - 1)) - 5 * o.Hints) : Math.Max(5, 15 - 5 * o.Hints);
+                return daily ? Math.Max(5, 20 - 5 * o.Hints) : Math.Max(5, 15 - 5 * o.Hints);
             case "queens":
                 if (!o.Solved) return 5;
                 return o.Hints > 0 ? 15 : 30;
@@ -176,15 +186,15 @@ public static class Progression
         }
     }
 
-    /// <summary>Puzzle-league points: daily solves score by speed; everything else earns its XP as points.</summary>
+    /// <summary>Puzzle-league points: daily solves score by speed; everything else, levels included, earns its XP as points.</summary>
     public static int LeaguePoints(PuzzleOutcome o, int xp)
     {
-        if ((o.Mode == "daily" || o.Mode.StartsWith("daily-", StringComparison.Ordinal)) && o.Solved && o.TimeMs is { } ms)
+        if (IsDaily(o.Mode) && o.Solved && o.TimeMs is { } ms)
             return Math.Max(50, 300 - ms / 1000) - 10 * o.Hints;
         return xp;
     }
 
-    /// <summary>Advances the shared daily-puzzle streak for a solve on <paramref name="day"/>.</summary>
+    /// <summary>Advances the shared puzzle streak for a level solved on <paramref name="day"/>.</summary>
     public static (int Streak, int? LastDay, int Freezes, bool Extended) AdvanceStreak(int streak, int? lastDay, int freezes, int day)
     {
         if (lastDay == day) return (streak, lastDay, freezes, false);

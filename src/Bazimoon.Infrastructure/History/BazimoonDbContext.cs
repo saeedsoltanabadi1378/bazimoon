@@ -23,6 +23,7 @@ public sealed class BazimoonDbContext : DbContext
     public DbSet<OperationalEventRecord> OperationalEvents => Set<OperationalEventRecord>();
     public DbSet<PlayerStatsRecord> PlayerStats => Set<PlayerStatsRecord>();
     public DbSet<PuzzleResultRecord> PuzzleResults => Set<PuzzleResultRecord>();
+    public DbSet<PuzzleProgressRecord> PuzzleProgress => Set<PuzzleProgressRecord>();
     public DbSet<CoupleRecord> Couples => Set<CoupleRecord>();
     public DbSet<CoupleAnswerRecord> CoupleAnswers => Set<CoupleAnswerRecord>();
     public DbSet<MafiaTableRecord> MafiaTables => Set<MafiaTableRecord>();
@@ -133,6 +134,15 @@ public sealed class BazimoonDbContext : DbContext
             b.HasIndex(x => new { x.UserId, x.Game, x.Day });
             b.HasIndex(x => new { x.Game, x.PuzzleNumber });
             b.HasIndex(x => x.Day);
+        });
+
+        modelBuilder.Entity<PuzzleProgressRecord>(b =>
+        {
+            b.ToTable("puzzle_progress");
+            b.HasKey(x => new { x.UserId, x.Game, x.Track });
+            b.Property(x => x.Game).HasMaxLength(16);
+            b.Property(x => x.Track).HasMaxLength(16);
+            b.Property(x => x.SavedState).HasMaxLength(Progression.MaxSavedStateLength);
         });
 
         modelBuilder.Entity<CoupleRecord>(b =>

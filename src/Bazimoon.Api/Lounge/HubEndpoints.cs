@@ -64,11 +64,11 @@ public static class HubEndpoints
         puzzles.MapGet("/{game}/board", (string game, int? number, string? mode, HubService hub, HttpContext http) =>
             hub.GetBoardAsync(http.User.GetUserId(), game, number, mode)).WithName("GetPuzzleBoard");
 
-        puzzles.MapGet("/{game}/archive", async (string game, int year, int month, HubService hub, HttpContext http) =>
-        {
-            if (month is < 1 or > 12 || year is < 2026 or > 2100) return Results.BadRequest();
-            return Results.Ok(await hub.GetArchiveAsync(http.User.GetUserId(), game, year, month));
-        }).WithName("GetPuzzleArchive");
+        puzzles.MapGet("/{game}/progress", (string game, string? track, HubService hub, HttpContext http) =>
+            hub.GetProgressAsync(http.User.GetUserId(), game, track)).WithName("GetLevelProgress");
+
+        puzzles.MapPut("/{game}/progress/state", (string game, SaveLevelStateRequest request, HubService hub, HttpContext http) =>
+            hub.SaveProgressStateAsync(http.User.GetUserId(), game, request)).WithName("SaveLevelState");
     }
 }
 
@@ -90,7 +90,9 @@ public sealed record DailyStatusDto(string Game, int Number, bool Played, bool S
 public sealed record LeagueSummaryDto(int Season, int DaysLeft, string Division, int Tier, int? Rank, int PlayerCount, string? Zone);
 /// <summary>App-wide switches the app reads once at start.</summary>
 public sealed record AppConfigDto(IReadOnlyList<string> DisabledGames);
-public sealed record HomeDto(int Streak, string Date, IReadOnlyList<DailyStatusDto> Daily, int? MergeBest, LeagueSummaryDto League, TableDto? Table, int OpenTables);
+/// <summary>Where a player is in a level game. HasSave: the current level has a half-finished board.</summary>
+public sealed record LevelStatusDto(string Game, string Track, int Level, int SolvedToday, bool HasSave);
+public sealed record HomeDto(int Streak, string Date, IReadOnlyList<LevelStatusDto> Levels, int? MergeBest, LeagueSummaryDto League, TableDto? Table, int OpenTables);
 
 public sealed record QualificationDto(int Played, int Needed);
 public sealed record LeagueYouDto(int? Rank, int Score, int Third, string? Zone);
@@ -100,7 +102,7 @@ public sealed record LeagueDto(string Board, int Season, int DaysLeft, string Di
 public sealed record PuzzleSubmitRequest(string Game, string Mode, int? PuzzleNumber, bool Solved, int? TimeMs, int? Score, int? Moves, int? Detail, int Hints);
 public sealed record PuzzleResultDto(
     int XpGained, int Points, int Xp, int Level, int XpIntoLevel, int XpForNext, int LevelBefore, int XpIntoLevelBefore,
-    int Streak, bool StreakExtended, bool NewBest, bool CountedAsDaily, int? PuzzleNumber, int? Percentile);
+    int Streak, bool StreakExtended, bool NewBest, bool CountedAsDaily, int? PuzzleNumber, int? Percentile, int? NextLevel = null);
 public sealed record GameStatsDto(
     string Game, int Played, int Solved, int WinRate, int? BestTimeMs, int? AverageTimeMs, int? BestScore, int? AverageScore,
     int? BestMoves, double AverageMoves, int? MaxDetail, int SumDetail, int DailyStreak, int WinStreak, int? TodayNumber,
@@ -110,5 +112,6 @@ public sealed record BoardRowDto(int? Rank, string Name, bool IsYou, bool Solved
 public sealed record BoardDto(string Game, int? Number, int SolvedCount, IReadOnlyList<BoardRowDto> Rows);
 public sealed record WeeklyRowDto(int Rank, string Name, bool IsYou, int Score);
 public sealed record WeeklyDto(string Game, string Division, int Tier, int DaysLeft, int? YourRank, IReadOnlyList<WeeklyRowDto> Rows);
-public sealed record ArchiveDayDto(int Day, int? Number, string Status, int? TimeMs);
-public sealed record ArchiveDto(string Game, int Year, int Month, int FirstWeekday, IReadOnlyList<ArchiveDayDto> Days);
+/// <summary>A level game's progress: the level to play next and its saved board (JSON), if any.</summary>
+public sealed record LevelProgressDto(string Game, string Track, int Level, string? SavedState);
+public sealed record SaveLevelStateRequest(string? Track, int Level, string? State);

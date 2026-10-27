@@ -98,6 +98,9 @@ export function PlayHeader({ title, sub, clockMs, right, onBack, backLabel }: {
   );
 }
 
+/** What useSavedState (and useLevelState) hand back: the state, its setter and a clear. */
+export type SavedState<T> = readonly [T, (next: T | ((s: T) => T)) => void, () => void];
+
 /** Keeps a serializable game state in localStorage under `key` (null clears it). */
 export function useSavedState<T>(key: string, initial: () => T) {
   const [state, setState] = useState<T>(() => {
@@ -109,7 +112,11 @@ export function useSavedState<T>(key: string, initial: () => T) {
     }
     return initial();
   });
+  // The state that was cleared. A board component clears in its own effect, which can run before this
+  // hook's save effect (when the hook lives in a parent), so the cleared state must not be written back.
+  const cleared = useRef<T | null>(null);
   useEffect(() => {
+    if (state === cleared.current) return;
     try {
       localStorage.setItem(key, JSON.stringify(state));
     } catch {
@@ -117,11 +124,12 @@ export function useSavedState<T>(key: string, initial: () => T) {
     }
   }, [key, state]);
   const clear = useCallback(() => {
+    cleared.current = state;
     try {
       localStorage.removeItem(key);
     } catch {
       // ignore
     }
-  }, [key]);
+  }, [key, state]);
   return [state, setState, clear] as const;
 }

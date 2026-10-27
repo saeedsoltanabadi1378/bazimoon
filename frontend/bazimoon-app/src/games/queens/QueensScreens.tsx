@@ -3,14 +3,14 @@ import { useLanguage } from "../../i18n/LanguageContext";
 import { useNavigation } from "../../app/router";
 import { useHub, useLoad } from "../../hub/HubData";
 import { Body, Screen, Segmented } from "../../ui/components";
-import { formatClock, formatShortDate, puzzleToday } from "../../lib/format";
-import { dailyNumber, randomSeed } from "../../lib/rng";
+import { formatClock } from "../../lib/format";
+import { randomSeed } from "../../lib/rng";
 import { haptic } from "../../lib/haptics";
 import { IntroScreen, PreviewGrid } from "../shared/IntroScreen";
-import { GroupBoard, ResultScreen } from "../shared/ResultScreen";
-import { PlayHeader, parseXp, useFinish, useSavedState, useStopwatch, useTrackStarted, type ResultParams } from "../shared/play";
-import { useCountdown } from "../zip/ZipScreens";
-import { blockedBy, conflicts, generateQueens, hint as hintFor, regionColors, type Mark } from "./logic";
+import { ResultScreen } from "../shared/ResultScreen";
+import { PlayHeader, parseXp, useFinish, useSavedState, useStopwatch, useTrackStarted, type ResultParams, type SavedState } from "../shared/play";
+import { LevelLoading, rememberLevel, useLevelCopy, useLevelMode, useLevelState } from "../shared/levels";
+import { blockedBy, conflicts, generateQueens, hint as hintFor, queensLevelSize, regionColors, type Mark } from "./logic";
 
 const ACCENT = "#B79CF2";
 const BOARD = 336;
@@ -21,16 +21,15 @@ export function QueensIntro() {
   const { push } = useNavigation();
   const { api } = useHub();
   const stats = useLoad(() => api.stats("queens"), [api]).data;
-  const countdown = useCountdown();
+  const levels = useLevelMode("queens", "level");
   const [size, setSize] = useState(8);
-  const number = dailyNumber("queens", puzzleToday());
   const preview = useMemo(() => generateQueens(5, "queens-preview"), []);
 
   return (
     <IntroScreen
       game="queens"
       title={t("gameQueens")}
-      tagline={t("queensIntroTagline", { number })}
+      tagline={levels.level === null ? t("queensTagline") : t("levelTagline", { n: levels.level })}
       accent={ACCENT}
       heroBg="#1C1530"
       preview={
@@ -45,11 +44,11 @@ export function QueensIntro() {
           }))}
         />
       }
-      badge={t("newPuzzleIn", { time: countdown })}
+      badge={levels.badge}
       heroTitle={t("queensHeroTitle")}
       heroSub={t("queensHeroSub")}
       modes={[
-        { key: "daily", label: t("modeDaily"), desc: t("queensDailyDesc"), play: stats?.today?.solved ? t("replayToday") : t("playToday"), onPlay: () => push({ name: "game", game: "queens", screen: "play", params: { mode: "daily" } }) },
+        levels.mode,
         { key: "practice", label: t("modePractice"), desc: t("queensPracticeDesc"), play: t("startPracticeSize", { size }), onPlay: () => push({ name: "game", game: "queens", screen: "play", params: { mode: "practice", size } }) },
       ]}
       extra={(mode) =>
@@ -69,8 +68,8 @@ export function QueensIntro() {
         { title: t("queensStep3"), text: t("queensStep3Text") },
         { title: t("queensStep4"), text: t("queensStep4Text") },
       ]}
-      rewards={[t("rewardDaily20"), t("rewardNoMistakes"), t("rewardLeagueTime")]}
-      secondary={{ label: t("leaderboard"), onClick: () => push({ name: "league" }) }}
+      rewards={[t("rewardLevel30"), t("rewardNoMistakes"), t("rewardLeagueXp")]}
+      secondary={levels.all}
     />
   );
 }
@@ -83,20 +82,37 @@ interface Saved {
   auto: boolean;
 }
 
-export function QueensPlay({ mode, size: sizeParam }: { mode: "daily" | "practice"; size?: number }) {
-  const { t, language } = useLanguage();
+const freshSave = (size: number) => (): Saved => ({ marks: new Array(size * size).fill(0), history: [], ms: 0, hints: 0, auto: false });
+
+export function QueensPlay({ mode, level, size: sizeParam }: { mode: "level" | "practice"; level?: number; size?: number }) {
+  const [seed] = useState(randomSeed);
+  if (mode === "level" && level) return <QueensLevel level={level} />;
+  return <QueensPractice size={sizeParam ?? 8} seed={seed} />;
+}
+
+function QueensLevel({ level }: { level: number }) {
+  const size = queensLevelSize(level);
+  // The server copy leaves out the undo history to stay small.
+  const [saved, setSaved, clear, ready] = useLevelState<Saved>("queens", "level", level, freshSave(size), (s) => ({ marks: s.marks, ms: s.ms, hints: s.hints, auto: s.auto }));
+  if (!ready) return <LevelLoading />;
+  return <QueensBoard level={level} size={size} seedKey={`queens-L${level}`} state={[saved, setSaved, clear]} />;
+}
+
+function QueensPractice({ size, seed }: { size: number; seed: number }) {
+  const seedKey = `queens-practice-${size}-${seed}`;
+  const state = useSavedState<Saved>(`bazimoon-queens-${seedKey}`, freshSave(size));
+  return <QueensBoard level={null} size={size} seedKey={seedKey} state={state} />;
+}
+
+function QueensBoard({ level, size, seedKey, state }: { level: number | null; size: number; seedKey: string; state: SavedState<Saved> }) {
+  const { t } = useLanguage();
   const { back } = useNavigation();
+  const copy = useLevelCopy();
   const finish = useFinish("queens");
   useTrackStarted("queens");
-  const today = puzzleToday();
-  const number = mode === "daily" ? dailyNumber("queens", today) : null;
-  const [seed] = useState(randomSeed);
-  const size = mode === "daily" ? 8 : sizeParam ?? 8;
-  const seedKey = mode === "daily" ? `queens-daily-${number}` : `queens-practice-${size}-${seed}`;
+  const mode = level !== null ? "level" : "practice";
   const puzzle = useMemo(() => generateQueens(size, seedKey), [size, seedKey]);
-  const [saved, setSaved, clearSaved] = useSavedState<Saved>(`bazimoon-queens-${seedKey}`, () => ({
-    marks: new Array(size * size).fill(0), history: [], ms: 0, hints: 0, auto: false,
-  }));
+  const [saved, setSaved, clearSaved] = state;
   const [message, setMessage] = useState<string | null>(null);
   const conf = conflicts(puzzle, saved.marks);
   const solved = conf.count === size && conf.bad.size === 0;
@@ -111,8 +127,9 @@ export function QueensPlay({ mode, size: sizeParam }: { mode: "daily" | "practic
   useEffect(() => {
     if (!solved) return;
     clearSaved();
+    if (level !== null) rememberLevel("queens", "level", level + 1);
     const timeMs = Math.round(ms);
-    void finish({ mode, puzzleNumber: number, solved: true, timeMs, hints: saved.hints }, { mode, number, timeMs, hints: saved.hints, size, seedKey });
+    void finish({ mode, puzzleNumber: level, solved: true, timeMs, hints: saved.hints }, { mode, level, timeMs, hints: saved.hints, size, seedKey });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [solved]);
 
@@ -144,8 +161,8 @@ export function QueensPlay({ mode, size: sizeParam }: { mode: "daily" | "practic
     <Screen theme="night">
       <div style={{ padding: "14px 16px 8px" }}>
         <PlayHeader
-          title={number ? `${t("gameQueens")} #${number}` : t("gameQueens")}
-          sub={`${number ? formatShortDate(today, language) : t("practice")} · ${size}×${size}`}
+          title={level !== null ? copy.title("gameQueens", level) : t("gameQueens")}
+          sub={level !== null ? `${size}×${size}` : `${t("practice")} · ${size}×${size}`}
           clockMs={ms}
           onBack={back}
           backLabel={t("backToGame", { game: t("gameQueens") })}
@@ -247,22 +264,20 @@ export function QueensPlay({ mode, size: sizeParam }: { mode: "daily" | "practic
 
 export function QueensResult({ params }: { params?: ResultParams }) {
   const { t, language, n } = useLanguage();
-  const { replace, push, reset } = useNavigation();
-  const { api } = useHub();
+  const { replace, reset } = useNavigation();
+  const copy = useLevelCopy();
   const xp = parseXp(params);
-  const mode = String(params?.mode ?? "daily");
-  const number = typeof params?.number === "number" ? params.number : null;
+  const level = typeof params?.level === "number" ? params.level : null;
   const timeMs = Number(params?.timeMs ?? 0);
   const hints = Number(params?.hints ?? 0);
   const size = Number(params?.size ?? 8);
   const seedKey = String(params?.seedKey ?? "");
-  const board = useLoad(() => (number && mode === "daily" ? api.board("queens", number) : Promise.resolve(null)), [api, number, mode]);
   const puzzle = useMemo(() => (seedKey ? generateQueens(size, seedKey) : null), [size, seedKey]);
   const time = formatClock(timeMs, language);
   const streak = xp?.streak ?? 0;
-  const title = number ? `${t("gameQueens")} #${number}` : t("gameQueens");
-  const sub = mode !== "daily" ? t("practiceNoStreak")
-    : hints ? t("queensHintsSub", { count: hints, streak }) : t("queensFlawlessSub", { streak });
+  const title = level !== null ? copy.title("gameQueens", level) : t("gameQueens");
+  const next = copy.nextLevel(xp, level);
+  const sub = level === null ? t("practiceNoStreak") : copy.next(xp, true, level);
 
   return (
     <ResultScreen
@@ -277,19 +292,14 @@ export function QueensResult({ params }: { params?: ResultParams }) {
         { value: n(hints), label: t("statHints"), color: hints ? "#F0A83A" : undefined },
       ]}
       xp={xp}
-      xpNote={hints ? t("queensHintCost") : xp?.percentile != null ? t("fasterThan", { pct: xp.percentile }) : undefined}
+      xpNote={hints ? t("queensHintCost") : xp?.percentile != null ? t("fasterThanLevel", { pct: xp.percentile }) : undefined}
       accent={ACCENT}
-      share={{ text: `${title} · ${time}${hints ? ` · ${t("hintsUsed", { count: hints })}` : ` · ${t("flawless")}`}${mode === "daily" ? `\n${t("streakDays", { count: streak })}` : ""}` }}
-      primary={{ label: t("practiceSize", { size: 10 }), onClick: () => replace({ name: "game", game: "queens", screen: "play", params: { mode: "practice", size: 10 } }) }}
+      share={{ text: `${title} · ${time}${hints ? ` · ${t("hintsUsed", { count: hints })}` : ` · ${t("flawless")}`}${level !== null ? `\n${t("streakDays", { count: streak })}` : ""}` }}
+      primary={level !== null
+        ? { label: t("playLevelN", { n: next }), onClick: () => replace({ name: "game", game: "queens", screen: "play", params: { mode: "level", level: next } }) }
+        : { label: t("practiceSize", { size: 10 }), onClick: () => replace({ name: "game", game: "queens", screen: "play", params: { mode: "practice", size: 10 } }) }}
       secondary={{ label: t("backToHome"), onClick: () => reset({ name: "home" }) }}
     >
-      {board.data && (
-        <GroupBoard
-          title={t("groupToday")}
-          onSeeAll={() => push({ name: "league" })}
-          rows={board.data.rows.slice(0, 5).map((r) => ({ rank: r.rank ?? "—", name: r.name, value: r.solved ? formatClock(r.timeMs, language) : t("dnf"), isYou: r.isYou }))}
-        />
-      )}
       {puzzle && (
         <div className="row" style={{ gap: 14, padding: 14, borderRadius: 18, border: "1.5px dashed #2E3252" }}>
           <div style={{ width: 66, flex: "none" }} aria-hidden="true">

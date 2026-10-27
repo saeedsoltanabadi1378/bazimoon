@@ -36,9 +36,9 @@ public class AdminDashboardTests : IClassFixture<BazimoonApiFactory>, IAsyncLife
     [Fact]
     public async Task Dashboard_ReflectsPlayersPuzzlesAndLiveTables()
     {
-        // A player solves today's Zip, and a group opens a Mafia lobby.
+        // A player solves Zip level 1, and a group opens a Mafia lobby.
         var player = await AuthTestHelper.CreateAuthenticatedClientAsync(_factory, 870001, "dashplayer");
-        (await player.PostAsJsonAsync("/api/puzzles/results", new PuzzleSubmitRequest("zip", "daily", null, true, 50_000, null, null, null, 0))).EnsureSuccessStatusCode();
+        (await player.PostAsJsonAsync("/api/puzzles/results", new PuzzleSubmitRequest("zip", "level", 1, true, 50_000, null, null, null, 0))).EnsureSuccessStatusCode();
         (await player.PostAsJsonAsync("/api/tables", new { name = "Dashboard crew", isOpen = false })).EnsureSuccessStatusCode();
 
         var admin = await AdminAsync();
@@ -65,8 +65,9 @@ public class AdminDashboardTests : IClassFixture<BazimoonApiFactory>, IAsyncLife
         Assert.Contains(acquisition!.Sources, s => s.Value == "direct" && s.Players >= 1);
 
         var puzzles = await admin.GetFromJsonAsync<AdminPuzzlesDto>("/api/admin/puzzles");
-        var zip = Assert.Single(puzzles!.Dailies, d => d.Game == "zip");
-        Assert.True(zip.Players >= 1 && zip.Solved >= 1);
+        var zip = Assert.Single(puzzles!.Levels, l => l.Game == "zip");
+        Assert.True(zip.Players >= 1 && zip.SolvedToday >= 1 && zip.TopLevel >= 1);
+        Assert.DoesNotContain(puzzles.Dailies, d => d.Game == "zip");
         Assert.Equal(5, puzzles.Divisions.Count);
 
         var events = await admin.GetFromJsonAsync<AdminEventsDto>("/api/admin/events?level=info&pageSize=5");
@@ -81,7 +82,7 @@ public class AdminDashboardTests : IClassFixture<BazimoonApiFactory>, IAsyncLife
     public async Task PlayerActivity_CombinesGamesPuzzlesAndAdminAudit_AndFiltersByKind()
     {
         var player = await AuthTestHelper.CreateAuthenticatedClientAsync(_factory, 870003, "activityplayer");
-        (await player.PostAsJsonAsync("/api/puzzles/results", new PuzzleSubmitRequest("zip", "daily", null, true, 40_000, null, null, null, 0))).EnsureSuccessStatusCode();
+        (await player.PostAsJsonAsync("/api/puzzles/results", new PuzzleSubmitRequest("zip", "level", 1, true, 40_000, null, null, null, 0))).EnsureSuccessStatusCode();
 
         var client = _factory.CreateClient();
         (await client.PostAsJsonAsync("/api/admin/auth/login", new LoginRequest(BazimoonApiFactory.AdminUsername, BazimoonApiFactory.AdminPassword))).EnsureSuccessStatusCode();
@@ -110,7 +111,7 @@ public class AdminDashboardTests : IClassFixture<BazimoonApiFactory>, IAsyncLife
         authResponse.EnsureSuccessStatusCode();
         var session = await authResponse.Content.ReadFromJsonAsync<AuthSessionResponse>();
         player.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", session!.AccessToken);
-        (await player.PostAsJsonAsync("/api/puzzles/results", new PuzzleSubmitRequest("zip", "daily", null, true, 45_000, null, null, null, 0))).EnsureSuccessStatusCode();
+        (await player.PostAsJsonAsync("/api/puzzles/results", new PuzzleSubmitRequest("zip", "level", 1, true, 45_000, null, null, null, 0))).EnsureSuccessStatusCode();
 
         var admin = await AdminAsync();
         var filtered = await admin.GetFromJsonAsync<AdminPageDto<AdminPlayerRowDto>>(
@@ -133,7 +134,7 @@ public class AdminDashboardTests : IClassFixture<BazimoonApiFactory>, IAsyncLife
         var finisher = await AuthTestHelper.CreateAuthenticatedClientAsync(_factory, 870004, "funnelfinisher");
         (await finisher.PostAsJsonAsync("/api/events", new { name = "puzzle_intro_viewed", flow = "puzzle", properties = new { game = "zip" } })).EnsureSuccessStatusCode();
         (await finisher.PostAsJsonAsync("/api/events", new { name = "puzzle_started", flow = "puzzle", properties = new { game = "zip" } })).EnsureSuccessStatusCode();
-        (await finisher.PostAsJsonAsync("/api/puzzles/results", new PuzzleSubmitRequest("zip", "daily", null, true, 40_000, null, null, null, 0))).EnsureSuccessStatusCode();
+        (await finisher.PostAsJsonAsync("/api/puzzles/results", new PuzzleSubmitRequest("zip", "level", 1, true, 40_000, null, null, null, 0))).EnsureSuccessStatusCode();
 
         var looker = await AuthTestHelper.CreateAuthenticatedClientAsync(_factory, 870005, "funnellooker");
         (await looker.PostAsJsonAsync("/api/events", new { name = "puzzle_intro_viewed", flow = "puzzle", properties = new { game = "zip" } })).EnsureSuccessStatusCode();

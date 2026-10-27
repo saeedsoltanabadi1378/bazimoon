@@ -150,10 +150,29 @@ export interface TableInfo {
   inviteCode: string | null;
 }
 
+/** Where the player is in a level game (Zip, Queens, Sudoku, Word, Ladder). */
+export interface LevelStatus {
+  game: string;
+  track: "level" | "level-fa";
+  /** The next level to play. */
+  level: number;
+  solvedToday: number;
+  /** The current level has a half-finished board saved. */
+  hasSave: boolean;
+}
+
+export interface LevelProgress {
+  game: string;
+  track: "level" | "level-fa";
+  level: number;
+  /** The current level's half-finished board, as the game's own JSON. */
+  savedState: string | null;
+}
+
 export interface Home {
   streak: number;
   date: string;
-  daily: DailyStatus[];
+  levels: LevelStatus[];
   mergeBest: number | null;
   league: { season: number; daysLeft: number; division: string; tier: number; rank: number | null; playerCount: number; zone: string | null };
   table: Table | null;
@@ -211,6 +230,8 @@ export interface PuzzleResult {
   countedAsDaily: boolean;
   puzzleNumber: number | null;
   percentile: number | null;
+  /** Level games: the next level to play after this result. */
+  nextLevel: number | null;
 }
 
 export interface GameStats {
@@ -263,21 +284,6 @@ export interface Weekly {
   rows: { rank: number; name: string; isYou: boolean; score: number }[];
 }
 
-export interface ArchiveDay {
-  day: number;
-  number: number | null;
-  status: "solved" | "missed" | "today" | "future" | "unavailable";
-  timeMs: number | null;
-}
-
-export interface Archive {
-  game: string;
-  year: number;
-  month: number;
-  firstWeekday: number;
-  days: ArchiveDay[];
-}
-
 /** Timers in seconds and rule switches for a new table. nightSeconds / votingSeconds of 0 mean the
  * creator moves that phase on by hand. */
 export interface TableRules {
@@ -324,8 +330,9 @@ export const hubApi = (api: BazimoonApiClient) => ({
     return api.request<Board>("GET", `/api/puzzles/${game}/board${query ? `?${query}` : ""}`);
   },
   weekly: (game: string) => api.request<Weekly>("GET", `/api/puzzles/${game}/weekly`),
-  archive: (game: string, year: number, month: number) =>
-    api.request<Archive>("GET", `/api/puzzles/${game}/archive?year=${year}&month=${month}`),
+  progress: (game: string, track: string) => api.request<LevelProgress>("GET", `/api/puzzles/${game}/progress?track=${track}`),
+  saveLevelState: (game: string, body: { track: string; level: number; state: string | null }) =>
+    api.request<LevelProgress>("PUT", `/api/puzzles/${game}/progress/state`, body),
   /** Reports a funnel step the server has no other way to learn about; never throws. */
   trackEvent: (name: string, flow?: string, properties?: Record<string, unknown>) => api.trackEvent(name, flow, properties),
 });

@@ -127,7 +127,7 @@ public sealed class AdminDashboardService
             mafiaRows.Where(r => r.Day == d).Select(r => r.UserId).Distinct().Count(),
             puzzleRows.Where(r => r.Day == d).Select(r => r.UserId).Distinct().Count())).ToList();
 
-        var dailySolves = puzzleRows.Where(r => r.Day > today - range && r.Solved && IsDaily(r.Mode)).ToList();
+        var dailySolves = puzzleRows.Where(r => r.Day > today - range && r.Solved && (IsDaily(r.Mode) || Progression.IsLevel(r.Mode))).ToList();
         var live = await GetLiveGamesAsync();
         var now = Now.UtcDateTime;
 
@@ -150,7 +150,7 @@ public sealed class AdminDashboardService
     private async Task<HashSet<Guid>> BotIdsAsync() =>
         (await _db.Users.AsNoTracking().Where(u => u.IsBot).Select(u => u.Id).ToListAsync()).ToHashSet();
 
-    private static bool IsDaily(string mode) => mode == "daily" || mode.StartsWith("daily-", StringComparison.Ordinal);
+    private static bool IsDaily(string mode) => Progression.IsDaily(mode);
 
     // ------------------------------------------------------------------ players
 
@@ -365,16 +365,31 @@ public sealed class AdminDashboardService
         var bots = await BotIdsAsync();
         var rows = (await _db.PuzzleResults.AsNoTracking().Where(r => r.Day == today).ToListAsync()).Where(r => !bots.Contains(r.UserId)).ToList();
         var dailies = new List<AdminDailyDto>();
-        foreach (var game in new[] { "zip", "queens", "sudoku", "word", "ladder", "mines", "stack", "blocks", "snake" })
+        foreach (var game in new[] { "mines", "stack", "blocks", "snake" })
         {
             if (Progression.DailyNumber(game, today) is not { } number) continue;
-            foreach (var mode in game == "word" ? new[] { "daily", "daily-fa" } : new[] { "daily" })
+            foreach (var mode in new[] { "daily" })
             {
                 // A daily counts once per player: their first attempt of the day.
                 var firsts = rows.Where(r => r.Game == game && r.Mode == mode).GroupBy(r => r.UserId).Select(g => g.OrderBy(r => r.CreatedAt).First()).ToList();
                 var solved = firsts.Where(r => r.Solved).ToList();
                 dailies.Add(new AdminDailyDto(game, mode, number, firsts.Count, solved.Count,
                     Median(solved.Select(r => r.TimeMs)), Median(solved.Select(r => r.Moves)), Median(firsts.Select(r => r.Score))));
+            }
+        }
+
+        // Level games: how far players have got and how many levels were finished today.
+        var progress = (await _db.PuzzleProgress.AsNoTracking().ToListAsync()).Where(p => !bots.Contains(p.UserId)).ToList();
+        var levels = new List<AdminLevelDto>();
+        foreach (var game in new[] { "zip", "queens", "sudoku", "word", "ladder" })
+        {
+            foreach (var track in game is "word" or "ladder" ? new[] { "level", "level-fa" } : new[] { "level" })
+            {
+                // Level is the next one to play, so a player who has finished nothing is on 1.
+                var started = progress.Where(p => p.Game == game && p.Track == track && p.Level > 1).Select(p => p.Level - 1).ToList();
+                var todays = rows.Where(r => r.Game == game && r.Mode == track).ToList();
+                levels.Add(new AdminLevelDto(game, track, started.Count, Median(started.Select(l => (int?)l)), started.Count == 0 ? 0 : started.Max(),
+                    todays.Count(r => r.Solved), todays.Select(r => r.UserId).Distinct().Count()));
             }
         }
 
@@ -416,7 +431,7 @@ public sealed class AdminDashboardService
         int totalQuestions = couples.Sum(c => c.TotalQuestions);
 
         return new AdminPuzzlesDto(
-            Progression.DateOfDay(today), dailies,
+            Progression.DateOfDay(today), dailies, levels,
             new AdminSeasonDto(season, today - seasonStart + 1, Progression.SeasonLengthDays, Progression.DateOfDay(seasonStart + Progression.SeasonLengthDays - 1)),
             divisions, leaders,
             new AdminCoupleStatsDto(couples.Count, both, totalQuestions == 0 ? 0 : (int)Math.Round(100.0 * couples.Sum(c => c.TotalMatches) / totalQuestions),
@@ -539,5 +554,7 @@ public sealed record AdminCoupleStatsDto(int Active, int BothToday, int AverageM
 public sealed record AdminFunnelStepDto(string Name, int Users, int PctOfFirst, int PctOfPrevious);
 public sealed record AdminFunnelDto(string Flow, int Days, IReadOnlyList<AdminFunnelStepDto> Steps);
 public sealed record AdminActivityFeedItemDto(long Id, DateTime At, string Flow, string Name, Guid? UserId, string? UserName, string? PropertiesJson = null);
-public sealed record AdminPuzzlesDto(DateOnly Date, IReadOnlyList<AdminDailyDto> Dailies, AdminSeasonDto Season, IReadOnlyList<AdminDivisionDto> Divisions,
+/// <summary>A level game's spread: players past level 1, their median and top finished level, and today's solves.</summary>
+public sealed record AdminLevelDto(string Game, string Track, int Players, int? MedianLevel, int TopLevel, int SolvedToday, int PlayersToday);
+public sealed record AdminPuzzlesDto(DateOnly Date, IReadOnlyList<AdminDailyDto> Dailies, IReadOnlyList<AdminLevelDto> Levels, AdminSeasonDto Season, IReadOnlyList<AdminDivisionDto> Divisions,
     IReadOnlyList<AdminLeaderDto> Leaders, AdminCoupleStatsDto Couples);

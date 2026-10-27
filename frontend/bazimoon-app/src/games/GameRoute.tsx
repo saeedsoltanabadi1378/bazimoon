@@ -1,13 +1,15 @@
 import type { Route } from "../app/router";
-import { ZipArchive, ZipIntro, ZipResult } from "./zip/ZipScreens";
+import { LevelsScreen } from "./shared/levels";
+import { ZipIntro, ZipResult } from "./zip/ZipScreens";
 import { ZipPlay } from "./zip/ZipPlay";
 import { MergeIntro, MergePlay, MergeResult } from "./merge/MergeScreens";
 import { MemoryIntro, MemoryPlay, MemoryResult } from "./memory/MemoryScreens";
 import { MinesIntro, MinesPlay, MinesResult } from "./mines/MinesScreens";
-import { LadderIntro, LadderPlay, LadderResult } from "./ladder/LadderScreens";
+import { LadderIntro, LadderLevels, LadderPlay, LadderResult } from "./ladder/LadderScreens";
 import { StackIntro, StackPlay, StackResult } from "./stack/StackScreens";
 import { BlocksIntro, BlocksPlay, BlocksResult } from "./blocks/BlocksScreens";
 import { WordIntro, WordPlay, WordResult } from "./word/WordScreens";
+import { wordLevelCount } from "./word/logic";
 import { QueensIntro, QueensPlay, QueensResult } from "./queens/QueensScreens";
 import { SudokuIntro, SudokuPlay, SudokuResult } from "./sudoku/SudokuScreens";
 import type { SudokuLevel } from "./sudoku/logic";
@@ -24,27 +26,29 @@ const num = (v: unknown) => (typeof v === "number" ? v : typeof v === "string" &
 const str = (v: unknown, fallback: string) => (typeof v === "string" ? v : fallback);
 const clamp = (v: number, min: number, max: number) => Math.min(max, Math.max(min, Math.round(v)));
 
-/** Picks the screen for a solo game route: intro, play, result (and Zip's archive). */
+/** Picks the screen for a solo game route: intro, play, result (and the level list of level games). */
 export function GameRoute({ route }: GameRouteProps) {
   const p = route.params;
+  // Level games: play level `level`; anything else (or a level missing) plays practice.
+  const level = str(p?.mode, "") === "level" ? num(p?.level) : undefined;
   switch (route.game) {
     case "zip":
-      if (route.screen === "play") {
-        return <ZipPlay key={JSON.stringify(p)} mode={str(p?.mode, "daily") as "daily" | "practice" | "archive"} number={num(p?.number)} />;
-      }
+      if (route.screen === "play") return <ZipPlay key={JSON.stringify(p)} mode={level ? "level" : "practice"} level={level} />;
       if (route.screen === "result") return <ZipResult params={p} />;
-      if (route.screen === "archive") return <ZipArchive />;
+      if (route.screen === "levels") return <LevelsScreen game="zip" track="level" name="gameZip" accent="#5FD0BE" />;
       return <ZipIntro />;
     case "queens":
-      if (route.screen === "play") return <QueensPlay key={JSON.stringify(p)} mode={str(p?.mode, "daily") as "daily" | "practice"} size={num(p?.size)} />;
+      if (route.screen === "play") return <QueensPlay key={JSON.stringify(p)} mode={level ? "level" : "practice"} level={level} size={num(p?.size)} />;
       if (route.screen === "result") return <QueensResult params={p} />;
+      if (route.screen === "levels") return <LevelsScreen game="queens" track="level" name="gameQueens" accent="#B79CF2" />;
       return <QueensIntro />;
     case "sudoku":
       if (route.screen === "play") {
-        const level = str(p?.level, "medium");
-        return <SudokuPlay key={JSON.stringify(p)} mode={str(p?.mode, "daily") === "classic" ? "classic" : "daily"} level={(["easy", "medium", "hard", "expert"].includes(level) ? level : "medium") as SudokuLevel} />;
+        const difficulty = str(p?.level, "medium");
+        return <SudokuPlay key={JSON.stringify(p)} mode={level ? "level" : "classic"} number={level} difficulty={(["easy", "medium", "hard", "expert"].includes(difficulty) ? difficulty : "medium") as SudokuLevel} />;
       }
       if (route.screen === "result") return <SudokuResult params={p} />;
+      if (route.screen === "levels") return <LevelsScreen game="sudoku" track="level" name="gameSudoku" accent="#7CC4FA" />;
       return <SudokuIntro />;
     case "merge":
       if (route.screen === "play") return <MergePlay key={JSON.stringify(p)} mode={str(p?.mode, "classic") as "classic" | "big" | "timed"} />;
@@ -58,13 +62,19 @@ export function GameRoute({ route }: GameRouteProps) {
       if (route.screen === "play") return <MemoryPlay key={JSON.stringify(p)} mode={str(p?.mode, "4x4") as "4x4" | "4x5" | "6x6" | "timed"} />;
       if (route.screen === "result") return <MemoryResult params={p} />;
       return <MemoryIntro />;
-    case "word":
-      if (route.screen === "play") return <WordPlay key={JSON.stringify(p)} lang={str(p?.lang, "en") === "fa" ? "fa" : "en"} />;
+    case "word": {
+      const lang = str(p?.lang, "en") === "fa" ? "fa" : "en";
+      if (route.screen === "play" && level) return <WordPlay key={JSON.stringify(p)} lang={lang} level={level} />;
       if (route.screen === "result") return <WordResult params={p} />;
+      if (route.screen === "levels") {
+        return <LevelsScreen game="word" track={lang === "fa" ? "level-fa" : "level"} name="gameWord" accent="#9ED98C" accentInk="#0E1F0A" maxLevel={wordLevelCount(lang)} params={{ lang }} />;
+      }
       return <WordIntro />;
+    }
     case "ladder":
-      if (route.screen === "play") return <LadderPlay key={JSON.stringify(p)} mode={str(p?.mode, "daily") === "endless" ? "endless" : "daily"} />;
+      if (route.screen === "play") return <LadderPlay key={JSON.stringify(p)} mode={level ? "level" : "endless"} level={level} />;
       if (route.screen === "result") return <LadderResult params={p} />;
+      if (route.screen === "levels") return <LadderLevels />;
       return <LadderIntro />;
     case "stack":
       if (route.screen === "play") return <StackPlay key={JSON.stringify(p)} mode={(["daily", "zen"].includes(str(p?.mode, "")) ? str(p?.mode, "") : "classic") as "classic" | "daily" | "zen"} />;

@@ -502,6 +502,37 @@ namespace Bazimoon.Infrastructure.History.Migrations
                     b.ToTable("player_stats", (string)null);
                 });
 
+            modelBuilder.Entity("Bazimoon.Infrastructure.Hub.PuzzleProgressRecord", b =>
+                {
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Game")
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<string>("Track")
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<int>("Level")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("SavedLevel")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("SavedState")
+                        .HasMaxLength(8000)
+                        .HasColumnType("character varying(8000)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("UserId", "Game", "Track");
+
+                    b.ToTable("puzzle_progress", (string)null);
+                });
+
             modelBuilder.Entity("Bazimoon.Infrastructure.Hub.PuzzleResultRecord", b =>
                 {
                     b.Property<long>("Id")

@@ -6,7 +6,12 @@ export type Score = 0 | 1 | 2; // absent, present elsewhere, correct
 
 const orderCache: Partial<Record<WordLang, string[]>> = {};
 
-/** Answers are drawn from a fixed shuffle so consecutive days never follow the list order. */
+/** How many Word levels a language has: one per answer in its list. */
+export function wordLevelCount(lang: WordLang) {
+  return (lang === "fa" ? FA_ANSWERS : EN_ANSWERS).length;
+}
+
+/** Level n's answer, from a fixed shuffle so consecutive levels never follow the list order. */
 export function answerFor(lang: WordLang, number: number) {
   const pool = lang === "fa" ? FA_ANSWERS : EN_ANSWERS;
   const order = (orderCache[lang] ??= shuffle(seeded(`word-${lang}-order`), pool));

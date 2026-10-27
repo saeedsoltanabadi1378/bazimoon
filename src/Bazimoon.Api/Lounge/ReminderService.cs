@@ -80,13 +80,13 @@ public sealed class ReminderService : BackgroundService
         foreach (var player in players)
         {
             player.LastReminderDay = today;
-            // Nobody needs a nudge once they've already solved today's daily.
+            // Nobody needs a nudge once they've already solved a puzzle level today.
             if (player.LastPuzzleDay == today) continue;
             int streak = Progression.CurrentStreak(player.PuzzleStreak, player.LastPuzzleDay, player.StreakFreezes, today);
             // The editable message talks about the streak; with no streak to keep, a plain line is sent.
             var text = streak > 0
                 ? new PushText(english.Replace("{streak}", streak.ToString()), persian.Replace("{streak}", streak.ToString()))
-                : new PushText("Today's puzzles are ready.", "پازل‌های امروز آماده‌اند.");
+                : new PushText("Your next puzzle level is waiting.", "مرحله‌ی بعدی پازل منتظرت است.");
             if (await notifier.NotifyAsync(player.UserId, text)) sent++; else failed++;
         }
 

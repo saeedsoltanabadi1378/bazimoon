@@ -33,12 +33,12 @@ public static class AppSettingsDefaults
     public const string MafiaOff = "Mafia is switched off for now. Try again later.";
     public const string MafiaOffFa = "مافیا فعلاً خاموش است. بعداً دوباره امتحان کنید.";
     public const string MaintenanceMessageFa = "نایت‌فال موقتاً برای به‌روزرسانی در دسترس نیست.";
-    public const string ReminderMessage = "Today's puzzles are ready. Keep your {streak}-day streak going!";
+    public const string ReminderMessage = "Your next puzzle level is waiting. Keep your {streak}-day streak going!";
     public const string TableStartMessage = "{creator} started {table}. Your role is waiting.";
     public const string TableStartMessageFa = "{creator} بازی {table} را شروع کرد. نقشت منتظر توست.";
     public const string CoupleTurnMessage = "{partner} answered today's questions. Your turn!";
     public const string CoupleTurnMessageFa = "{partner} به سؤال‌های امروز جواب داد. نوبت توست!";
-    public const string ReminderMessageFa = "پازل‌های امروز آماده‌اند. رکورد {streak} روزه‌ات را حفظ کن!";
+    public const string ReminderMessageFa = "مرحله‌ی بعدی پازل منتظرت است. رکورد {streak} روزه‌ات را حفظ کن!";
 }
 
 public static class PlayerMessages

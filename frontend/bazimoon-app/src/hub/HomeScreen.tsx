@@ -7,8 +7,7 @@ import { Icon } from "../ui/Icon";
 import { LogoTiles } from "../ui/LogoTiles";
 import { TabBar } from "../ui/TabBar";
 import { useHub, useLoad } from "./HubData";
-import type { DailyStatus, Home } from "../api/hub";
-import { formatClock, formatShortDate } from "../lib/format";
+import type { Home, LevelStatus } from "../api/hub";
 import { dailyLadder } from "../games/ladder/logic";
 import { useCoupleSummary } from "../couple/CoupleHomeCard";
 import { haptic } from "../lib/haptics";
@@ -23,14 +22,24 @@ export function HomeScreen() {
   const home = useLoad(() => api.home(), [api]);
   const data = home.data;
 
-  const daily = (game: string) => data?.daily.find((d) => d.game === game);
-  const open = (game: GameKey, screen: "intro" | "play" = "intro", params?: Record<string, string>) => {
+  const levelOf = (game: string) => data?.levels.find((d) => d.game === game);
+  const open = (game: GameKey, screen: "intro" | "play" = "intro", params?: Record<string, string | number>) => {
     haptic.tap();
     push({ name: "game", game, screen, params });
   };
+  /** Straight into the player's current level, or the intro while Home is still loading. */
+  const playLevel = (game: GameKey) => {
+    const status = levelOf(game);
+    if (status) open(game, "play", { mode: "level", level: status.level });
+    else open(game, "intro");
+  };
+  const levelTitle = (name: "gameZip" | "gameQueens" | "gameLadder", game: string) => {
+    const status = levelOf(game);
+    return status ? `${t(name)} · ${t("levelN", { n: status.level })}` : t(name);
+  };
 
-  const ladder = daily("ladder");
-  const ladderPuzzle = ladder ? dailyLadder(ladder.number) : null;
+  const ladder = levelOf("ladder");
+  const ladderPuzzle = ladder ? dailyLadder(ladder.level, language) : null;
 
   return (
     <Screen theme="hub">
@@ -58,41 +67,39 @@ export function HomeScreen() {
 
         <section className="stack" style={{ gap: 12 }}>
           <div className="row row--between row--baseline">
-            <h2 className="display" style={{ fontSize: 20, fontWeight: 700 }}>{t("todaysPuzzles")}</h2>
-            {data && <span className="small muted">{formatShortDate(data.date, language)}</span>}
+            <h2 className="display" style={{ fontSize: 20, fontWeight: 700 }}>{t("yourPuzzles")}</h2>
           </div>
 
           {isGameOn("zip") && (
-            <DailyRow
+            <LevelRow
               icon={<Icon name="zipFull" size={24} />} iconBg="#173A36" iconFg="#5FD0BE"
-              title={t("puzzleNumbered", { name: t("gameZip"), number: daily("zip")?.number ?? "" })}
+              title={levelTitle("gameZip", "zip")}
               sub={t("zipTagline")}
-              status={daily("zip")}
+              status={levelOf("zip")}
               primary
-              onPlay={() => open("zip", "play", { mode: "daily" })}
+              onPlay={() => playLevel("zip")}
             />
           )}
           {isGameOn("queens") && (
-            <DailyRow
+            <LevelRow
               icon={<Icon name="crown" size={24} />} iconBg="#2E2340" iconFg="#B79CF2"
-              title={t("puzzleNumbered", { name: t("gameQueens"), number: daily("queens")?.number ?? "" })}
+              title={levelTitle("gameQueens", "queens")}
               sub={t("queensTagline")}
-              status={daily("queens")}
-              onPlay={() => open("queens", "play", { mode: "daily" })}
+              status={levelOf("queens")}
+              onPlay={() => playLevel("queens")}
             />
           )}
           {isGameOn("ladder") && (
-            <DailyRow
+            <LevelRow
               icon={<span className="display" style={{ fontSize: 18 }}>Aa</span>} iconBg="#3A2A16" iconFg="#F0A83A"
-              title={t("gameLadder")}
+              title={levelTitle("gameLadder", "ladder")}
               sub={ladderPuzzle ? t("ladderToday", { from: ladderPuzzle.start, to: ladderPuzzle.end, steps: ladderPuzzle.par }) : t("subLadder")}
               status={ladder}
-              showMoves
-              onPlay={() => open("ladder", "intro")}
+              onPlay={() => playLevel("ladder")}
             />
           )}
           {isGameOn("merge") && (
-            <DailyRow
+            <LevelRow
               icon={<MergeGlyph />} iconBg="#2A2650" iconFg="#9C8CFF"
               title={t("gameMerge")}
               sub={data?.mergeBest ? t("mergeEndlessBest", { best: n(data.mergeBest) }) : t("mergeEndless")}
@@ -143,43 +150,39 @@ export function HomeScreen() {
   }
 }
 
-function DailyRow({ icon, iconBg, iconFg, title, sub, status, primary, showMoves, onPlay }: {
+/** A puzzle on Home: the player's level, how many they finished today, and a button into the next one. */
+function LevelRow({ icon, iconBg, iconFg, title, sub, status, primary, onPlay }: {
   icon: ReactNode;
   iconBg: string;
   iconFg: string;
   title: string;
   sub: string;
-  status?: DailyStatus;
+  status?: LevelStatus;
   primary?: boolean;
-  showMoves?: boolean;
   onPlay: () => void;
 }) {
-  const { t, language, n } = useLanguage();
-  const solved = status?.solved;
+  const { t } = useLanguage();
   return (
     <div className="row" style={{ gap: 12, padding: 14, borderRadius: 18, background: "var(--surface)" }}>
       <span style={{ width: 48, height: 48, flex: "none", borderRadius: 14, background: iconBg, color: iconFg, display: "flex", alignItems: "center", justifyContent: "center" }}>{icon}</span>
       <div className="grow">
         <div style={{ fontWeight: 600, fontSize: 16 }}>{title}</div>
         <div className="small muted">{sub}</div>
+        {status && status.solvedToday > 0 && (
+          <div className="row tiny" style={{ gap: 4, marginTop: 2, color: "#5FD0BE", fontWeight: 600 }}>
+            <Icon name="check" size={12} strokeWidth={3} />
+            {t("levelsSolvedToday", { count: status.solvedToday })}
+          </div>
+        )}
       </div>
-      {solved ? (
-        <span className="row" style={{ gap: 6, color: "#5FD0BE", fontWeight: 600, fontSize: 14 }} aria-label={t("solvedLabel")}>
-          <Icon name="check" size={18} strokeWidth={2.5} />
-          {showMoves && status?.moves ? t("movesCount", { count: n(status.moves) }) : formatClock(status?.timeMs, language)}
-        </span>
-      ) : status?.played ? (
-        <span className="small muted">{t("triedToday")}</span>
-      ) : (
-        <button
-          type="button"
-          onClick={onPlay}
-          className="btn btn--pill"
-          style={primary ? { background: "#F0A83A", color: "#1A1206" } : { background: "transparent", border: "1.5px solid #3A3F52", color: "var(--text)" }}
-        >
-          {t("play")}
-        </button>
-      )}
+      <button
+        type="button"
+        onClick={onPlay}
+        className="btn btn--pill"
+        style={primary ? { background: "#F0A83A", color: "#1A1206" } : { background: "transparent", border: "1.5px solid #3A3F52", color: "var(--text)" }}
+      >
+        {status?.hasSave ? t("continueGame") : t("play")}
+      </button>
     </div>
   );
 }

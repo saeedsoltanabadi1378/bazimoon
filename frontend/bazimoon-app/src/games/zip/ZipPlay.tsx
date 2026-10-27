@@ -3,13 +3,12 @@ import { useLanguage } from "../../i18n/LanguageContext";
 import { useNavigation } from "../../app/router";
 import { Body, ProgressBar, Screen } from "../../ui/components";
 import { TabBar } from "../../ui/TabBar";
-import { useHub, useLoad } from "../../hub/HubData";
-import { formatClock, formatShortDate, puzzleToday } from "../../lib/format";
-import { dailyNumber, dateOfDaily, randomSeed } from "../../lib/rng";
+import { formatClock } from "../../lib/format";
+import { randomSeed } from "../../lib/rng";
 import { haptic } from "../../lib/haptics";
-import { generateZip, hint as hintFor, visit, type ZipMessage } from "./logic";
-import { GroupBoard } from "../shared/ResultScreen";
-import { PlayHeader, useFinish, useSavedState, useStopwatch, useTrackStarted } from "../shared/play";
+import { generateZip, hint as hintFor, visit, zipLevelSize, type ZipMessage } from "./logic";
+import { PlayHeader, useFinish, useSavedState, useStopwatch, useTrackStarted, type SavedState } from "../shared/play";
+import { LevelLoading, rememberLevel, useLevelCopy, useLevelState } from "../shared/levels";
 
 const BOARD = 300;
 
@@ -20,27 +19,40 @@ interface Saved {
   cleared: number[] | null;
 }
 
-export function ZipPlay({ mode, number: archived, seed: seedParam, size: sizeParam }: { mode: "daily" | "practice" | "archive"; number?: number; seed?: number; size?: number }) {
+const freshSave = (): Saved => ({ path: [], ms: 0, hints: 0, cleared: null });
+
+export function ZipPlay({ mode, level, seed: seedParam, size: sizeParam }: { mode: "level" | "practice"; level?: number; seed?: number; size?: number }) {
+  const [practice] = useState(() => ({ seed: seedParam ?? randomSeed(), size: sizeParam ?? 5 + Math.floor(Math.random() * 4) }));
+  if (mode === "level" && level) return <ZipLevel level={level} />;
+  return <ZipPractice seed={practice.seed} size={practice.size} />;
+}
+
+function ZipLevel({ level }: { level: number }) {
+  const [saved, setSaved, clear, ready] = useLevelState<Saved>("zip", "level", level, freshSave, (s) => ({ path: s.path, ms: s.ms, hints: s.hints }));
+  if (!ready) return <LevelLoading />;
+  return <ZipBoard level={level} size={zipLevelSize(level)} seedKey={`zip-L${level}`} state={[saved, setSaved, clear]} />;
+}
+
+function ZipPractice({ seed, size }: { seed: number; size: number }) {
+  const seedKey = `zip-practice-${seed}`;
+  const state = useSavedState<Saved>(`bazimoon-zip-${seedKey}`, freshSave);
+  return <ZipBoard level={null} size={size} seedKey={seedKey} state={state} />;
+}
+
+function ZipBoard({ level, size, seedKey, state }: { level: number | null; size: number; seedKey: string; state: SavedState<Saved> }) {
   const { t, language } = useLanguage();
   const { back } = useNavigation();
-  const { api } = useHub();
+  const copy = useLevelCopy();
   const finish = useFinish("zip");
   useTrackStarted("zip");
-
-  const today = puzzleToday();
-  const number = mode === "daily" ? dailyNumber("zip", today) : mode === "archive" ? archived ?? dailyNumber("zip", today) : null;
-  const [practice] = useState(() => ({ seed: seedParam ?? randomSeed(), size: sizeParam ?? 5 + Math.floor(Math.random() * 4) }));
-  const size = number !== null ? (number % 5 === 0 ? 7 : 6) : practice.size;
-  const seedKey = number !== null ? `zip-daily-${number}` : `zip-practice-${practice.seed}`;
+  const mode = level !== null ? "level" : "practice";
   const puzzle = useMemo(() => generateZip(size, seedKey), [size, seedKey]);
-  const saveKey = `bazimoon-zip-${seedKey}`;
 
-  const [saved, setSaved, clearSaved] = useSavedState<Saved>(saveKey, () => ({ path: [], ms: 0, hints: 0, cleared: null }));
+  const [saved, setSaved, clearSaved] = state;
   const [message, setMessage] = useState<{ key: ZipMessage | "hintOffTrack" | "hintAdded" | "boardCleared" | "pathRestored"; values?: Record<string, number>; error: boolean } | null>(null);
   const solved = saved.path.length === size * size && puzzle.checkpoints[saved.path[saved.path.length - 1]] === puzzle.count;
   const [ms] = useStopwatch(!solved, saved.ms);
   const dragging = useRef(false);
-  const board = useLoad(() => (number !== null && mode === "daily" ? api.board("zip", number) : Promise.resolve(null)), [api, number, mode]);
 
   // Persist the clock with the path so leaving and coming back resumes the same attempt.
   useEffect(() => {
@@ -51,10 +63,11 @@ export function ZipPlay({ mode, number: archived, seed: seedParam, size: sizePar
   useEffect(() => {
     if (!solved) return;
     clearSaved();
+    if (level !== null) rememberLevel("zip", "level", level + 1);
     const timeMs = Math.round(ms);
     void finish(
-      { mode, puzzleNumber: number, solved: true, timeMs, hints: saved.hints },
-      { mode, number, timeMs, hints: saved.hints, size, solved: true },
+      { mode, puzzleNumber: level, solved: true, timeMs, hints: saved.hints },
+      { mode, level, timeMs, hints: saved.hints, size, solved: true },
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [solved]);
@@ -90,15 +103,13 @@ export function ZipPlay({ mode, number: archived, seed: seedParam, size: sizePar
   const msgText = message
     ? t(`zipMsg_${message.key}`, message.values)
     : t("zipMsg_default", { count: puzzle.count });
-  const subtitle = number !== null
-    ? `${formatShortDate(mode === "daily" ? today : dateOfDaily("zip", number), language)} · ${size}×${size}`
-    : `${t("practice")} · ${size}×${size}`;
+  const subtitle = level !== null ? `${size}×${size}` : `${t("practice")} · ${size}×${size}`;
 
   return (
     <Screen theme="hub">
       <Body style={{ padding: "16px 16px 20px", gap: 14 }}>
         <PlayHeader
-          title={number !== null ? `${t("gameZip")} #${number}` : t("gameZip")}
+          title={level !== null ? copy.title("gameZip", level) : t("gameZip")}
           sub={subtitle}
           clockMs={ms}
           onBack={back}
@@ -222,13 +233,6 @@ export function ZipPlay({ mode, number: archived, seed: seedParam, size: sizePar
           </button>
         </div>
 
-        {mode === "daily" && board.data && (
-          <GroupBoard
-            title={t("yourGroupToday")}
-            rows={board.data.rows.filter((r) => r.solved).slice(0, 5).map((r) => ({ rank: r.rank ?? "—", name: r.name, value: formatClock(r.timeMs, language), isYou: r.isYou }))}
-            empty={t("beFirstInGroup")}
-          />
-        )}
       </Body>
       <TabBar />
     </Screen>

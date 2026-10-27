@@ -158,6 +158,11 @@ function stillConnected(size: number, regions: number[], region: number, without
  * grown at random, then repaired: while another solution exists, one of its queen cells is moved
  * into a neighbouring region (which that other solution already uses), breaking it.
  */
+/** Board size for a level: 5×5 to learn on, growing to 9×9. */
+export function queensLevelSize(level: number) {
+  return level <= 3 ? 5 : level <= 10 ? 6 : level <= 25 ? 7 : level <= 50 ? 8 : 9;
+}
+
 export function generateQueens(size: number, seedKey: string): QueensPuzzle {
   const rng = seeded(seedKey);
   for (let attempt = 0; attempt < 200; attempt++) {

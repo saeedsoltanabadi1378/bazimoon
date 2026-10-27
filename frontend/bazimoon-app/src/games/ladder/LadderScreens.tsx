@@ -1,16 +1,16 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useLanguage } from "../../i18n/LanguageContext";
 import { useNavigation } from "../../app/router";
 import { useHub, useLoad } from "../../hub/HubData";
 import { Screen } from "../../ui/components";
-import { formatClock, puzzleToday } from "../../lib/format";
-import { dailyNumber } from "../../lib/rng";
+import { formatClock } from "../../lib/format";
 import { readLocal, writeLocal } from "../../lib/storage";
 import { haptic } from "../../lib/haptics";
 import { IntroScreen } from "../shared/IntroScreen";
 import { InGameHelp } from "../shared/InGameHelp";
 import { ResultScreen } from "../shared/ResultScreen";
 import { PlayHeader, parseXp, useFinish, useSavedState, useStopwatch, useTrackStarted, type ResultParams } from "../shared/play";
+import { LevelLoading, LevelsScreen, levelTrack, rememberLevel, useLevelCopy, useLevelMode, useLevelState } from "../shared/levels";
 import { dailyLadder, endlessLadder, endlessShape, letterDiff, loadLadderDictionary, shortestPath, type Ladder } from "./logic";
 
 const ACCENT = "#F0A83A";
@@ -19,7 +19,7 @@ const CHANGED = "#5A4120";
 const endlessLevelKey = (language: "en" | "fa") => `bazimoon-ladder-${language}-endless-level`;
 const endlessKey = (language: "en" | "fa") => `bazimoon-ladder-${language}-endless`;
 
-type LadderMode = "daily" | "endless";
+type LadderMode = "level" | "endless";
 
 interface Saved {
   ladder: Ladder;
@@ -27,16 +27,6 @@ interface Saved {
   chain: string[];
   hints: number;
   elapsedMs: number;
-  /** Result params once the ladder was finished (or given up), so it is never submitted twice. */
-  result?: ResultParams;
-}
-
-const dailyKey = (number: number, language: "en" | "fa") => `bazimoon-ladder-${language}-daily-${number}`;
-
-function dailyStatus(number: number, language: "en" | "fa") {
-  const saved = readLocal<Saved | null>(dailyKey(number, language), null);
-  if (!saved) return null;
-  return saved.result ? "done" : saved.chain.length > 1 ? "playing" : null;
 }
 
 /** Small letter rows used in the intro hero and the result paths. */
@@ -69,9 +59,8 @@ export function LadderIntro() {
   const { push } = useNavigation();
   const { api } = useHub();
   const stats = useLoad(() => api.stats("ladder"), [api]).data;
-  const number = dailyNumber("ladder", puzzleToday());
-  const today = dailyLadder(number, language);
-  const status = dailyStatus(number, language);
+  const levels = useLevelMode("ladder", levelTrack("ladder", language));
+  const today = dailyLadder(levels.level ?? 1, language);
   const level = readLocal<number>(endlessLevelKey(language), 1);
   const byDetail = stats?.solvedByDetail ?? {};
   const atOrUnder = Object.entries(byDetail).reduce((sum, [k, v]) => (Number(k) <= 0 ? sum + v : sum), 0);
@@ -87,15 +76,11 @@ export function LadderIntro() {
       accentInk={INK}
       heroBg="#241A0E"
       preview={<MiniRungs words={rungs} end={today.end} hidden />}
-      badge={t("ladderTodayPar", { par: today.par })}
+      badge={levels.level === null ? undefined : t("ladderLevelPar", { n: levels.level, par: today.par })}
       heroTitle={t("ladderTurnInto", { from: today.start, to: today.end })}
       heroSub={t("ladderRealWords")}
       modes={[
-        {
-          key: "daily", label: t("modeDaily"), desc: t("ladderDailyDesc"),
-          play: status === "done" ? t("seeTodaysBoard") : status === "playing" ? t("continueGame") : t("ladderPlayDaily", { from: today.start, to: today.end }),
-          onPlay: () => push({ name: "game", game: "ladder", screen: "play", params: { mode: "daily" } }),
-        },
+        { ...levels.mode, desc: t("ladderLevelsDesc") },
         {
           key: "endless", label: t("modeEndless"), desc: t("ladderEndlessDesc"),
           play: level > 1 ? t("ladderContinueLevel", { level }) : t("ladderStartEndless"),
@@ -114,35 +99,50 @@ export function LadderIntro() {
         { title: t("ladderStep3"), text: t("ladderStep3Text") },
       ]}
       rewards={[t("ladderRewardPar"), t("ladderRewardUnder"), t("ladderRewardHint")]}
-      secondary={{ label: t("leaderboard"), onClick: () => push({ name: "league" }) }}
+      secondary={levels.all}
     />
   );
 }
 
-export function LadderPlay({ mode }: { mode: LadderMode }) {
+export function LadderPlay({ mode, level }: { mode: LadderMode; level?: number }) {
+  if (mode === "level" && level) return <LadderLevel level={level} />;
+  return <LadderEndless />;
+}
+
+function LadderLevel({ level }: { level: number }) {
+  const { language } = useLanguage();
+  const track = levelTrack("ladder", language);
+  const [saved, setSaved, clear, ready] = useLevelState<Saved>("ladder", track, level, () => {
+    const ladder = dailyLadder(level, language);
+    return { ladder, level, chain: [ladder.start], hints: 0, elapsedMs: 0 };
+  });
+  if (!ready) return <LevelLoading />;
+  return <LadderGame mode="level" level={level} saved={saved} setSaved={setSaved} clear={clear} />;
+}
+
+function LadderEndless() {
+  const { language } = useLanguage();
+  const level = readLocal<number>(endlessLevelKey(language), 1);
+  const [saved, setSaved, clear] = useSavedState<Saved | null>(endlessKey(language), () => null);
+  // An endless save from another level is stale; start a fresh ladder for the current one.
+  return <LadderGame mode="endless" level={level} saved={saved && saved.level === level ? saved : null} setSaved={setSaved} clear={clear} />;
+}
+
+function LadderGame({ mode, level, saved, setSaved, clear }: { mode: LadderMode; level: number; saved: Saved | null; setSaved: (s: Saved) => void; clear: () => void }) {
   const { t, language } = useLanguage();
-  const { back, replace } = useNavigation();
+  const { back } = useNavigation();
   const finish = useFinish("ladder");
   useTrackStarted("ladder");
-  const number = dailyNumber("ladder", puzzleToday());
-  const daily = mode === "daily";
-  const level = daily ? 0 : readLocal<number>(endlessLevelKey(language), 1);
-  const length = daily ? 4 : endlessShape(level, language).length;
+  const levels = mode === "level";
+  const length = levels ? 4 : endlessShape(level, language).length;
   const [dict, setDict] = useState<Set<string> | null>(null);
-  const [saved, setSaved, clear] = useSavedState<Saved | null>(daily ? dailyKey(number, language) : endlessKey(language), () => {
-    if (!daily) return null;
-    const ladder = dailyLadder(number, language);
-    return { ladder, level: 0, chain: [ladder.start], hints: 0, elapsedMs: 0 };
-  });
-  // An endless save from another level is stale; start a fresh ladder for the current one.
-  const current = saved && (daily || saved.level === level) ? saved : null;
 
   useEffect(() => {
     let alive = true;
     void loadLadderDictionary(length, language).then((d) => {
       if (!alive) return;
       setDict(d);
-      if (!daily && !current) {
+      if (!levels && !saved) {
         const ladder = endlessLadder(level, d, Date.now(), language);
         setSaved({ ladder, level, chain: [ladder.start], hints: 0, elapsedMs: 0 });
       }
@@ -153,7 +153,7 @@ export function LadderPlay({ mode }: { mode: LadderMode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [length, language]);
 
-  if (!current || !dict) {
+  if (!saved || !dict) {
     return (
       <Screen theme="night">
         <div className="stack center" style={{ flex: 1, justifyContent: "center" }}>
@@ -164,28 +164,22 @@ export function LadderPlay({ mode }: { mode: LadderMode }) {
   }
   return (
     <LadderBoard
-      key={`${current.ladder.start}-${current.ladder.end}`}
-      saved={current}
-      setSaved={(next) => setSaved(next)}
+      key={`${saved.ladder.start}-${saved.ladder.end}`}
+      saved={saved}
+      setSaved={setSaved}
       dict={dict}
       mode={mode}
-      number={number}
       onBack={back}
       onFinish={(won, chain, elapsedMs, hints) => {
-        if (current.result) {
-          replace({ name: "game", game: "ladder", screen: "result", params: current.result });
-          return;
-        }
         const steps = chain.length - 1;
-        const best = shortestPath(current.ladder.start, current.ladder.end, dict) ?? [current.ladder.start, current.ladder.end];
-        const params: ResultParams = { mode, number, level, start: current.ladder.start, end: current.ladder.end, par: current.ladder.par, won, steps, timeMs: Math.round(elapsedMs), hints, path: JSON.stringify(chain), best: JSON.stringify(best) };
-        if (daily) setSaved({ ...current, chain, hints, elapsedMs, result: params });
-        else {
-          clear();
-          if (won) writeLocal(endlessLevelKey(language), level + 1);
-        }
+        const best = shortestPath(saved.ladder.start, saved.ladder.end, dict) ?? [saved.ladder.start, saved.ladder.end];
+        const params: ResultParams = { mode, level, start: saved.ladder.start, end: saved.ladder.end, par: saved.ladder.par, won, steps, timeMs: Math.round(elapsedMs), hints, path: JSON.stringify(chain), best: JSON.stringify(best) };
+        clear();
+        const track = levelTrack("ladder", language);
+        if (levels) rememberLevel("ladder", track, level + 1);
+        else if (won) writeLocal(endlessLevelKey(language), level + 1);
         void finish(
-          { mode: daily && language === "fa" ? "daily-fa" : mode, puzzleNumber: daily ? number : null, solved: won, timeMs: Math.round(elapsedMs), moves: steps, detail: won ? steps - current.ladder.par : null, hints },
+          { mode: levels ? track : mode, puzzleNumber: levels ? level : null, solved: won, timeMs: Math.round(elapsedMs), moves: steps, detail: won ? steps - saved.ladder.par : null, hints },
           params,
         );
       }}
@@ -193,12 +187,11 @@ export function LadderPlay({ mode }: { mode: LadderMode }) {
   );
 }
 
-function LadderBoard({ saved, setSaved, dict, mode, number, onBack, onFinish }: {
+function LadderBoard({ saved, setSaved, dict, mode, onBack, onFinish }: {
   saved: Saved;
   setSaved: (s: Saved) => void;
   dict: Set<string>;
   mode: LadderMode;
-  number: number;
   onBack: () => void;
   onFinish: (won: boolean, chain: string[], elapsedMs: number, hints: number) => void;
 }) {
@@ -206,7 +199,7 @@ function LadderBoard({ saved, setSaved, dict, mode, number, onBack, onFinish }: 
   const { ladder, chain, hints } = saved;
   const last = chain[chain.length - 1];
   const won = last === ladder.end;
-  const over = won || saved.result !== undefined;
+  const over = won;
   const [draft, setDraft] = useState(last.split(""));
   const [sel, setSel] = useState(0);
   const [msg, setMsg] = useState<{ text: string; err: boolean } | null>(null);
@@ -291,7 +284,7 @@ function LadderBoard({ saved, setSaved, dict, mode, number, onBack, onFinish }: 
   const cell = wordLen >= 6 ? 44 : 52;
   const gapDots = Math.min(3, Math.max(1, ladder.par - steps));
   const title = `${ladder.start} → ${ladder.end}`;
-  const sub = mode === "daily" ? t("ladderDailySub", { number, par: ladder.par }) : t("ladderEndlessSub", { level: saved.level, par: ladder.par });
+  const sub = mode === "level" ? t("ladderLevelSub", { level: saved.level, par: ladder.par }) : t("ladderEndlessSub", { level: saved.level, par: ladder.par });
 
   return (
     <Screen theme="night">
@@ -443,10 +436,9 @@ function parseList(raw: unknown): string[] {
 export function LadderResult({ params }: { params?: ResultParams }) {
   const { t, n, language } = useLanguage();
   const { replace } = useNavigation();
-  const { api } = useHub();
+  const copy = useLevelCopy();
   const xp = parseXp(params);
-  const mode = (params?.mode === "endless" ? "endless" : "daily") as LadderMode;
-  const number = Number(params?.number ?? 0);
+  const mode = (params?.mode === "endless" ? "endless" : "level") as LadderMode;
   const level = Number(params?.level ?? 1);
   const par = Number(params?.par ?? 0);
   const end = String(params?.end ?? "");
@@ -456,30 +448,14 @@ export function LadderResult({ params }: { params?: ResultParams }) {
   const timeMs = Number(params?.timeMs ?? 0);
   const mine = parseList(params?.path);
   const best = parseList(params?.best);
-  const board = useLoad(() => (mode === "daily" ? api.board("ladder", number, language === "fa" ? "daily-fa" : "daily") : Promise.resolve(null)), [api, mode, number, language]).data;
   const streak = xp?.streak ?? 0;
-
-  const dist = useMemo(() => {
-    const rows = board?.rows ?? [];
-    const total = rows.length;
-    const buckets = [
-      { key: "par", label: t("ladderDistPar", { par }), count: rows.filter((r) => r.solved && (r.moves ?? 0) <= par).length, mine: won && steps <= par },
-      { key: "one", label: t("ladderDistSteps", { steps: par + 1 }), count: rows.filter((r) => r.solved && r.moves === par + 1).length, mine: won && steps === par + 1 },
-      { key: "more", label: t("ladderDistMore", { steps: par + 2 }), count: rows.filter((r) => r.solved && (r.moves ?? 0) >= par + 2).length, mine: won && steps >= par + 2 },
-      { key: "gave", label: t("ladderDistGaveUp"), count: rows.filter((r) => !r.solved).length, mine: !won },
-    ];
-    return buckets.map((b) => ({ ...b, pct: total ? Math.round((b.count / total) * 100) : 0 }));
-  }, [board, par, steps, won, t]);
+  const next = copy.nextLevel(xp, level);
 
   const title = !won ? t("ladderRevealed") : steps < par ? t("ladderUnderTitle", { steps }) : steps === par ? t("ladderParTitle", { steps }) : t("ladderMadeIt", { steps });
-  const sub = !won
-    ? t("ladderGaveSub", { steps })
-    : mode === "endless"
-      ? t("ladderEndlessDone", { level })
-      : steps <= par
-        ? `${t("ladderShortest")} · ${t("streakDays", { count: streak })}`
-        : t("ladderOverSub", { over: steps - par });
-  const kicker = mode === "daily" ? t("ladderKicker", { number, par }) : t("ladderEndlessKicker", { level, par });
+  const sub = mode === "level"
+    ? copy.next(xp, won, level)
+    : !won ? t("ladderGaveSub", { steps }) : t("ladderEndlessDone", { level });
+  const kicker = mode === "level" ? t("ladderLevelKicker", { level, par }) : t("ladderEndlessKicker", { level, par });
 
   return (
     <ResultScreen
@@ -496,11 +472,13 @@ export function LadderResult({ params }: { params?: ResultParams }) {
       xp={xp}
       accent={ACCENT}
       accentInk={INK}
-      share={{ text: `${t("gameLadder")} ${mode === "daily" ? `#${number}` : ""} · ${mine[0] ?? ""} → ${end} · ${won ? `${steps}/${par}` : "X"}` }}
-      primary={{
-        label: mode === "endless" && won ? t("ladderNextLevel") : t("ladderPlayEndless"),
-        onClick: () => replace({ name: "game", game: "ladder", screen: "play", params: { mode: "endless", at: Date.now() } }),
-      }}
+      share={{ text: `${mode === "level" ? copy.title("gameLadder", level) : t("gameLadder")} · ${mine[0] ?? ""} → ${end} · ${won ? `${steps}/${par}` : "X"}${mode === "level" ? ` · ${t("streakDays", { count: streak })}` : ""}` }}
+      primary={mode === "level"
+        ? { label: t("playLevelN", { n: next }), onClick: () => replace({ name: "game", game: "ladder", screen: "play", params: { mode: "level", level: next } }) }
+        : {
+          label: won ? t("ladderNextLevel") : t("ladderPlayEndless"),
+          onClick: () => replace({ name: "game", game: "ladder", screen: "play", params: { mode: "endless", at: Date.now() } }),
+        }}
       onClose={() => replace({ name: "game", game: "ladder", screen: "intro" })}
     >
       <div className="card" style={{ display: "flex", gap: 12, padding: 14 }} dir={language === "fa" ? "rtl" : "ltr"}>
@@ -515,20 +493,12 @@ export function LadderResult({ params }: { params?: ResultParams }) {
         </div>
       </div>
 
-      {mode === "daily" && board && board.rows.length > 0 && (
-        <div className="card stack" style={{ gap: 8, padding: 14 }}>
-          <span style={{ fontSize: 14, fontWeight: 600 }}>{t("ladderEveryone")}</span>
-          {dist.map((d) => (
-            <div key={d.key} className="row" style={{ gap: 8 }}>
-              <span style={{ width: 72, fontSize: 13, color: "var(--text-2)" }}>{d.label}</span>
-              <div style={{ flex: 1, height: 18, borderRadius: 4, background: "#1E2138", overflow: "hidden" }}>
-                <div style={{ width: `${d.pct}%`, height: 18, background: d.mine ? (d.key === "gave" ? "#F08A7A" : ACCENT) : "#3A3F5E" }} />
-              </div>
-              <span className="num" style={{ width: 38, textAlign: "end", fontSize: 13, fontWeight: 600 }}>{n(d.pct)}%</span>
-            </div>
-          ))}
-        </div>
-      )}
     </ResultScreen>
   );
+}
+
+/** Ladder's level list follows the app language, like its levels. */
+export function LadderLevels() {
+  const { language } = useLanguage();
+  return <LevelsScreen game="ladder" track={levelTrack("ladder", language)} name="gameLadder" accent={ACCENT} accentInk={INK} />;
 }

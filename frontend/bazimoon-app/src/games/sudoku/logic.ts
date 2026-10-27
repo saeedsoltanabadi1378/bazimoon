@@ -192,4 +192,7 @@ export function completeUnits(entries: number[], solution: number[]): Set<number
   return done;
 }
 
-export const DAILY_LEVEL: SudokuLevel = "medium";
+/** Difficulty for a level: easy grids first, expert from level 61 on. */
+export function sudokuLevelDifficulty(level: number): SudokuLevel {
+  return level <= 10 ? "easy" : level <= 30 ? "medium" : level <= 60 ? "hard" : "expert";
+}

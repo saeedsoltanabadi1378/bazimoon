@@ -238,9 +238,22 @@ export interface Daily {
   medianScore: number | null;
 }
 
+/** A level game (Zip, Queens, Sudoku, Word, Ladder): how far players have got. */
+export interface LevelSpread {
+  game: string;
+  track: "level" | "level-fa";
+  /** Players who have finished at least one level. */
+  players: number;
+  medianLevel: number | null;
+  topLevel: number;
+  solvedToday: number;
+  playersToday: number;
+}
+
 export interface Puzzles {
   date: string;
   dailies: Daily[];
+  levels: LevelSpread[];
   season: { number: number; day: number; length: number; endsOn: string };
   divisions: { name: string; count: number }[];
   leaders: { rank: number; name: string; points: number }[];

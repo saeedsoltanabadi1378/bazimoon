@@ -3,15 +3,13 @@ import { useLanguage } from "../../i18n/LanguageContext";
 import { useNavigation } from "../../app/router";
 import { useHub, useLoad } from "../../hub/HubData";
 import { IconButton, Screen } from "../../ui/components";
-import { formatShortDate, puzzleToday } from "../../lib/format";
-import { dailyNumber } from "../../lib/rng";
-import { readLocal } from "../../lib/storage";
 import { haptic } from "../../lib/haptics";
 import { IntroScreen, PreviewGrid } from "../shared/IntroScreen";
 import { InGameHelp } from "../shared/InGameHelp";
 import { XpCard } from "../shared/ResultScreen";
-import { parseXp, useFinish, useSavedState, useTrackStarted, type ResultParams } from "../shared/play";
-import { answerFor, keyboards, loadDictionary, score, type Score, type WordLang } from "./logic";
+import { parseXp, useFinish, useTrackStarted, type ResultParams, type SavedState } from "../shared/play";
+import { LevelLoading, levelTrack, rememberLevel, useLevelCopy, useLevelProgress, useLevelState } from "../shared/levels";
+import { answerFor, keyboards, loadDictionary, score, wordLevelCount, type Score, type WordLang } from "./logic";
 
 const ACCENT = "#9ED98C";
 const FA_FONT = "Vazirmatn, sans-serif";
@@ -28,25 +26,20 @@ interface Saved {
   submitted: boolean;
 }
 
-const storageKey = (lang: WordLang, number: number) => `bazimoon-word-${lang}-${number}`;
-
-function savedOutcome(lang: WordLang, number: number) {
-  const saved = readLocal<Saved | null>(storageKey(lang, number), null);
-  if (!saved) return null;
-  const answer = answerFor(lang, number).join("");
-  if (saved.guesses.some((g) => g.join("") === answer)) return "won";
-  if (saved.guesses.length >= 6) return "lost";
-  return saved.guesses.length ? "playing" : null;
-}
+const freshSave = (): Saved => ({ guesses: [], cur: [], submitted: false });
 
 export function WordIntro() {
   const { t, language } = useLanguage();
   const { push } = useNavigation();
   const { api } = useHub();
   const stats = useLoad(() => api.stats("word"), [api]).data;
-  const number = dailyNumber("word", puzzleToday());
   const [lang, setLang] = useState<WordLang>(language === "fa" ? "fa" : "en");
-  const status = savedOutcome(lang, number);
+  const en = useLevelProgress("word", "level")?.level ?? null;
+  const fa = useLevelProgress("word", "level-fa")?.level ?? null;
+  const current = lang === "fa" ? fa : en;
+  const playLabel = (level: number | null, l: WordLang) =>
+    level === null ? t("loading") : level > wordLevelCount(l) ? t("allLevelsDoneShort") : level > 1 ? t("continueLevel", { n: level }) : t("startLevel1");
+  const playable = (level: number | null, l: WordLang) => level !== null && level <= wordLevelCount(l);
   const rows: [string, Score][] = [["S", 0], ["T", 0], ["O", 0], ["R", 0], ["M", 0], ["L", 0], ["I", 1], ["G", 1], ["H", 1], ["T", 2], ["N", 2], ["I", 2], ["G", 2], ["H", 2], ["T", 2]];
   const colors = palette(false);
   const avgTries = stats && stats.solved ? stats.averageMoves.toFixed(1) : "—";
@@ -55,7 +48,7 @@ export function WordIntro() {
     <IntroScreen
       game="word"
       title={t("gameWord")}
-      tagline={t("wordTagline", { number })}
+      tagline={current === null ? t("wordTagline") : t("levelTagline", { n: current })}
       accent={ACCENT}
       accentInk="#0E1F0A"
       heroBg="#14241A"
@@ -63,22 +56,29 @@ export function WordIntro() {
       heroTitle={t("wordHeroTitle")}
       heroSub={t("wordHeroSub")}
       modeTitle={t("languageSetting")}
+      badge={current === null ? undefined : t("levelN", { n: current })}
       modes={[
         {
           key: "en", label: "English", desc: t("wordEnDesc"),
-          play: savedOutcome("en", number) === "won" || savedOutcome("en", number) === "lost" ? t("seeTodaysBoard") : t("playEnglish"),
-          onPlay: () => push({ name: "game", game: "word", screen: "play", params: { lang: "en" } }),
+          play: playLabel(en, "en"),
+          disabled: !playable(en, "en"),
+          onPlay: () => {
+            if (playable(en, "en")) push({ name: "game", game: "word", screen: "play", params: { lang: "en", mode: "level", level: en } });
+          },
         },
         {
           key: "fa", label: <span style={{ fontFamily: FA_FONT }}>فارسی</span>, desc: t("wordFaDesc"),
-          play: savedOutcome("fa", number) === "won" || savedOutcome("fa", number) === "lost" ? t("seeTodaysBoard") : t("playPersian"),
-          onPlay: () => push({ name: "game", game: "word", screen: "play", params: { lang: "fa" } }),
+          play: playLabel(fa, "fa"),
+          disabled: !playable(fa, "fa"),
+          onPlay: () => {
+            if (playable(fa, "fa")) push({ name: "game", game: "word", screen: "play", params: { lang: "fa", mode: "level", level: fa } });
+          },
         },
       ]}
       initialMode={lang === "fa" ? 1 : 0}
       extra={(mode) => {
         if (mode !== lang) window.setTimeout(() => setLang(mode as WordLang), 0);
-        return status === "playing" ? <div className="small" style={{ color: ACCENT }}>{t("wordInProgress")}</div> : null;
+        return null;
       }}
       stats={[
         { value: stats?.played ?? "—", label: t("statPlayed") },
@@ -91,22 +91,28 @@ export function WordIntro() {
         { title: t("wordStep2"), text: t("wordStep2Text") },
         { title: t("wordStep3"), text: t("wordStep3Text") },
       ]}
-      rewards={[t("rewardDaily20"), t("wordReward2"), t("wordReward3")]}
-      secondary={{ label: formatShortDate(puzzleToday(), language), onClick: () => push({ name: "league" }) }}
+      rewards={[t("rewardLevel20"), t("wordReward2"), t("wordReward3")]}
+      secondary={{ label: t("allLevels"), onClick: () => push({ name: "game", game: "word", screen: "levels", params: { lang } }) }}
     />
   );
 }
 
-export function WordPlay({ lang }: { lang: WordLang }) {
-  const { t, n, language } = useLanguage();
+export function WordPlay({ lang, level }: { lang: WordLang; level: number }) {
+  const track = levelTrack("word", lang);
+  const [saved, setSaved, clearSaved, ready] = useLevelState<Saved>("word", track, level, freshSave, (s) => ({ guesses: s.guesses, cur: s.cur }));
+  if (!ready) return <LevelLoading />;
+  return <WordBoard lang={lang} level={level} state={[saved, setSaved, clearSaved]} />;
+}
+
+function WordBoard({ lang, level, state }: { lang: WordLang; level: number; state: SavedState<Saved> }) {
+  const { t, n } = useLanguage();
   const { back } = useNavigation();
   const { highContrast } = useHub();
   const finish = useFinish("word");
   useTrackStarted("word");
-  const today = puzzleToday();
-  const number = dailyNumber("word", today);
-  const answer = answerFor(lang, number);
-  const [saved, setSaved] = useSavedState<Saved>(storageKey(lang, number), () => ({ guesses: [], cur: [], submitted: false }));
+  const track = levelTrack("word", lang);
+  const answer = answerFor(lang, level);
+  const [saved, setSaved, clearSaved] = state;
   const [msg, setMsg] = useState<string | null>(null);
   const [shake, setShake] = useState(false);
   const fa = lang === "fa";
@@ -179,9 +185,11 @@ export function WordPlay({ lang }: { lang: WordLang }) {
     if (!over || saved.submitted) return;
     setSaved((s) => ({ ...s, submitted: true }));
     window.setTimeout(() => {
+      clearSaved();
+      rememberLevel("word", track, level + 1);
       void finish(
-        { mode: fa ? "daily-fa" : "daily", puzzleNumber: number, solved: won, moves: won ? tries : 7 },
-        { lang, number, won, tries, answer: answer.join(""), pattern: JSON.stringify(saved.guesses.map((g) => score(g, answer))) },
+        { mode: track, puzzleNumber: level, solved: won, moves: won ? tries : 7 },
+        { lang, level, won, tries, answer: answer.join(""), pattern: JSON.stringify(saved.guesses.map((g) => score(g, answer))) },
       );
     }, 1200);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -201,7 +209,7 @@ export function WordPlay({ lang }: { lang: WordLang }) {
         <IconButton icon="back" label={t("backToGame", { game: t("gameWord") })} onClick={back} />
         <div style={{ textAlign: "center", minWidth: 0 }}>
           <div style={{ fontSize: 20, fontWeight: 700 }}>{t(fa ? "wordBoardPersian" : "wordBoardEnglish")}</div>
-          <div className="tiny muted"><bdi>#{n(number)}</bdi> · {formatShortDate(today, language)}</div>
+          <div className="tiny muted">{t("levelN", { n: level })}</div>
         </div>
         <div className="row" style={{ gap: 6 }}>
           <InGameHelp
@@ -301,10 +309,11 @@ export function WordResult({ params }: { params?: ResultParams }) {
   const { t, n } = useLanguage();
   const { replace } = useNavigation();
   const { api, highContrast, profile } = useHub();
+  const copy = useLevelCopy();
   const xp = parseXp(params);
   const stats = useLoad(() => api.stats("word"), [api]).data;
   const lang = String(params?.lang ?? "en") as WordLang;
-  const number = Number(params?.number ?? 0);
+  const level = Number(params?.level ?? 1);
   const won = Boolean(params?.won);
   const tries = Number(params?.tries ?? 0);
   const answer = String(params?.answer ?? "");
@@ -316,14 +325,14 @@ export function WordResult({ params }: { params?: ResultParams }) {
     }
   })();
   const C = palette(highContrast);
-  const other: WordLang = lang === "en" ? "fa" : "en";
-  const otherDone = savedOutcome(other, number);
+  const next = copy.nextLevel(xp, level);
+  const moreLevels = next <= wordLevelCount(lang);
   const title = won ? (tries <= 3 ? t("brilliantIn", { n: tries }) : tries === 6 ? t("phewIn6") : t("gotItIn", { n: tries })) : t("soClose");
-  const sub = otherDone === "won" || otherDone === "lost" ? t("bothWordsDone") : other === "fa" ? t("playPersianForXp") : t("playEnglishForXp");
+  const sub = moreLevels ? copy.next(xp, won, level) : t("allLevelsDone");
   const counts = [1, 2, 3, 4, 5, 6].map((k) => stats?.solvedByMoves?.[String(k)] ?? 0);
   const max = Math.max(1, ...counts);
   const emoji = (sc: Score) => (sc === 2 ? "🟩" : sc === 1 ? "🟨" : "⬛");
-  const shareText = `${t("gameWord")} #${n(number)} · ${won ? n(tries) : "X"}/${n(6)}\n${pattern.map((row) => row.map(emoji).join("")).join("\n")}`;
+  const shareText = `${copy.title("gameWord", level)} · ${won ? n(tries) : "X"}/${n(6)}\n${pattern.map((row) => row.map(emoji).join("")).join("\n")}`;
 
   return (
     <Screen theme="night">
@@ -332,7 +341,7 @@ export function WordResult({ params }: { params?: ResultParams }) {
       </div>
       <div className="screen__body" style={{ paddingTop: 0, paddingBottom: 20 }}>
         <section className="stack center" style={{ gap: 8, textAlign: "center" }}>
-          <div className="kicker" style={{ color: won ? ACCENT : "#F08A7A" }}>{t("dailyWordN", { number })}</div>
+          <div className="kicker" style={{ color: won ? ACCENT : "#F08A7A" }}>{copy.title("gameWord", level)}</div>
           <div className="row" style={{ gap: 5, direction: lang === "fa" ? "rtl" : "ltr" }}>
             {Array.from(answer).map((ch, i) => (
               <span key={i} style={{ width: 44, height: 44, borderRadius: 8, background: won ? C[2][0] : "#2B3042", color: won ? C[2][1] : "#EDEBF5", fontFamily: lang === "fa" ? FA_FONT : "var(--font-display)", fontSize: 22, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center" }}>{ch}</span>
@@ -374,7 +383,7 @@ export function WordResult({ params }: { params?: ResultParams }) {
             {pattern.flat().map((sc, i) => <div key={i} style={{ aspectRatio: "1", borderRadius: 2, background: C[sc][0] }} />)}
           </div>
           <div className="small soft" style={{ whiteSpace: "pre-line" }}>
-            {`${t("gameWord")} #${number} · ${won ? tries : "X"}/6\n${won ? t("streakDays", { count: xp?.streak ?? 0 }) : t("newWordTomorrow")}`}
+            {`${copy.title("gameWord", level)} · ${won ? n(tries) : "X"}/${n(6)}\n${t("streakDays", { count: xp?.streak ?? 0 })}`}
           </div>
         </div>
       </div>
@@ -384,9 +393,9 @@ export function WordResult({ params }: { params?: ResultParams }) {
           type="button"
           className="btn"
           style={{ flex: 1.3, fontSize: 15, background: ACCENT, color: "#0E1F0A" }}
-          onClick={() => replace(otherDone === "won" || otherDone === "lost" ? { name: "solo" } : { name: "game", game: "word", screen: "play", params: { lang: other } })}
+          onClick={() => replace(moreLevels ? { name: "game", game: "word", screen: "play", params: { lang, mode: "level", level: next } } : { name: "solo" })}
         >
-          {otherDone === "won" || otherDone === "lost" ? t("moreGames") : other === "fa" ? t("playPersianWord") : t("playEnglishWord")}
+          {moreLevels ? t("playLevelN", { n: next }) : t("moreGames")}
         </button>
       </div>
     </Screen>

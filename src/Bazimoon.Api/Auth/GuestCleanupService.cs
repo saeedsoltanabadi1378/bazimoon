@@ -49,6 +49,7 @@ public sealed class GuestCleanupService : BackgroundService
 
         db.PlayerStats.RemoveRange(await db.PlayerStats.Where(s => ids.Contains(s.UserId)).ToListAsync(ct));
         db.PuzzleResults.RemoveRange(await db.PuzzleResults.Where(r => ids.Contains(r.UserId)).ToListAsync(ct));
+        db.PuzzleProgress.RemoveRange(await db.PuzzleProgress.Where(p => ids.Contains(p.UserId)).ToListAsync(ct));
         db.CoupleAnswers.RemoveRange(await db.CoupleAnswers.Where(a => ids.Contains(a.UserId)).ToListAsync(ct));
         db.Couples.RemoveRange(await db.Couples.Where(c => ids.Contains(c.InviterId) || (c.PartnerId != null && ids.Contains(c.PartnerId.Value))).ToListAsync(ct));
         db.RefreshTokens.RemoveRange(await db.RefreshTokens.Where(t => ids.Contains(t.UserId)).ToListAsync(ct));

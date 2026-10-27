@@ -5,13 +5,32 @@ namespace Bazimoon.Tests;
 public class ProgressionTests
 {
     [Fact]
-    public void DailyNumbers_MatchTheDesignCalendar()
+    public void DailyNumbers_CountFromEachSeriesStart_AndLevelGamesHaveNone()
     {
         int day = Progression.PuzzleDay(new DateTimeOffset(2026, 10, 13, 12, 0, 0, TimeSpan.Zero));
-        Assert.Equal(142, Progression.DailyNumber("zip", day));
-        Assert.Equal(88, Progression.DailyNumber("queens", day));
+        Assert.Equal(43, Progression.DailyNumber("mines", day));
         Assert.Null(Progression.DailyNumber("merge", day));
-        Assert.Equal(day, Progression.DayOfDailyNumber("zip", 142));
+        foreach (var game in Progression.LevelGames)
+            Assert.Null(Progression.DailyNumber(game, day));
+    }
+
+    [Theory]
+    [InlineData("zip", "level", "level")]
+    [InlineData("word", "level-fa", "level-fa")]
+    [InlineData("ladder", "level-fa", "level-fa")]
+    [InlineData("zip", "level-fa", "level")]
+    [InlineData("zip", "practice", null)]
+    [InlineData("mines", "level", null)]
+    public void LevelTrack_OnlyForLevelGames(string game, string mode, string? track)
+    {
+        Assert.Equal(track, Progression.LevelTrack(game, mode));
+    }
+
+    [Fact]
+    public void StartingLevel_FollowsSolvedDailies()
+    {
+        Assert.Equal(1, Progression.StartingLevel(0));
+        Assert.Equal(13, Progression.StartingLevel(12));
     }
 
     [Fact]
@@ -67,17 +86,19 @@ public class ProgressionTests
     }
 
     [Fact]
-    public void ZipXp_GrowsWithStreak_AsTheResultScreenShows()
+    public void ZipLevelXp_IsFlat_SoManyLevelsADayCannotRideTheStreak()
     {
-        var solved = new Progression.PuzzleOutcome("zip", "daily", true, 42_000, null, null, null, 0);
-        Assert.Equal(80, Progression.SoloXp(solved, puzzleStreak: 13, newBest: false));
+        var solved = new Progression.PuzzleOutcome("zip", "level", true, 42_000, null, null, null, 0);
+        Assert.Equal(20, Progression.SoloXp(solved, puzzleStreak: 13, newBest: false));
+        Assert.Equal(15, Progression.SoloXp(solved with { Hints = 1 }, 13, false));
+        Assert.Equal(15, Progression.SoloXp(solved with { Mode = "practice" }, 13, false));
         Assert.Equal(5, Progression.SoloXp(solved with { Solved = false }, 13, false));
     }
 
     [Fact]
     public void LadderXp_FollowsParRewardsAndHintCost()
     {
-        var atPar = new Progression.PuzzleOutcome("ladder", "daily", true, 86_000, null, 4, 0, 0);
+        var atPar = new Progression.PuzzleOutcome("ladder", "level", true, 86_000, null, 4, 0, 0);
         Assert.Equal(25, Progression.SoloXp(atPar, 1, false));
         Assert.Equal(40, Progression.SoloXp(atPar with { Detail = -1 }, 1, false));
         Assert.Equal(10, Progression.SoloXp(atPar with { Detail = 1, Hints = 1 }, 1, false));

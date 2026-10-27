@@ -1,9 +1,7 @@
 import { useEffect, useState } from "react";
-import type { Daily, Puzzles } from "../adminApi";
+import type { Daily, LevelSpread, Puzzles } from "../adminApi";
 import { useAdminI18n } from "../i18n";
 import { Header, PageState, Svg, ICONS, divisionName, formatDuration, gameName, useAdminData } from "../ui";
-import { answerFor } from "../../games/word/logic";
-import { dailyLadder } from "../../games/ladder/logic";
 import { questionSet } from "../../couple/questions";
 import { formatCountdown, msUntilNextPuzzle } from "../../lib/format";
 
@@ -18,7 +16,6 @@ const DIVISION_COLORS: Record<string, string> = {
 export function PuzzlesPage() {
   const { t, n, lang, date } = useAdminI18n();
   const { data, error, reload } = useAdminData<Puzzles>("/puzzles");
-  const [showAnswers, setShowAnswers] = useState(false);
   const [left, setLeft] = useState(msUntilNextPuzzle());
 
   useEffect(() => {
@@ -33,7 +30,10 @@ export function PuzzlesPage() {
   );
   if (!data) return <main className="adm-main">{header}<PageState error={error} onRetry={reload} /></main>;
 
-  const label = (d: Daily) => d.game === "word" ? `${gameName("word", lang)} (${d.mode === "daily-fa" ? (lang === "fa" ? "فارسی" : "Persian") : (lang === "fa" ? "انگلیسی" : "English")})` : gameName(d.game, lang);
+  const label = (d: Daily) => gameName(d.game, lang);
+  const levelLabel = (l: LevelSpread) => l.game === "word" || l.game === "ladder"
+    ? `${gameName(l.game, lang)} (${t(l.track === "level-fa" ? "trackPersian" : "trackEnglish")})`
+    : gameName(l.game, lang);
   const median = (d: Daily) => {
     switch (d.game) {
       case "word": return d.medianMoves != null ? t("tries", { count: d.medianMoves }) : t("none");
@@ -44,11 +44,6 @@ export function PuzzlesPage() {
       default: return d.medianTimeMs != null ? formatDuration(d.medianTimeMs, n) : t("none");
     }
   };
-  const answer = (d: Daily) => {
-    if (d.game === "word") return answerFor(d.mode === "daily-fa" ? "fa" : "en", d.number).join("");
-    if (d.game === "ladder") { const l = dailyLadder(d.number); return `${l.start} → ${l.end} · par ${l.par}`; }
-    return null;
-  };
   const totalDivisions = data.divisions.reduce((s, v) => s + v.count, 0);
   const couples = data.couples;
 
@@ -56,12 +51,44 @@ export function PuzzlesPage() {
     <main className="adm-main">
       {header}
 
+      <section className="adm-panel flush" aria-labelledby="levels-title">
+        <div className="adm-panel-head" style={{ padding: "16px 18px 8px", alignItems: "center" }}>
+          <h2 id="levels-title">{t("levelsTitle")}</h2>
+          <span className="small text-2">{t("levelsNote")}</span>
+        </div>
+        <div className="adm-table-wrap">
+          <table className="adm-table" style={{ minWidth: 640 }}>
+            <thead>
+              <tr>
+                <th scope="col">{t("colGame")}</th>
+                <th scope="col">{t("colPlayers")}</th>
+                <th scope="col">{t("colMedianLevel")}</th>
+                <th scope="col">{t("colTopLevel")}</th>
+                <th scope="col">{t("colToday")}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.levels.map((l) => (
+                <tr key={`${l.game}-${l.track}`}>
+                  <td>
+                    <span style={{ display: "flex", alignItems: "center", gap: 10, minHeight: 32, fontWeight: 600 }}>
+                      <span style={{ width: 10, height: 10, borderRadius: 3, background: GAME_COLORS[l.game] ?? "#9C8CFF" }} />{levelLabel(l)}
+                    </span>
+                  </td>
+                  <td className="num">{n(l.players)}</td>
+                  <td className="text-2 num">{l.medianLevel != null ? n(l.medianLevel) : t("none")}</td>
+                  <td className="num">{l.topLevel ? n(l.topLevel) : t("none")}</td>
+                  <td className="text-2 num">{l.solvedToday ? t("levelsToday", { solved: l.solvedToday, players: l.playersToday }) : t("none")}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
       <section className="adm-panel flush" aria-labelledby="daily-title">
         <div className="adm-panel-head" style={{ padding: "16px 18px 8px", alignItems: "center" }}>
           <h2 id="daily-title">{t("dailiesTitle")}</h2>
-          <button type="button" className="adm-btn" aria-pressed={showAnswers} onClick={() => setShowAnswers((v) => !v)} style={{ minHeight: 40, fontSize: 13 }}>
-            {showAnswers ? t("hideAnswers") : t("showAnswers")}
-          </button>
         </div>
         <div className="adm-table-wrap">
           <table className="adm-table" style={{ minWidth: 760 }}>
@@ -72,14 +99,12 @@ export function PuzzlesPage() {
                 <th scope="col">{t("colPlayers")}</th>
                 <th scope="col">{t("colSolveRate")}</th>
                 <th scope="col">{t("colMedian")}</th>
-                <th scope="col">{t("colAnswer")}</th>
               </tr>
             </thead>
             <tbody>
               {data.dailies.map((d) => {
                 const rate = d.players ? Math.round((d.solved / d.players) * 100) : 0;
                 const color = GAME_COLORS[d.game] ?? "#9C8CFF";
-                const a = answer(d);
                 return (
                   <tr key={`${d.game}-${d.mode}`}>
                     <td>
@@ -98,9 +123,6 @@ export function PuzzlesPage() {
                       </span>
                     </td>
                     <td className="text-2 num">{median(d)}</td>
-                    <td className="num" style={{ color: showAnswers && a ? "#EDEBF5" : "#9A9CB8" }}>
-                      {!a ? t("noAnswer") : showAnswers ? <bdi dir={d.mode === "daily-fa" ? "rtl" : "ltr"}>{a}</bdi> : t("hidden")}
-                    </td>
                   </tr>
                 );
               })}

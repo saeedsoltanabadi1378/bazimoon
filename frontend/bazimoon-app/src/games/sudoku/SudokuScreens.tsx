@@ -3,14 +3,14 @@ import { useLanguage } from "../../i18n/LanguageContext";
 import { useNavigation } from "../../app/router";
 import { useHub, useLoad } from "../../hub/HubData";
 import { Body, Screen } from "../../ui/components";
-import { formatClock, formatShortDate, puzzleToday } from "../../lib/format";
-import { dailyNumber, randomSeed } from "../../lib/rng";
+import { formatClock } from "../../lib/format";
+import { randomSeed } from "../../lib/rng";
 import { haptic } from "../../lib/haptics";
 import { IntroScreen, PreviewGrid } from "../shared/IntroScreen";
-import { GroupBoard, ResultScreen } from "../shared/ResultScreen";
-import { PlayHeader, parseXp, useFinish, useSavedState, useStopwatch, useTrackStarted, type ResultParams } from "../shared/play";
-import { useCountdown } from "../zip/ZipScreens";
-import { DAILY_LEVEL, LEVEL_GIVENS, PEERS, UNITS, clashes, completeUnits, generateSudoku, type SudokuLevel, type SudokuPuzzle } from "./logic";
+import { ResultScreen } from "../shared/ResultScreen";
+import { PlayHeader, parseXp, useFinish, useSavedState, useStopwatch, useTrackStarted, type ResultParams, type SavedState } from "../shared/play";
+import { LevelLoading, rememberLevel, useLevelCopy, useLevelMode, useLevelState } from "../shared/levels";
+import { LEVEL_GIVENS, PEERS, UNITS, clashes, completeUnits, generateSudoku, sudokuLevelDifficulty, type SudokuLevel, type SudokuPuzzle } from "./logic";
 
 const ACCENT = "#7CC4FA";
 const LEVELS: SudokuLevel[] = ["easy", "medium", "hard", "expert"];
@@ -21,16 +21,15 @@ export function SudokuIntro() {
   const { push } = useNavigation();
   const { api } = useHub();
   const stats = useLoad(() => api.stats("sudoku"), [api]).data;
-  const countdown = useCountdown();
+  const levels = useLevelMode("sudoku", "level");
   const [level, setLevel] = useState<SudokuLevel>("medium");
-  const number = dailyNumber("sudoku", puzzleToday());
   const preview = useMemo(() => generateSudoku("sudoku-preview", "easy"), []);
 
   return (
     <IntroScreen
       game="sudoku"
       title={t("gameSudoku")}
-      tagline={t("sudokuIntroTagline", { number })}
+      tagline={levels.level === null ? t("subSudoku") : t("sudokuLevelTagline", { n: levels.level, level: t(levelKey(sudokuLevelDifficulty(levels.level))) })}
       accent={ACCENT}
       heroBg="#0F2233"
       preview={
@@ -38,11 +37,11 @@ export function SudokuIntro() {
           <PreviewGrid cols={9} gap={1} radius={0} cells={preview.givens.map((v) => ({ bg: v ? "#16304A" : "#0F1224", fg: "#EDEBF5", text: v ? <span style={{ fontSize: 8, fontWeight: 700 }}>{n(v)}</span> : "" }))} />
         </div>
       }
-      badge={t("newPuzzleIn", { time: countdown })}
+      badge={levels.badge}
       heroTitle={t("sudokuHeroTitle")}
       heroSub={t("sudokuHeroSub")}
       modes={[
-        { key: "daily", label: t("modeDaily"), desc: t("sudokuDailyDesc"), play: stats?.today?.solved ? t("replayToday") : t("playToday"), onPlay: () => push({ name: "game", game: "sudoku", screen: "play", params: { mode: "daily" } }) },
+        { ...levels.mode, desc: t("sudokuLevelsDesc") },
         { key: "classic", label: t("modeClassic"), desc: t("sudokuClassicDesc"), play: t("sudokuStartLevel", { level: t(levelKey(level)) }), onPlay: () => push({ name: "game", game: "sudoku", screen: "play", params: { mode: "classic", level } }) },
       ]}
       extra={(mode) =>
@@ -72,8 +71,8 @@ export function SudokuIntro() {
         { title: t("sudokuStep3"), text: t("sudokuStep3Text") },
         { title: t("sudokuStep4"), text: t("sudokuStep4Text") },
       ]}
-      rewards={[t("rewardDaily20"), t("rewardNoHints10"), t("rewardLeagueTime")]}
-      secondary={{ label: t("leaderboard"), onClick: () => push({ name: "league" }) }}
+      rewards={[t("rewardLevel30"), t("rewardNoHints10"), t("rewardLeagueXp")]}
+      secondary={levels.all}
     />
   );
 }
@@ -93,14 +92,15 @@ interface Saved {
 
 const fresh = (): Saved => ({ entries: new Array(81).fill(0), notes: Array.from({ length: 81 }, () => []), history: [], ms: 0, hints: 0, sel: -1, notesMode: false, boxOrder: [] });
 
-export function SudokuPlay({ mode, level: levelParam }: { mode: "daily" | "classic"; level?: SudokuLevel }) {
-  const { t, n, language } = useLanguage();
+/** Level mode plays numbered levels (`number`); classic plays a fresh grid at the chosen difficulty. */
+export function SudokuPlay({ mode, number: levelNumber, difficulty }: { mode: "level" | "classic"; number?: number; difficulty?: SudokuLevel }) {
+  const { t } = useLanguage();
   const { back } = useNavigation();
-  const today = puzzleToday();
-  const number = mode === "daily" ? dailyNumber("sudoku", today) : null;
-  const level: SudokuLevel = mode === "daily" ? DAILY_LEVEL : levelParam ?? "medium";
+  const copy = useLevelCopy();
+  const number = mode === "level" && levelNumber ? levelNumber : null;
+  const level: SudokuLevel = number !== null ? sudokuLevelDifficulty(number) : difficulty ?? "medium";
   const [seed] = useState(randomSeed);
-  const seedKey = mode === "daily" ? `sudoku-daily-${number}` : `sudoku-${level}-${seed}`;
+  const seedKey = number !== null ? `sudoku-L${number}` : `sudoku-${level}-${seed}`;
   // Hard grids can take a moment to make, so build after the first paint.
   const [puzzle, setPuzzle] = useState<SudokuPuzzle | null>(null);
   useEffect(() => {
@@ -108,13 +108,14 @@ export function SudokuPlay({ mode, level: levelParam }: { mode: "daily" | "class
     return () => window.clearTimeout(id);
   }, [seedKey, level]);
 
-  if (puzzle) return <SudokuBoard puzzle={puzzle} seedKey={seedKey} mode={mode} number={number} level={level} />;
+  if (puzzle && number !== null) return <SudokuLevelBoard puzzle={puzzle} number={number} level={level} />;
+  if (puzzle) return <SudokuPracticeBoard puzzle={puzzle} seedKey={seedKey} level={level} />;
   return (
     <Screen theme="night">
       <div style={{ padding: "14px 16px 8px" }}>
         <PlayHeader
-          title={number ? `${t("gameSudoku")} #${n(number)}` : t("gameSudoku")}
-          sub={number ? `${formatShortDate(today, language)} · ${t(levelKey(level))}` : t("sudokuClassicSub", { level: t(levelKey(level)) })}
+          title={number !== null ? copy.title("gameSudoku", number) : t("gameSudoku")}
+          sub={number !== null ? t(levelKey(level)) : t("sudokuClassicSub", { level: t(levelKey(level)) })}
           clockMs={0}
           onBack={back}
           backLabel={t("backToGame", { game: t("gameSudoku") })}
@@ -129,13 +130,26 @@ export function SudokuPlay({ mode, level: levelParam }: { mode: "daily" | "class
   );
 }
 
-function SudokuBoard({ puzzle, seedKey, mode, number, level }: { puzzle: SudokuPuzzle; seedKey: string; mode: "daily" | "classic"; number: number | null; level: SudokuLevel }) {
+function SudokuLevelBoard({ puzzle, number, level }: { puzzle: SudokuPuzzle; number: number; level: SudokuLevel }) {
+  // The server copy leaves out the undo history to stay small.
+  const [saved, setSaved, clear, ready] = useLevelState<Saved>("sudoku", "level", number, fresh, (s) => ({ entries: s.entries, notes: s.notes, ms: s.ms, hints: s.hints, boxOrder: s.boxOrder }));
+  if (!ready) return <LevelLoading />;
+  return <SudokuBoard puzzle={puzzle} number={number} level={level} state={[saved, setSaved, clear]} />;
+}
+
+function SudokuPracticeBoard({ puzzle, seedKey, level }: { puzzle: SudokuPuzzle; seedKey: string; level: SudokuLevel }) {
+  const state = useSavedState<Saved>(`bazimoon-sudoku-${seedKey}`, fresh);
+  return <SudokuBoard puzzle={puzzle} number={null} level={level} state={state} />;
+}
+
+function SudokuBoard({ puzzle, number, level, state }: { puzzle: SudokuPuzzle; number: number | null; level: SudokuLevel; state: SavedState<Saved> }) {
   const { t, n, language } = useLanguage();
   const { back } = useNavigation();
+  const copy = useLevelCopy();
   const finish = useFinish("sudoku");
   useTrackStarted("sudoku");
-  const today = puzzleToday();
-  const [saved, setSaved, clearSaved] = useSavedState<Saved>(`bazimoon-sudoku-${seedKey}`, fresh);
+  const mode = number !== null ? "level" : "classic";
+  const [saved, setSaved, clearSaved] = state;
   const [message, setMessage] = useState<{ text: string; tone: "hint" | "bad" } | null>(null);
   const [pop, setPop] = useState<{ cell: number; key: number } | null>(null);
   const [flash, setFlash] = useState<Set<number>>(new Set());
@@ -164,10 +178,11 @@ function SudokuBoard({ puzzle, seedKey, mode, number, level }: { puzzle: SudokuP
     if (!solved) return;
     haptic.success();
     clearSaved();
+    if (number !== null) rememberLevel("sudoku", "level", number + 1);
     const timeMs = Math.round(ms);
     const order = [...saved.boxOrder, ...Array.from({ length: 9 }, (_, b) => b).filter((b) => !saved.boxOrder.includes(b))];
     void finish(
-      { mode: mode === "daily" ? "daily" : level, puzzleNumber: number, solved: true, timeMs, hints: saved.hints },
+      { mode: mode === "level" ? "level" : level, puzzleNumber: number, solved: true, timeMs, hints: saved.hints },
       { mode, level, number, timeMs, hints: saved.hints, boxOrder: order.join(",") },
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -292,8 +307,8 @@ function SudokuBoard({ puzzle, seedKey, mode, number, level }: { puzzle: SudokuP
     <Screen theme="night">
       <div style={{ padding: "14px 16px 8px" }}>
         <PlayHeader
-          title={number ? `${t("gameSudoku")} #${n(number)}` : t("gameSudoku")}
-          sub={number ? `${formatShortDate(today, language)} · ${t(levelKey(level))}` : t("sudokuClassicSub", { level: t(levelKey(level)) })}
+          title={number !== null ? copy.title("gameSudoku", number) : t("gameSudoku")}
+          sub={number !== null ? t(levelKey(level)) : t("sudokuClassicSub", { level: t(levelKey(level)) })}
           clockMs={ms}
           onBack={back}
           backLabel={t("backToGame", { game: t("gameSudoku") })}
@@ -402,21 +417,20 @@ function SudokuBoard({ puzzle, seedKey, mode, number, level }: { puzzle: SudokuP
 
 export function SudokuResult({ params }: { params?: ResultParams }) {
   const { t, language, n } = useLanguage();
-  const { replace, push, reset } = useNavigation();
-  const { api } = useHub();
+  const { replace, reset } = useNavigation();
+  const copy = useLevelCopy();
   const xp = parseXp(params);
-  const mode = String(params?.mode ?? "daily");
   const level = String(params?.level ?? "medium") as SudokuLevel;
   const number = typeof params?.number === "number" ? params.number : null;
   const timeMs = Number(params?.timeMs ?? 0);
   const hints = Number(params?.hints ?? 0);
   const order = String(params?.boxOrder ?? "0,1,2,3,4,5,6,7,8").split(",").map(Number);
-  const board = useLoad(() => (number && mode === "daily" ? api.board("sudoku", number) : Promise.resolve(null)), [api, number, mode]);
   const time = formatClock(timeMs, language);
   const streak = xp?.streak ?? 0;
-  const title = number ? `${t("gameSudoku")} #${n(number)}` : t("gameSudoku");
+  const title = number !== null ? copy.title("gameSudoku", number) : t("gameSudoku");
   const kicker = `${title} · ${t(levelKey(level))}`;
-  const sub = mode !== "daily" ? t("practiceNoStreak") : hints ? t("sudokuHintsSub", { count: hints, streak }) : t("sudokuNoHintsSub", { streak });
+  const next = copy.nextLevel(xp, number);
+  const sub = number === null ? t("practiceNoStreak") : copy.next(xp, true, number);
   // Share card: the nine boxes shaded by when they were finished (first = brightest).
   const shade = (box: number) => {
     const rank = Math.max(0, order.indexOf(box));
@@ -437,19 +451,14 @@ export function SudokuResult({ params }: { params?: ResultParams }) {
         { value: n(hints), label: t("statHints"), color: hints ? "#F0A83A" : undefined },
       ]}
       xp={xp}
-      xpNote={hints ? t("sudokuHintCost") : xp?.percentile != null ? t("fasterThan", { pct: xp.percentile }) : undefined}
+      xpNote={hints ? t("sudokuHintCost") : xp?.percentile != null ? t("fasterThanLevel", { pct: xp.percentile }) : undefined}
       accent={ACCENT}
-      share={{ text: `${title} · ${time}${hints ? ` · ${t("hintsUsed", { count: hints })}` : ` · ${t("flawless")}`}${mode === "daily" ? `\n${t("streakDays", { count: streak })}` : ""}` }}
-      primary={{ label: t("sudokuPlayHard"), onClick: () => replace({ name: "game", game: "sudoku", screen: "play", params: { mode: "classic", level: "hard" } }) }}
+      share={{ text: `${title} · ${time}${hints ? ` · ${t("hintsUsed", { count: hints })}` : ` · ${t("flawless")}`}${number !== null ? `\n${t("streakDays", { count: streak })}` : ""}` }}
+      primary={number !== null
+        ? { label: t("playLevelN", { n: next }), onClick: () => replace({ name: "game", game: "sudoku", screen: "play", params: { mode: "level", level: next } }) }
+        : { label: t("sudokuPlayHard"), onClick: () => replace({ name: "game", game: "sudoku", screen: "play", params: { mode: "classic", level: "hard" } }) }}
       secondary={{ label: t("backToHome"), onClick: () => reset({ name: "home" }) }}
     >
-      {board.data && (
-        <GroupBoard
-          title={t("groupToday")}
-          onSeeAll={() => push({ name: "league" })}
-          rows={board.data.rows.slice(0, 5).map((r) => ({ rank: r.rank ?? "—", name: r.name, value: r.solved ? formatClock(r.timeMs, language) : t("dnf"), isYou: r.isYou }))}
-        />
-      )}
       <div className="row" style={{ gap: 14, padding: 14, borderRadius: 18, border: "1.5px dashed #2E3252" }}>
         <div dir="ltr" style={{ width: 66, flex: "none", display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 3 }} aria-hidden="true">
           {Array.from({ length: 9 }, (_, b) => <span key={b} style={{ aspectRatio: "1", borderRadius: 4, background: shade(b) }} />)}

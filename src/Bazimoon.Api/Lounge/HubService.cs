@@ -146,7 +146,10 @@ public sealed class HubService
             .Where(p => p.UserId == userId && p.Won != null && p.GameRecord.Status == "Completed")
             .Select(p => new RatedGame(p.Role, p.Won, p.GameRecord.EndedAt, p.RatingDelta));
 
-    private static bool IsDaily(string mode) => mode == "daily" || mode.StartsWith("daily-", StringComparison.Ordinal);
+    private static bool IsDaily(string mode) => Progression.IsDaily(mode);
+
+    /// <summary>A daily or a first go at a level: the attempts that count toward the streak and league.</summary>
+    private static bool Counts(string mode) => Progression.IsDaily(mode) || Progression.IsLevel(mode);
 
     private static int Percent(int part, int whole) => whole == 0 ? 0 : (int)Math.Round(100.0 * part / whole);
 
@@ -157,14 +160,18 @@ public sealed class HubService
         var stats = await _db.GetOrCreateStatsAsync(userId, username);
         await _db.SaveChangesAsync();
         var today = Today;
-        var todays = await _db.PuzzleResults
-            .Where(r => r.UserId == userId && r.Day == today && r.Mode == "daily")
-            .ToListAsync();
-        var daily = new[] { "zip", "queens", "sudoku", "word", "ladder" }.Select(game =>
+        var solvedToday = await _db.PuzzleResults
+            .Where(r => r.UserId == userId && r.Day == today && r.Solved && (r.Mode == "level" || r.Mode == "level-fa"))
+            .Select(r => new { r.Game, r.Mode }).ToListAsync();
+        var levels = new List<LevelStatusDto>();
+        foreach (var game in new[] { "zip", "queens", "sudoku", "word", "ladder" })
         {
-            var solved = todays.Where(r => r.Game == game).OrderByDescending(r => r.Solved).FirstOrDefault();
-            return new DailyStatusDto(game, Progression.DailyNumber(game, today) ?? 0, solved is not null, solved?.Solved ?? false, solved?.TimeMs, solved?.Moves);
-        }).ToList();
+            // Word and Ladder follow the player's language.
+            string track = stats.Language == "fa" && game is "word" or "ladder" ? "level-fa" : "level";
+            var progress = await GetOrCreateProgressAsync(userId, game, track);
+            levels.Add(new LevelStatusDto(game, track, progress.Level, solvedToday.Count(r => r.Game == game && r.Mode == track), progress.SavedLevel == progress.Level));
+        }
+        await _db.SaveChangesAsync();
 
         int? mergeBest = await _db.PuzzleResults.Where(r => r.UserId == userId && r.Game == "merge").MaxAsync(r => r.Score);
         var league = await GetLeagueAsync(userId, username, "mafia");
@@ -172,7 +179,7 @@ public sealed class HubService
         return new HomeDto(
             Progression.CurrentStreak(stats.PuzzleStreak, stats.LastPuzzleDay, stats.StreakFreezes, today),
             Progression.DateOfDay(today).ToString("yyyy-MM-dd"),
-            daily,
+            levels,
             mergeBest,
             new LeagueSummaryDto(league.Season, league.DaysLeft, league.Division, league.Tier, league.You.Rank, league.PlayerCount, league.You.Zone),
             tables.FirstOrDefault(),
@@ -207,10 +214,10 @@ public sealed class HubService
                     var s = sameDivision[g.Key];
                     return new LeagueEntry(g.Key, s.Username, g.Sum(r => r.Points), g.Where(r => r.Day >= weekStart).Sum(r => r.Points),
                         Progression.CurrentStreak(s.PuzzleStreak, s.LastPuzzleDay, s.StreakFreezes, today), 0,
-                        g.Count(r => IsDaily(r.Mode) && r.Solved && r.Day >= weekStart) >= Progression.PuzzleQualifyingSolves);
+                        g.Count(r => Counts(r.Mode) && r.Solved && r.Day >= weekStart) >= Progression.PuzzleQualifyingSolves);
                 })
                 .ToList();
-            int mySolves = results.Count(r => r.UserId == userId && IsDaily(r.Mode) && r.Solved && r.Day >= weekStart);
+            int mySolves = results.Count(r => r.UserId == userId && Counts(r.Mode) && r.Solved && r.Day >= weekStart);
             qualification = new QualificationDto(mySolves, Progression.PuzzleQualifyingSolves);
         }
         else
@@ -274,21 +281,40 @@ public sealed class HubService
         var stats = await _db.GetOrCreateStatsAsync(userId, username);
         var today = Today;
         int? number = null;
+        int? nextLevel = null;
         bool countsAsDaily = false;
-        // "daily" or a language/variant daily such as "daily-fa" (Daily Word has one per language).
-        if (IsDaily(mode))
+        bool countsAsLevel = false;
+        // Level games have no daily or archive any more; an older app's daily is kept as practice.
+        if (Progression.LevelGames.Contains(request.Game) && (IsDaily(mode) || mode == "archive"))
+            mode = "practice";
+
+        if (Progression.LevelTrack(request.Game, mode) is { } track)
+        {
+            if (request.PuzzleNumber is not { } playedLevel || playedLevel < 1) throw new GameException("Pick a level.");
+            var progress = await GetOrCreateProgressAsync(userId, request.Game, track);
+            if (playedLevel > progress.Level) throw new GameException("That level is still locked.");
+            number = playedLevel;
+            if (playedLevel == progress.Level)
+            {
+                // Finishing the current level, solved or not, opens the next one. Earlier levels are replays.
+                countsAsLevel = true;
+                mode = track;
+                progress.Level++;
+                progress.SavedLevel = null;
+                progress.SavedState = null;
+                progress.UpdatedAt = DateTime.UtcNow;
+            }
+            else mode = "practice";
+            nextLevel = progress.Level;
+        }
+        // "daily" or a language/variant daily such as "daily-fa" (Esm-Famil has one per language).
+        else if (IsDaily(mode))
         {
             number = Progression.DailyNumber(request.Game, today);
             var dailyMode = mode;
             // Only the first daily attempt counts; replays are recorded as practice.
             countsAsDaily = !await _db.PuzzleResults.AnyAsync(r => r.UserId == userId && r.Game == request.Game && r.Mode == dailyMode && r.PuzzleNumber == number);
             if (!countsAsDaily) mode = "practice";
-        }
-        else if (mode == "archive" && request.PuzzleNumber is { } archived)
-        {
-            var day = Progression.DayOfDailyNumber(request.Game, archived);
-            if (day is null || day > today || archived < 1) throw new GameException("That puzzle is not available.");
-            number = archived;
         }
 
         var history = await _db.PuzzleResults.Where(r => r.UserId == userId && r.Game == request.Game).ToListAsync();
@@ -299,7 +325,7 @@ public sealed class HubService
         if (higherIsBetter && history.Count == 0 && (request.Score ?? 0) > 0) newBest = true;
 
         bool streakExtended = false;
-        if (countsAsDaily && request.Solved && Progression.StreakGames.Contains(request.Game))
+        if (countsAsLevel && request.Solved && Progression.StreakGames.Contains(request.Game))
         {
             var advanced = Progression.AdvanceStreak(stats.PuzzleStreak, stats.LastPuzzleDay, stats.StreakFreezes, today);
             stats.PuzzleStreak = advanced.Streak;
@@ -328,12 +354,12 @@ public sealed class HubService
         _activity.Track(userId, ActivityEvents.Puzzle, ActivityEvents.PuzzleCompleted, new
         {
             game = request.Game, mode, number, solved = request.Solved, timeMs = request.TimeMs, moves = request.Moves,
-            hints = Math.Max(0, request.Hints), newBest, streakExtended, xp, countsAsDaily,
+            hints = Math.Max(0, request.Hints), newBest, streakExtended, xp, countsAsDaily, countsAsLevel,
         });
         await _db.SaveChangesAsync();
 
         int? percentile = null;
-        if (countsAsDaily && request.Solved)
+        if ((countsAsDaily || countsAsLevel) && request.Solved)
         {
             var others = await _db.PuzzleResults.Where(r => r.Game == request.Game && r.Mode == mode && r.PuzzleNumber == number && r.UserId != userId)
                 .Select(r => new { r.Solved, r.TimeMs, r.Moves }).ToListAsync();
@@ -348,7 +374,7 @@ public sealed class HubService
 
         var (level, into, forNext) = Progression.Level(stats.Xp);
         var (levelBefore, intoBefore, _) = Progression.Level(xpBefore);
-        return new PuzzleResultDto(xp, points, stats.Xp, level, into, forNext, levelBefore, intoBefore, streak, streakExtended, newBest, countsAsDaily, number, percentile);
+        return new PuzzleResultDto(xp, points, stats.Xp, level, into, forNext, levelBefore, intoBefore, streak, streakExtended, newBest, countsAsDaily || countsAsLevel, number, percentile, nextLevel);
     }
 
     public async Task<GameStatsDto> GetGameStatsAsync(Guid userId, string game)
@@ -360,8 +386,8 @@ public sealed class HubService
         var timed = solved.Where(r => r.TimeMs.HasValue).ToList();
         var scored = rows.Where(r => r.Score.HasValue).ToList();
 
-        // Daily streak for this game alone: consecutive days with a solved daily up to today/yesterday.
-        var solvedDays = rows.Where(r => IsDaily(r.Mode) && r.Solved).Select(r => r.Day).ToHashSet();
+        // Streak for this game alone: consecutive days with a solved daily or level up to today/yesterday.
+        var solvedDays = rows.Where(r => Counts(r.Mode) && r.Solved).Select(r => r.Day).ToHashSet();
         int gameStreak = 0;
         for (int d = solvedDays.Contains(today) ? today : today - 1; solvedDays.Contains(d); d--) gameStreak++;
 
@@ -416,26 +442,53 @@ public sealed class HubService
         return new BoardDto(game, number, results.Count(r => r.Solved), rows);
     }
 
-    public async Task<ArchiveDto> GetArchiveAsync(Guid userId, string game, int year, int month)
+    // ------------------------------------------------------------------ levels
+
+    /// <summary>The player's place in a level game, created the first time it is asked for.</summary>
+    public async Task<LevelProgressDto> GetProgressAsync(Guid userId, string game, string? track)
     {
-        var first = new DateOnly(year, month, 1);
-        var today = Today;
-        int firstDay = first.DayNumber - Progression.DateOfDay(0).DayNumber;
-        int days = DateTime.DaysInMonth(year, month);
-        var results = await _db.PuzzleResults
-            .Where(r => r.UserId == userId && r.Game == game && (r.Mode == "daily" || r.Mode == "archive") && r.Day >= firstDay - 1)
-            .ToListAsync();
-        var list = new List<ArchiveDayDto>();
-        for (int d = 0; d < days; d++)
-        {
-            int day = firstDay + d;
-            int? number = Progression.DailyNumber(game, day);
-            if (number is null || number < 1) { list.Add(new ArchiveDayDto(d + 1, null, "unavailable", null)); continue; }
-            var mine = results.Where(r => r.PuzzleNumber == number && r.Solved).OrderBy(r => r.TimeMs ?? int.MaxValue).FirstOrDefault();
-            string status = day > today ? "future" : mine is not null ? "solved" : day == today ? "today" : "missed";
-            list.Add(new ArchiveDayDto(d + 1, number, status, mine?.TimeMs));
-        }
-        return new ArchiveDto(game, year, month, (int)first.DayOfWeek, list);
+        var progress = await GetOrCreateProgressAsync(userId, game, LevelTrackOf(game, track));
+        await _db.SaveChangesAsync();
+        return ToDto(progress);
+    }
+
+    /// <summary>Keeps the half-finished board of the current level (null state clears it).</summary>
+    public async Task<LevelProgressDto> SaveProgressStateAsync(Guid userId, string game, SaveLevelStateRequest request)
+    {
+        var progress = await GetOrCreateProgressAsync(userId, game, LevelTrackOf(game, request.Track));
+        // Only the current level has a server save; replays of earlier levels stay on the device.
+        if (request.Level != progress.Level) throw new GameException("Only the current level can be saved.");
+        if (request.State is { Length: > Progression.MaxSavedStateLength }) throw new GameException("That board is too big to save.");
+        progress.SavedLevel = request.State is null ? null : request.Level;
+        progress.SavedState = request.State;
+        progress.UpdatedAt = DateTime.UtcNow;
+        await _db.SaveChangesAsync();
+        return ToDto(progress);
+    }
+
+    private static string LevelTrackOf(string game, string? track)
+    {
+        if (!Progression.LevelGames.Contains(game)) throw new GameException("Unknown game.");
+        return Progression.LevelTrack(game, track ?? "level") ?? "level";
+    }
+
+    private static LevelProgressDto ToDto(PuzzleProgressRecord p) =>
+        new(p.Game, p.Track, p.Level, p.SavedLevel == p.Level ? p.SavedState : null);
+
+    /// <summary>Loads (or starts) a player's progress row. A new row begins one past the dailies they had
+    /// already solved under the old one-a-day rules, so nobody starts over.</summary>
+    private async Task<PuzzleProgressRecord> GetOrCreateProgressAsync(Guid userId, string game, string track)
+    {
+        var row = _db.PuzzleProgress.Local.FirstOrDefault(p => p.UserId == userId && p.Game == game && p.Track == track)
+            ?? await _db.PuzzleProgress.FirstOrDefaultAsync(p => p.UserId == userId && p.Game == game && p.Track == track);
+        if (row is not null) return row;
+        string dailyMode = track == "level-fa" ? "daily-fa" : "daily";
+        int solved = await _db.PuzzleResults
+            .Where(r => r.UserId == userId && r.Game == game && r.Mode == dailyMode && r.Solved && r.PuzzleNumber != null)
+            .Select(r => r.PuzzleNumber).Distinct().CountAsync();
+        row = new PuzzleProgressRecord { UserId = userId, Game = game, Track = track, Level = Progression.StartingLevel(solved) };
+        _db.PuzzleProgress.Add(row);
+        return row;
     }
 
     /// <summary>This week's best score per player in your division for an endless game (Merge, Stack, Blocks…).</summary>

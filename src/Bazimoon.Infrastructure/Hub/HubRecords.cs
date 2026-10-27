@@ -51,3 +51,20 @@ public sealed class PuzzleResultRecord
     public int Points { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }
+
+/// <summary>How far a player has got through a level-based puzzle (Zip, Queens, Sudoku, Word, Ladder),
+/// and the board they left half-finished. One row per player, game and track.</summary>
+public sealed class PuzzleProgressRecord
+{
+    public Guid UserId { get; set; }
+    public string Game { get; set; } = string.Empty;
+    /// <summary>"level", or "level-fa" for the Persian Word and Ladder levels.</summary>
+    public string Track { get; set; } = "level";
+    /// <summary>The highest unlocked level: the next one to play. Every level below it is finished.</summary>
+    public int Level { get; set; } = 1;
+    /// <summary>The level the saved board belongs to.</summary>
+    public int? SavedLevel { get; set; }
+    /// <summary>The half-finished board as the app's own JSON; null when there is none.</summary>
+    public string? SavedState { get; set; }
+    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+}

@@ -46,6 +46,12 @@ function randomPath(size: number, rng: Rng) {
   return path;
 }
 
+/** Board size for a level: small boards to learn on, then bigger ones, with every tenth level a step up. */
+export function zipLevelSize(level: number) {
+  const base = level <= 3 ? 5 : level <= 15 ? 6 : level <= 40 ? 7 : 8;
+  return level % 10 === 0 ? Math.min(8, base + 1) : base;
+}
+
 export function generateZip(size: number, seedKey: string): ZipPuzzle {
   const rng = seeded(seedKey);
   const solution = randomPath(size, rng);
