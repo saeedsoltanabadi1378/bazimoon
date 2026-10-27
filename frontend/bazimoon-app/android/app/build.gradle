@@ -1,5 +1,11 @@
 apply plugin: 'com.android.application'
 
+def releaseSigningFile = rootProject.file('../../../secrets/android-release.properties')
+def releaseSigning = new Properties()
+if (releaseSigningFile.exists()) {
+    releaseSigningFile.withInputStream { releaseSigning.load(it) }
+}
+
 android {
     namespace = "com.bazimoon.app"
     compileSdk = rootProject.ext.compileSdkVersion
@@ -16,8 +22,21 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    signingConfigs {
+        release {
+            if (releaseSigningFile.exists()) {
+                storeFile rootProject.file('../../../secrets/bazimoon-release.jks')
+                storePassword releaseSigning['storePassword']
+                keyAlias releaseSigning['keyAlias']
+                keyPassword releaseSigning['keyPassword']
+            }
+        }
+    }
     buildTypes {
         release {
+            if (releaseSigningFile.exists()) {
+                signingConfig signingConfigs.release
+            }
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }

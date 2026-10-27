@@ -9,6 +9,7 @@ dist/
 
 # Env
 .env
+secrets/
 
 # OS / editor
 .vs/
