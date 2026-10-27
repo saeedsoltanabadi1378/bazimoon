@@ -18,7 +18,6 @@ Bazimoon is a free online game hub in English and Persian. It offers daily logic
 - مافیا آنلاین: https://bazimoon.com/fa/mafia/
 - بازی جاسوس: https://bazimoon.com/fa/spy/
 - کوییز زوج‌ها: https://bazimoon.com/fa/couple-quiz/
-- تخته‌نرد: https://bazimoon.com/fa/backgammon/
 - دوز: https://bazimoon.com/fa/tic-tac-toe/
 - بازی حافظه: https://bazimoon.com/fa/memory/
 - بازی مار: https://bazimoon.com/fa/snake/
@@ -29,7 +28,6 @@ Bazimoon is a free online game hub in English and Persian. It offers daily logic
 - Daily Word: https://bazimoon.com/en/daily-word/
 - Mafia: https://bazimoon.com/en/mafia/
 - Esm-Famil: https://bazimoon.com/en/esm-famil/
-- Backgammon: https://bazimoon.com/en/backgammon/
 
 ## Language support
 

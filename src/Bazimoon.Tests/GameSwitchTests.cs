@@ -42,10 +42,10 @@ public class GameSwitchTests : IClassFixture<BazimoonApiFactory>, IAsyncLifetime
         Assert.Empty((await player.GetFromJsonAsync<AppConfigDto>("/api/hub/config"))!.DisabledGames);
 
         Assert.Equal(HttpStatusCode.BadRequest, (await SaveDisabledAsync(admin, "chess")).StatusCode);
-        (await SaveDisabledAsync(admin, "mafia", "nard")).EnsureSuccessStatusCode();
+        (await SaveDisabledAsync(admin, "mafia", "memory")).EnsureSuccessStatusCode();
 
         var config = await player.GetFromJsonAsync<AppConfigDto>("/api/hub/config");
-        Assert.Equal(["mafia", "nard"], config!.DisabledGames.Order().ToArray());
+        Assert.Equal(["mafia", "memory"], config!.DisabledGames.Order().ToArray());
 
         // No new tables while Mafia is off.
         var refused = await player.PostAsync("/api/games", null);
@@ -53,7 +53,7 @@ public class GameSwitchTests : IClassFixture<BazimoonApiFactory>, IAsyncLifetime
         Assert.Contains("switched off", await refused.Content.ReadAsStringAsync());
 
         // A switched-off solo game can still be finished and recorded.
-        (await player.PostAsJsonAsync("/api/puzzles/results", new PuzzleSubmitRequest("nard", "classic", null, true, null, null, null, 1, 0))).EnsureSuccessStatusCode();
+        (await player.PostAsJsonAsync("/api/puzzles/results", new PuzzleSubmitRequest("memory", "4x4", null, true, null, null, null, 1, 0))).EnsureSuccessStatusCode();
 
         (await SaveDisabledAsync(admin)).EnsureSuccessStatusCode();
         (await player.PostAsync("/api/games", null)).EnsureSuccessStatusCode();

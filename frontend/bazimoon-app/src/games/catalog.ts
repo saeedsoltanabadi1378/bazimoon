@@ -3,10 +3,10 @@ import type { IconName } from "../ui/Icon";
 import type { TranslationKey } from "../i18n/LanguageContext";
 
 export type GameCategory = "Puzzles" | "Words" | "Party" | "Couples" | "Classics" | "Arcade";
-export type GameTag = "Daily" | "Endless" | "New" | "vsBot" | "Soon";
+export type GameTag = "Daily" | "Endless" | "New" | "vsBot";
 
 export interface CatalogEntry {
-  key: GameKey | "couple" | "hokm" | "mafiaBots" | "liar";
+  key: GameKey | "couple";
   name: TranslationKey;
   sub: TranslationKey;
   category: GameCategory;
@@ -16,7 +16,6 @@ export interface CatalogEntry {
   fg: string;
   /** Accent used on the game's intro/result screens. */
   accent: string;
-  soon?: boolean;
 }
 
 export const catalog: CatalogEntry[] = [
@@ -24,12 +23,8 @@ export const catalog: CatalogEntry[] = [
   { key: "merge", name: "gameMerge", sub: "subMerge", category: "Puzzles", tag: "Endless", icon: "merge", bg: "#2A2650", fg: "#9C8CFF", accent: "#9C8CFF" },
   { key: "mines", name: "gameMines", sub: "subMines", category: "Puzzles", tag: "Endless", icon: "mine", bg: "#2A1A1A", fg: "#F08A7A", accent: "#F08A7A" },
   { key: "memory", name: "gameMemory", sub: "subMemory", category: "Arcade", tag: "New", icon: "memory", bg: "#1B2A44", fg: "#8FA8FF", accent: "#8FA8FF" },
-  { key: "nard", name: "gameNard", sub: "subNard", category: "Classics", tag: "vsBot", icon: "nard", bg: "#3A2A16", fg: "#F0A83A", accent: "#F0A83A" },
   { key: "sudoku", name: "gameSudoku", sub: "subSudoku", category: "Puzzles", tag: "New", icon: "grid", bg: "#12304A", fg: "#7CC4FA", accent: "#7CC4FA" },
   { key: "queens", name: "gameQueens", sub: "subQueens", category: "Puzzles", tag: "Daily", icon: "godfather", bg: "#2E2340", fg: "#B79CF2", accent: "#B79CF2" },
-  { key: "hokm", name: "gameHokm", sub: "subHokm", category: "Classics", tag: "Soon", icon: "cards", bg: "#3A1C1A", fg: "#F08A7A", accent: "#F08A7A", soon: true },
-  { key: "mafiaBots", name: "gameMafiaBots", sub: "subMafiaBots", category: "Classics", tag: "Soon", icon: "moon", bg: "#1E2138", fg: "#9C8CFF", accent: "#9C8CFF", soon: true },
-  { key: "liar", name: "gameLiar", sub: "subLiar", category: "Puzzles", tag: "Soon", icon: "detective", bg: "#1B2A44", fg: "#8FA8FF", accent: "#8FA8FF", soon: true },
   { key: "word", name: "gameWord", sub: "subWord", category: "Words", tag: "Daily", icon: "word", bg: "#14241A", fg: "#9ED98C", accent: "#9ED98C" },
   { key: "ladder", name: "gameLadder", sub: "subLadder", category: "Words", tag: "Daily", icon: "ladder", bg: "#3A2A16", fg: "#F0A83A", accent: "#F0A83A" },
   { key: "stack", name: "gameStack", sub: "subStack", category: "Arcade", tag: "Endless", icon: "stack", bg: "#13302C", fg: "#5FD0BE", accent: "#5FD0BE" },
@@ -46,7 +41,6 @@ export const tagColors: Record<GameTag, [string, string]> = {
   Endless: ["#2A2650", "#C3B9FF"],
   New: ["#3A2A16", "#F0A83A"],
   vsBot: ["#3A2A16", "#F0A83A"],
-  Soon: ["#1E2138", "#9A9CB8"],
 };
 
 export function entryFor(key: string) {

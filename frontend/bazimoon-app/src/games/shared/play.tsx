@@ -81,7 +81,7 @@ export function PlayHeader({ title, sub, clockMs, right, onBack, backLabel }: {
   onBack: () => void;
   backLabel: string;
 }) {
-  const { language } = useLanguage();
+  const { language, t } = useLanguage();
   return (
     <div className="row row--between">
       <IconButton icon="back" label={backLabel} onClick={onBack} />
@@ -90,7 +90,7 @@ export function PlayHeader({ title, sub, clockMs, right, onBack, backLabel }: {
         {sub && <div className="tiny muted">{sub}</div>}
       </div>
       {right ?? (
-        <div className="num" style={{ minWidth: 44, padding: "8px 10px", borderRadius: 12, background: "var(--surface)", fontWeight: 600, textAlign: "center" }} aria-label="timer">
+        <div className="num" style={{ minWidth: 44, padding: "8px 10px", borderRadius: 12, background: "var(--surface)", fontWeight: 600, textAlign: "center" }} aria-label={t("statTime")}>
           {clockMs === undefined ? "" : formatClock(clockMs, language)}
         </div>
       )}

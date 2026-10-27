@@ -4,7 +4,6 @@ import { ZipPlay } from "./zip/ZipPlay";
 import { MergeIntro, MergePlay, MergeResult } from "./merge/MergeScreens";
 import { MemoryIntro, MemoryPlay, MemoryResult } from "./memory/MemoryScreens";
 import { MinesIntro, MinesPlay, MinesResult } from "./mines/MinesScreens";
-import { NardIntro, NardPlay, NardResult } from "./nard/NardScreens";
 import { LadderIntro, LadderPlay, LadderResult } from "./ladder/LadderScreens";
 import { StackIntro, StackPlay, StackResult } from "./stack/StackScreens";
 import { BlocksIntro, BlocksPlay, BlocksResult } from "./blocks/BlocksScreens";
@@ -59,10 +58,6 @@ export function GameRoute({ route }: GameRouteProps) {
       if (route.screen === "play") return <MemoryPlay key={JSON.stringify(p)} mode={str(p?.mode, "4x4") as "4x4" | "4x5" | "6x6" | "timed"} />;
       if (route.screen === "result") return <MemoryResult params={p} />;
       return <MemoryIntro />;
-    case "nard":
-      if (route.screen === "play") return <NardPlay key={JSON.stringify(p)} resume={p?.resume === true} />;
-      if (route.screen === "result") return <NardResult params={p} />;
-      return <NardIntro />;
     case "word":
       if (route.screen === "play") return <WordPlay key={JSON.stringify(p)} lang={str(p?.lang, "en") === "fa" ? "fa" : "en"} />;
       if (route.screen === "result") return <WordResult params={p} />;

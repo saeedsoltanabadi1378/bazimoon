@@ -171,7 +171,6 @@ const GAMES: Record<string, [string, string]> = {
   merge: ["Merge 2048", "۲۰۴۸"],
   mines: ["Minesweeper", "مین‌روب"],
   memory: ["Memory", "حافظه"],
-  nard: ["Takhte Nard", "تخته‌نرد"],
   word: ["Daily Word", "کلمه روز"],
   ladder: ["Word Ladder", "نردبان کلمه"],
   stack: ["Stack Tower", "برج‌سازی"],

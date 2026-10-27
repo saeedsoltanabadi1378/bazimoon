@@ -29,7 +29,7 @@ public sealed class AppSettingsRecord
 public static class AppSettingsDefaults
 {
     /// <summary>Every game an admin can switch on or off.</summary>
-    public static readonly string[] Games = ["mafia", "couple", "zip", "queens", "sudoku", "word", "ladder", "mines", "merge", "blocks", "stack", "memory", "nard", "snake", "dooz", "spy", "esmfamil"];
+    public static readonly string[] Games = ["mafia", "couple", "zip", "queens", "sudoku", "word", "ladder", "mines", "merge", "blocks", "stack", "memory", "snake", "dooz", "spy", "esmfamil"];
     public const string MafiaOff = "Mafia is switched off for now. Try again later.";
     public const string MafiaOffFa = "مافیا فعلاً خاموش است. بعداً دوباره امتحان کنید.";
     public const string MaintenanceMessageFa = "نایت‌فال موقتاً برای به‌روزرسانی در دسترس نیست.";

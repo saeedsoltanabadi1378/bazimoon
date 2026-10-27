@@ -4,10 +4,8 @@ import { SessionProvider, useSession } from "./app/session";
 import { NavigationProvider, useNavigation, type GameKey, type Route } from "./app/router";
 import { LoadingScreen, StateScreen } from "./app/StateScreen";
 import { HomeScreen } from "./hub/HomeScreen";
-import { WelcomeScreen, WELCOMED_KEY } from "./hub/WelcomeScreen";
 import { HubDataProvider } from "./hub/HubData";
 import { initAppShell } from "./lib/platform";
-import { readLocal } from "./lib/storage";
 import { readDeepLink } from "./lib/links";
 import { GoogleButton } from "./ui/GoogleButton";
 import { UpdatePrompt } from "./app/UpdatePrompt";
@@ -25,10 +23,10 @@ const RecapScreen = lazy(() => import("./mafia/RecapScreen").then((m) => ({ defa
 const GameRoute = lazy(() => import("./games/GameRoute").then((m) => ({ default: m.GameRoute })));
 const CoupleRoute = lazy(() => import("./couple/CoupleRoute").then((m) => ({ default: m.CoupleRoute })));
 
-const gameKeys: GameKey[] = ["zip", "queens", "merge", "mines", "memory", "nard", "word", "ladder", "stack", "blocks", "sudoku", "snake", "dooz", "spy", "esmfamil"];
+const gameKeys: GameKey[] = ["zip", "queens", "merge", "mines", "memory", "word", "ladder", "stack", "blocks", "sudoku", "snake", "dooz", "spy", "esmfamil"];
 const isGameKey = (key: string): key is GameKey => (gameKeys as string[]).includes(key);
 
-/** Where the app opens: an invite or game link (/t/CODE, /g/ID, /couple/TOKEN, /ef/CODE, /play/GAME), first-launch welcome, or home. */
+/** Where the app opens: an invite or game link (/t/CODE, /g/ID, /couple/TOKEN, /ef/CODE, /play/GAME), or home. */
 function initialRoutes(): Route[] {
   const link = readDeepLink();
   // The link has been read; keep the address bar on the app root so reloads open Home.
@@ -50,15 +48,12 @@ function initialRoutes(): Route[] {
       if (isGameKey(link.game)) return [{ name: "home" }, { name: "game", game: link.game, screen: "intro" }];
       break;
   }
-  if (!readLocal<boolean>(WELCOMED_KEY, false)) return [{ name: "welcome" }];
   return [{ name: "home" }];
 }
 
 function CurrentScreen() {
   const { route } = useNavigation();
   switch (route.name) {
-    case "welcome":
-      return <WelcomeScreen />;
     case "home":
       return <HomeScreen />;
     case "solo":

@@ -32,7 +32,7 @@ public sealed class PuzzleResultRecord
 {
     public long Id { get; set; }
     public Guid UserId { get; set; }
-    /// <summary>Game key: zip, queens, merge, mines, memory, nard, word, ladder, stack, blocks.</summary>
+    /// <summary>Game key such as zip, queens, merge, mines, memory, word, ladder, stack or blocks.</summary>
     public string Game { get; set; } = string.Empty;
     /// <summary>daily, practice, archive, classic, endless, timed, easy/medium/hard, ...</summary>
     public string Mode { get; set; } = string.Empty;

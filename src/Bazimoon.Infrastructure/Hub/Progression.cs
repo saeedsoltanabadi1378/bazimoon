@@ -31,7 +31,7 @@ public static class Progression
         ["esmfamil"] = new DateOnly(2026, 10, 15),
     };
 
-    public static readonly IReadOnlySet<string> Games = new HashSet<string> { "zip", "queens", "merge", "mines", "memory", "nard", "word", "ladder", "stack", "blocks", "sudoku", "snake", "dooz", "esmfamil" };
+    public static readonly IReadOnlySet<string> Games = new HashSet<string> { "zip", "queens", "merge", "mines", "memory", "word", "ladder", "stack", "blocks", "sudoku", "snake", "dooz", "esmfamil" };
     /// <summary>Daily puzzles that count toward the shared puzzle streak.</summary>
     public static readonly IReadOnlySet<string> StreakGames = new HashSet<string> { "zip", "queens", "word", "ladder", "sudoku" };
 
@@ -129,7 +129,7 @@ public static class Progression
     /// <summary>XP for a finished solo game, following the rewards each game's intro/result screen states.</summary>
     public static int SoloXp(PuzzleOutcome o, int puzzleStreak, bool newBest)
     {
-        bool daily = o.Mode == "daily";
+        bool daily = o.Mode == "daily" || o.Mode.StartsWith("daily-", StringComparison.Ordinal);
         switch (o.Game)
         {
             case "zip":
@@ -153,8 +153,6 @@ public static class Progression
                 return o.Solved ? (o.Mode switch { "hard" => 40, "medium" => 30, _ => 20 }) : 5;
             case "memory":
                 return (o.Detail ?? 0) switch { 3 => 30, 2 => 20, 1 => 10, _ => 5 };
-            case "nard":
-                return o.Solved ? ((o.Detail ?? 1) >= 2 ? 70 : 50) : 10;
             case "merge":
                 return Math.Min(150, (o.Score ?? 0) / 50);
             case "stack":
@@ -181,7 +179,7 @@ public static class Progression
     /// <summary>Puzzle-league points: daily solves score by speed; everything else earns its XP as points.</summary>
     public static int LeaguePoints(PuzzleOutcome o, int xp)
     {
-        if (o.Mode == "daily" && o.Solved && o.TimeMs is { } ms)
+        if ((o.Mode == "daily" || o.Mode.StartsWith("daily-", StringComparison.Ordinal)) && o.Solved && o.TimeMs is { } ms)
             return Math.Max(50, 300 - ms / 1000) - 10 * o.Hints;
         return xp;
     }

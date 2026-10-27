@@ -57,7 +57,6 @@ const paths = {
   mine: <path d="M12 7a5 5 0 1 0 0 10 5 5 0 0 0 0-10zM12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2" />,
   flag: <path d="M5 21V4M5 4h11l-2 4 2 4H5" />,
   memory: <path d="M4 5h7v14H4zM13 5h7v14h-7z" />,
-  nard: <path d="M3 4h18v16H3zM12 4v16M6 4l1.5 6L9 4M15 4l1.5 6L18 4M6 20l1.5-6L9 20M15 20l1.5-6L18 20" />,
   cards: <path d="M6 3h12v18H6zM12 8c-2 2-3 3-3 4.5a3 3 0 0 0 6 0C15 11 14 10 12 8z" />,
   word: <path d="M4 5h4v4H4zM10 5h4v4h-4zM16 5h4v4h-4zM4 11h4v4H4zM10 11h4v4h-4zM16 11h4v4h-4z" />,
   ladder: <path d="M7 3v18M17 3v18M7 7h10M7 12h10M7 17h10" />,

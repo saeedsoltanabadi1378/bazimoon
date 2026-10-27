@@ -16,8 +16,8 @@ import { dailyLadder, endlessLadder, endlessShape, letterDiff, loadLadderDiction
 const ACCENT = "#F0A83A";
 const INK = "#1A1206";
 const CHANGED = "#5A4120";
-const ENDLESS_LEVEL_KEY = "bazimoon-ladder-endless-level";
-const ENDLESS_KEY = "bazimoon-ladder-endless";
+const endlessLevelKey = (language: "en" | "fa") => `bazimoon-ladder-${language}-endless-level`;
+const endlessKey = (language: "en" | "fa") => `bazimoon-ladder-${language}-endless`;
 
 type LadderMode = "daily" | "endless";
 
@@ -31,18 +31,19 @@ interface Saved {
   result?: ResultParams;
 }
 
-const dailyKey = (number: number) => `bazimoon-ladder-daily-${number}`;
+const dailyKey = (number: number, language: "en" | "fa") => `bazimoon-ladder-${language}-daily-${number}`;
 
-function dailyStatus(number: number) {
-  const saved = readLocal<Saved | null>(dailyKey(number), null);
+function dailyStatus(number: number, language: "en" | "fa") {
+  const saved = readLocal<Saved | null>(dailyKey(number, language), null);
   if (!saved) return null;
   return saved.result ? "done" : saved.chain.length > 1 ? "playing" : null;
 }
 
 /** Small letter rows used in the intro hero and the result paths. */
 function MiniRungs({ words, end, size = 24, hidden = false }: { words: string[]; end: string; size?: number; hidden?: boolean }) {
+  const { language } = useLanguage();
   return (
-    <div className="stack" style={{ gap: 4 }} dir="ltr">
+    <div className="stack" style={{ gap: 4 }} dir={language === "fa" ? "rtl" : "ltr"}>
       {words.map((w, i) => {
         const prev = words[i - 1];
         const edge = i === 0 || w === end;
@@ -64,14 +65,14 @@ function MiniRungs({ words, end, size = 24, hidden = false }: { words: string[];
 }
 
 export function LadderIntro() {
-  const { t, n } = useLanguage();
+  const { t, n, language } = useLanguage();
   const { push } = useNavigation();
   const { api } = useHub();
   const stats = useLoad(() => api.stats("ladder"), [api]).data;
   const number = dailyNumber("ladder", puzzleToday());
-  const today = dailyLadder(number);
-  const status = dailyStatus(number);
-  const level = readLocal<number>(ENDLESS_LEVEL_KEY, 1);
+  const today = dailyLadder(number, language);
+  const status = dailyStatus(number, language);
+  const level = readLocal<number>(endlessLevelKey(language), 1);
   const byDetail = stats?.solvedByDetail ?? {};
   const atOrUnder = Object.entries(byDetail).reduce((sum, [k, v]) => (Number(k) <= 0 ? sum + v : sum), 0);
   const under = Object.entries(byDetail).reduce((sum, [k, v]) => (Number(k) < 0 ? sum + v : sum), 0);
@@ -100,7 +101,6 @@ export function LadderIntro() {
           play: level > 1 ? t("ladderContinueLevel", { level }) : t("ladderStartEndless"),
           onPlay: () => push({ name: "game", game: "ladder", screen: "play", params: { mode: "endless" } }),
         },
-        { key: "fa", label: <span style={{ fontFamily: "Vazirmatn, sans-serif" }}>فارسی</span>, desc: t("ladderFaDesc"), play: t("comingSoon"), disabled: true, onPlay: () => undefined },
       ]}
       stats={[
         { value: stats ? n(stats.played) : "—", label: t("statPlayed") },
@@ -120,18 +120,18 @@ export function LadderIntro() {
 }
 
 export function LadderPlay({ mode }: { mode: LadderMode }) {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const { back, replace } = useNavigation();
   const finish = useFinish("ladder");
   useTrackStarted("ladder");
   const number = dailyNumber("ladder", puzzleToday());
   const daily = mode === "daily";
-  const level = daily ? 0 : readLocal<number>(ENDLESS_LEVEL_KEY, 1);
-  const length = daily ? 4 : endlessShape(level).length;
+  const level = daily ? 0 : readLocal<number>(endlessLevelKey(language), 1);
+  const length = daily ? 4 : endlessShape(level, language).length;
   const [dict, setDict] = useState<Set<string> | null>(null);
-  const [saved, setSaved, clear] = useSavedState<Saved | null>(daily ? dailyKey(number) : ENDLESS_KEY, () => {
+  const [saved, setSaved, clear] = useSavedState<Saved | null>(daily ? dailyKey(number, language) : endlessKey(language), () => {
     if (!daily) return null;
-    const ladder = dailyLadder(number);
+    const ladder = dailyLadder(number, language);
     return { ladder, level: 0, chain: [ladder.start], hints: 0, elapsedMs: 0 };
   });
   // An endless save from another level is stale; start a fresh ladder for the current one.
@@ -139,11 +139,11 @@ export function LadderPlay({ mode }: { mode: LadderMode }) {
 
   useEffect(() => {
     let alive = true;
-    void loadLadderDictionary(length).then((d) => {
+    void loadLadderDictionary(length, language).then((d) => {
       if (!alive) return;
       setDict(d);
       if (!daily && !current) {
-        const ladder = endlessLadder(level, d);
+        const ladder = endlessLadder(level, d, Date.now(), language);
         setSaved({ ladder, level, chain: [ladder.start], hints: 0, elapsedMs: 0 });
       }
     });
@@ -151,7 +151,7 @@ export function LadderPlay({ mode }: { mode: LadderMode }) {
       alive = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [length]);
+  }, [length, language]);
 
   if (!current || !dict) {
     return (
@@ -182,10 +182,10 @@ export function LadderPlay({ mode }: { mode: LadderMode }) {
         if (daily) setSaved({ ...current, chain, hints, elapsedMs, result: params });
         else {
           clear();
-          if (won) writeLocal(ENDLESS_LEVEL_KEY, level + 1);
+          if (won) writeLocal(endlessLevelKey(language), level + 1);
         }
         void finish(
-          { mode, puzzleNumber: daily ? number : null, solved: won, timeMs: Math.round(elapsedMs), moves: steps, detail: won ? steps - current.ladder.par : null, hints },
+          { mode: daily && language === "fa" ? "daily-fa" : mode, puzzleNumber: daily ? number : null, solved: won, timeMs: Math.round(elapsedMs), moves: steps, detail: won ? steps - current.ladder.par : null, hints },
           params,
         );
       }}
@@ -276,7 +276,7 @@ function LadderBoard({ saved, setSaved, dict, mode, number, onBack, onFinish }: 
     const onKey = (e: KeyboardEvent) => {
       if (e.metaKey || e.ctrlKey || e.altKey) return;
       const k = e.key;
-      if (/^[a-zA-Z]$/.test(k)) setLetter(k.toUpperCase());
+      if (language === "fa" ? /^[\u0600-\u06ff]$/.test(k) : /^[a-zA-Z]$/.test(k)) setLetter(language === "fa" ? k : k.toUpperCase());
       else if (k === "Enter") submit();
       else if (k === "ArrowLeft") setSel((s) => Math.max(0, s - 1));
       else if (k === "ArrowRight") setSel((s) => Math.min(wordLen - 1, s + 1));
@@ -297,7 +297,7 @@ function LadderBoard({ saved, setSaved, dict, mode, number, onBack, onFinish }: 
     <Screen theme="night">
       <div style={{ padding: "14px 16px 8px" }}>
         <PlayHeader
-          title={<span dir="ltr">{title}</span>}
+          title={<span dir={language === "fa" ? "rtl" : "ltr"}>{title}</span>}
           sub={sub}
           onBack={onBack}
           backLabel={t("backToGame", { game: t("gameLadder") })}
@@ -323,7 +323,7 @@ function LadderBoard({ saved, setSaved, dict, mode, number, onBack, onFinish }: 
         {chain.map((w, i) => {
           const prev = chain[i - 1];
           return (
-            <div key={`${w}-${i}`} className="row" style={{ gap: 10 }} dir="ltr">
+            <div key={`${w}-${i}`} className="row" style={{ gap: 10 }} dir={language === "fa" ? "rtl" : "ltr"}>
               <span dir={language === "fa" ? "rtl" : "ltr"} style={{ width: 30, fontSize: 12, color: "var(--muted)", textAlign: "right" }}>{i === 0 ? t("ladderStart") : n(i)}</span>
               <div style={{ display: "flex", gap: 6 }}>
                 {w.split("").map((ch, j) => {
@@ -340,7 +340,7 @@ function LadderBoard({ saved, setSaved, dict, mode, number, onBack, onFinish }: 
         })}
 
         {!over && (
-          <div className="row" style={{ gap: 10 }} dir="ltr">
+          <div className="row" style={{ gap: 10 }} dir={language === "fa" ? "rtl" : "ltr"}>
             <span style={{ width: 30, fontSize: 12, color: ACCENT, textAlign: "right" }}>{n(steps + 1)}</span>
             <div style={{ display: "flex", gap: 6 }}>
               {draft.map((ch, i) => {
@@ -369,7 +369,7 @@ function LadderBoard({ saved, setSaved, dict, mode, number, onBack, onFinish }: 
             <div className="stack center" style={{ gap: 4, margin: "2px 0" }} aria-hidden="true">
               {Array.from({ length: gapDots }, (_, i) => <span key={i} style={{ width: 4, height: 8, borderRadius: 999, background: "#2E3252" }} />)}
             </div>
-            <div className="row" style={{ gap: 10 }} dir="ltr">
+            <div className="row" style={{ gap: 10 }} dir={language === "fa" ? "rtl" : "ltr"}>
               <span dir={language === "fa" ? "rtl" : "ltr"} style={{ width: 30, fontSize: 11, color: "var(--muted)", textAlign: "right" }}>{t("ladderGoal")}</span>
               <div style={{ display: "flex", gap: 6 }}>
                 {ladder.end.split("").map((ch, j) => (
@@ -405,8 +405,8 @@ function LadderBoard({ saved, setSaved, dict, mode, number, onBack, onFinish }: 
           <button type="button" onClick={hint} disabled={over} style={actionStyle(false)}>{t("hint")}</button>
           <button type="button" onClick={submit} disabled={over} style={actionStyle(true)}>{t("ladderSubmit")}</button>
         </div>
-        {["QWERTYUIOP", "ASDFGHJKL", "ZXCVBNM"].map((row) => (
-          <div key={row} style={{ display: "flex", gap: 5, justifyContent: "center" }} dir="ltr">
+        {(language === "fa" ? ["ضصثقفغعهخحجچ", "شسیبلاتنمکگ", "ظطزرذدپوژ"] : ["QWERTYUIOP", "ASDFGHJKL", "ZXCVBNM"]).map((row) => (
+          <div key={row} style={{ display: "flex", gap: 5, justifyContent: "center" }} dir={language === "fa" ? "rtl" : "ltr"}>
             {row.split("").map((ch) => (
               <button key={ch} type="button" onClick={() => setLetter(ch)} aria-label={ch} style={{ flex: 1, maxWidth: 34, height: 48, padding: 0, borderRadius: 8, border: 0, background: "#2E3252", color: "#EDEBF5", font: "700 16px var(--font-body)", cursor: "pointer" }}>
                 {ch}
@@ -456,7 +456,7 @@ export function LadderResult({ params }: { params?: ResultParams }) {
   const timeMs = Number(params?.timeMs ?? 0);
   const mine = parseList(params?.path);
   const best = parseList(params?.best);
-  const board = useLoad(() => (mode === "daily" ? api.board("ladder", number) : Promise.resolve(null)), [api, mode, number]).data;
+  const board = useLoad(() => (mode === "daily" ? api.board("ladder", number, language === "fa" ? "daily-fa" : "daily") : Promise.resolve(null)), [api, mode, number, language]).data;
   const streak = xp?.streak ?? 0;
 
   const dist = useMemo(() => {
@@ -503,7 +503,7 @@ export function LadderResult({ params }: { params?: ResultParams }) {
       }}
       onClose={() => replace({ name: "game", game: "ladder", screen: "intro" })}
     >
-      <div className="card" style={{ display: "flex", gap: 12, padding: 14 }} dir="ltr">
+      <div className="card" style={{ display: "flex", gap: 12, padding: 14 }} dir={language === "fa" ? "rtl" : "ltr"}>
         <div className="stack center" style={{ flex: 1, gap: 5 }}>
           <span className="tiny muted">{won ? t("ladderYourPath") : t("ladderYourAttempt")}</span>
           <MiniRungs words={mine} end={end} size={mine[0]?.length >= 6 ? 22 : 26} />

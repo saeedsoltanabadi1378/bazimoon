@@ -75,12 +75,11 @@ export function SoloScreen() {
               <button
                 key={g.key}
                 type="button"
-                disabled={g.soon}
                 onClick={() => open(g.key)}
                 className="stack"
                 style={{
                   gap: 10, padding: 14, borderRadius: 20, background: "var(--surface)", border: "1px solid var(--surface-2)",
-                  color: "var(--text)", textAlign: "start", opacity: g.soon ? 0.6 : 1, cursor: g.soon ? "default" : "pointer",
+                  color: "var(--text)", textAlign: "start", cursor: "pointer",
                 }}
               >
                 <span className="row row--between" style={{ alignItems: "flex-start", width: "100%" }}>

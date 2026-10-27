@@ -456,7 +456,6 @@ export const games: Record<keyof typeof en, string> = {
   ladderRealWords: "هر پله باید یک کلمه واقعی باشد.",
   ladderDailyDesc: "نردبان ۴ حرفی · برای همه یکسان · در رکورد حساب می‌شود",
   ladderEndlessDesc: "نردبان‌های بی‌پایان · ۳ تا ۶ حرف · سختی بیشتر می‌شود",
-  ladderFaDesc: "نردبان‌های فارسی · راست‌به‌چپ · در فصل‌های بعد",
   ladderPlayDaily: "بازی {from} → {to}",
   ladderStartEndless: "شروع بی‌پایان",
   ladderContinueLevel: "ادامه · مرحله {level}",

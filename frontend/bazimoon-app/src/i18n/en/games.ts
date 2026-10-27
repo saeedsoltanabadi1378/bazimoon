@@ -455,7 +455,6 @@ export const games = {
   ladderRealWords: "Every step must be a real word.",
   ladderDailyDesc: "4-letter ladder · same for everyone · counts for streak",
   ladderEndlessDesc: "New ladders forever · 3 to 6 letters · difficulty rises",
-  ladderFaDesc: "Persian ladders · right-to-left · coming in a later season",
   ladderPlayDaily: "Play {from} → {to}",
   ladderStartEndless: "Start endless",
   ladderContinueLevel: "Continue · level {level}",

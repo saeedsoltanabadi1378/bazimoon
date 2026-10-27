@@ -258,27 +258,6 @@ export const games: Game[] = [
     },
   },
   {
-    slug: 'backgammon', bg: '#3A2A16', fg: '#F0A83A', group: 'classics',
-    en: {
-      name: 'Backgammon (Takhte Nard)', line: 'Backgammon against a bot.',
-      h1: 'Backgammon (Takhte Nard) online vs a bot', title: 'Backgammon (Takhte Nard) – play free online | Bazimoon',
-      description: 'Play backgammon, Takhte Nard, free in your browser against a bot at three levels. No download, no sign-up.',
-      intro: 'Takhte Nard is the Persian name for backgammon. Roll the dice, move your checkers around the board and bear them all off before the bot does. Pick easy, medium or hard.',
-      steps: [['Roll the dice', 'Each die is a move for one checker; doubles give four moves.'], ['Move and hit', 'Land on a single enemy checker to send it to the bar.'], ['Bear off', 'Once all your checkers are home, take them off the board. First to clear wins; win before the bot bears off any for a mars.']],
-      features: ['Three bot levels', 'Classic rules', 'Mars (gammon) wins', 'Works offline'],
-      faq: [['Can I play against a friend?', 'For now Takhte Nard is against the bot.'], ['What is a mars?', 'Bearing off all your checkers before the bot bears off any; it counts double.']],
-    },
-    fa: {
-      name: 'تخته‌نرد', line: 'تخته‌نرد در برابر ربات.',
-      h1: 'تخته‌نرد آنلاین با ربات', title: 'تخته‌نرد آنلاین رایگان | بازیمون',
-      description: 'تخته‌نرد را رایگان در مرورگر در برابر ربات با سه سطح سختی بازی کنید. بدون دانلود و بدون ثبت‌نام.',
-      intro: 'تاس بریزید، مهره‌ها را دور صفحه حرکت دهید و پیش از ربات همه را از صفحه بیرون ببرید. آسان، متوسط یا سخت را انتخاب کنید.',
-      steps: [['تاس بریزید', 'هر تاس یک حرکت برای یک مهره است؛ جفت چهار حرکت می‌دهد.'], ['حرکت و زدن', 'روی مهره تک حریف بنشینید تا آن را بزنید.'], ['مهره‌ها را بیرون ببرید', 'وقتی همه مهره‌ها به خانه رسیدند بیرونشان ببرید. اولین کسی که تمام کند می‌برد؛ اگر ربات هیچ مهره‌ای بیرون نبرده باشد، مارس است.']],
-      features: ['سه سطح سختی ربات', 'قانون‌های کلاسیک', 'برد مارس', 'بدون اینترنت هم کار می‌کند'],
-      faq: [['با دوستم می‌توانم بازی کنم؟', 'فعلاً تخته‌نرد در برابر ربات است.'], ['مارس یعنی چه؟', 'وقتی همه مهره‌هایتان را بیرون ببرید پیش از اینکه ربات حتی یکی را بیرون ببرد؛ دو برابر حساب می‌شود.']],
-    },
-  },
-  {
     slug: 'tic-tac-toe', bg: '#1E2138', fg: '#C3B9FF', group: 'classics',
     en: {
       name: 'Tic-tac-toe (Dooz)', line: 'Tic-tac-toe against a bot or a friend.',
@@ -388,7 +367,7 @@ export const games: Game[] = [
 /** The app route each game page opens (see readDeepLink's "play" link). */
 export const appGame: Record<string, string> = {
   zip: 'zip', queens: 'queens', sudoku: 'sudoku', '2048': 'merge', minesweeper: 'mines', 'daily-word': 'word', 'word-ladder': 'ladder',
-  'esm-famil': 'esmfamil', mafia: 'mafia', spy: 'spy', 'couple-quiz': 'couple', backgammon: 'nard', 'tic-tac-toe': 'dooz', memory: 'memory',
+  'esm-famil': 'esmfamil', mafia: 'mafia', spy: 'spy', 'couple-quiz': 'couple', 'tic-tac-toe': 'dooz', memory: 'memory',
   'stack-tower': 'stack', snake: 'snake', blocks: 'blocks',
 }
 
@@ -428,9 +407,9 @@ export const site: Record<Lang, SiteText> = {
   en: {
     brand: 'Bazimoon', open: 'Open Bazimoon', otherLang: 'فارسی', otherLangLong: 'نسخه فارسی',
     title: 'Bazimoon – free online games: daily puzzles, Mafia and word games',
-    description: 'Free games in your browser: Sudoku, Zip, Queens, Daily Word, backgammon, voice Mafia, Esm-Famil and more. In English and Persian, no download.',
+    description: 'Free games in your browser: Sudoku, Zip, Queens, Daily Word, Dooz, voice Mafia, Esm-Famil and more. In English and Persian, no download.',
     h1: 'Free online games: daily puzzles, Mafia and word games',
-    intro: 'Bazimoon is a free collection of games that runs right in your browser: Sudoku and daily puzzles, a daily word game, backgammon, tic-tac-toe, and party games like voice Mafia and Esm-Famil online. No download, no sign-up to start.',
+    intro: 'Bazimoon is a free collection of games that runs right in your browser: Sudoku and daily puzzles, a daily word game, tic-tac-toe, and party games like voice Mafia and Esm-Famil online. No download, no sign-up to start.',
     cta: 'Play now', ctaNote: 'Free · no download · phone and computer',
     groups: { puzzles: 'Daily and logic puzzles', words: 'Word games', party: 'Party games with friends', classics: 'Classics and arcade' },
     whyTitle: 'Why Bazimoon?',
@@ -448,9 +427,9 @@ export const site: Record<Lang, SiteText> = {
   fa: {
     brand: 'بازیمون', open: 'باز کردن بازیمون', otherLang: 'English', otherLangLong: 'English version',
     title: 'بازیمون – بازی آنلاین رایگان: پازل روزانه، مافیا و اسم فامیل',
-    description: 'بازی‌های رایگان در مرورگر: سودوکو، زیپ، ملکه‌ها، کلمه روز، تخته‌نرد، مافیا با صدا، اسم فامیل و بیشتر. کاملاً فارسی، بدون دانلود.',
+    description: 'بازی‌های رایگان در مرورگر: سودوکو، زیپ، ملکه‌ها، کلمه روز، دوز، مافیا با صدا، اسم فامیل و بیشتر. کاملاً فارسی، بدون دانلود.',
     h1: 'بازی آنلاین رایگان: پازل روزانه، مافیا و اسم فامیل',
-    intro: 'بازیمون مجموعه‌ای از بازی‌های فارسی و رایگان است که مستقیم در مرورگر اجرا می‌شود: سودوکو و پازل‌های روزانه، کلمه روز فارسی، تخته‌نرد، دوز، و بازی‌های گروهی مثل مافیا با صدا و اسم فامیل آنلاین. بدون دانلود و بدون ثبت‌نام شروع کنید.',
+    intro: 'بازیمون مجموعه‌ای از بازی‌های فارسی و رایگان است که مستقیم در مرورگر اجرا می‌شود: سودوکو و پازل‌های روزانه، کلمه روز فارسی، دوز، و بازی‌های گروهی مثل مافیا با صدا و اسم فامیل آنلاین. بدون دانلود و بدون ثبت‌نام شروع کنید.',
     cta: 'همین حالا بازی کنید', ctaNote: 'رایگان · بدون دانلود · روی گوشی و کامپیوتر',
     groups: { puzzles: 'پازل‌های روزانه و فکری', words: 'بازی با کلمات', party: 'بازی گروهی با دوستان', classics: 'کلاسیک و آرکید' },
     whyTitle: 'چرا بازیمون؟',

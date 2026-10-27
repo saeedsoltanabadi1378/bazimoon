@@ -51,7 +51,7 @@ const GameContext = createContext<GameContextValue | null>(null);
 
 export function GameProvider({ gameId, children }: { gameId: string; children: ReactNode }) {
   const { api } = useSession();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const [status, setStatus] = useState<GameStatus>("loading");
   const [link, setLink] = useState<LinkState>("connected");
   const [view, setView] = useState<GameView | null>(null);
@@ -155,12 +155,12 @@ export function GameProvider({ gameId, children }: { gameId: string; children: R
       return true;
     } catch (err) {
       haptic.warn();
-      setActionError(err instanceof ApiError && err.status !== 0 ? err.message : err instanceof ApiError ? t("offlineAction") : t("genericError"));
+      setActionError(err instanceof ApiError && err.status === 0 ? t("offlineAction") : err instanceof ApiError && language === "en" ? err.message : t("genericError"));
       return false;
     } finally {
       setBusy(false);
     }
-  }, [refresh, t]);
+  }, [refresh, t, language]);
 
   const value: GameContextValue = {
     apiClient: api,
@@ -202,7 +202,7 @@ export function GameProvider({ gameId, children }: { gameId: string; children: R
         return true;
       } catch (err) {
         haptic.warn();
-        setActionError(err instanceof ApiError && err.status !== 0 ? err.message : t("genericError"));
+        setActionError(err instanceof ApiError && err.status !== 0 && language === "en" ? err.message : t("genericError"));
         return false;
       }
     },

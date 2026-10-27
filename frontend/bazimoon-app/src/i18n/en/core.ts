@@ -46,7 +46,6 @@ export const core = {
   playOfflineGames: "Play offline games",
   playAsGuest: "Play as a guest",
   signInWithGoogle: "Sign in with Google",
-  guestNote: "No sign-up needed. Sign in with Google any time to keep your progress on every device.",
   guestBadge: "Guest",
   guestCardTitle: "Your progress lives on this phone",
   guestCardBody: "Sign in with Google to keep your streak, rating and badges if you change or reset your phone.",

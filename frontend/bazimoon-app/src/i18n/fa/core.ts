@@ -47,7 +47,6 @@ export const core: Record<keyof typeof en, string> = {
   playOfflineGames: "بازی‌های آفلاین",
   playAsGuest: "شروع بازی به‌عنوان مهمان",
   signInWithGoogle: "ورود با گوگل",
-  guestNote: "بدون ثبت‌نام بازی کن. هر وقت خواستی با گوگل وارد شو تا پیشرفتت روی همه دستگاه‌ها بماند.",
   guestBadge: "مهمان",
   guestCardTitle: "پیشرفتت فقط روی همین گوشی است",
   guestCardBody: "با گوگل وارد شو تا اگر گوشی‌ات را عوض یا ریست کردی، رکورد، امتیاز و نشان‌هایت بماند.",

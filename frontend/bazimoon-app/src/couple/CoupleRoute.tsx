@@ -191,7 +191,7 @@ function CoupleInvite({ state, onChange }: { state: CoupleState; onChange: () =>
 
 /** Opened from a partner's couple_<token> link: show who invited you and let you join. */
 function CoupleJoin({ token }: { token: string }) {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const { reset, replace } = useNavigation();
   const { profile } = useHub();
   const capi = useCoupleApi();
@@ -215,7 +215,7 @@ function CoupleJoin({ token }: { token: string }) {
       haptic.success();
       replace({ name: "couple", screen: "home" });
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : t("coupleSomethingWrong"));
+      setError(err instanceof ApiError && language === "en" ? err.message : t("coupleSomethingWrong"));
     } finally {
       setBusy(false);
     }
@@ -464,6 +464,7 @@ function QuizBoard({ number, setId, language, partner, me, onBack, onDone, submi
   t: ReturnType<typeof useLanguage>["t"];
   fmt: ReturnType<typeof useLanguage>["n"];
 }) {
+  const { language: uiLanguage } = useLanguage();
   const set = questionSet(setId, language);
   const [draft, setDraftState] = useState<QuizDraft>(() => readLocal<QuizDraft>(quizKey(number), { step: 0, answers: [null, null, null, null, null, null], review: false }));
   const [busy, setBusy] = useState(false);
@@ -493,7 +494,7 @@ function QuizBoard({ number, setId, language, partner, me, onBack, onDone, submi
       haptic.success();
       onDone(number);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : t("coupleSomethingWrong"));
+      setError(err instanceof ApiError && uiLanguage === "en" ? err.message : t("coupleSomethingWrong"));
     } finally {
       setBusy(false);
     }
@@ -603,7 +604,7 @@ function CoupleReveal({ number }: { number?: number }) {
 }
 
 function CoupleRevealView({ number }: { number: number }) {
-  const { t, n } = useLanguage();
+  const { t, n, language: uiLanguage } = useLanguage();
   const { back } = useNavigation();
   const { profile } = useHub();
   const capi = useCoupleApi();
@@ -636,7 +637,7 @@ function CoupleRevealView({ number }: { number: number }) {
       haptic.success();
       setNudged(true);
     } catch (err) {
-      setToast(err instanceof ApiError ? err.message : t("coupleSomethingWrong"));
+      setToast(err instanceof ApiError && uiLanguage === "en" ? err.message : t("coupleSomethingWrong"));
     }
   }
 
