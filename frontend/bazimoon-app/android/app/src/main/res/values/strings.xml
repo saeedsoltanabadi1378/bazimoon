@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Bazimoon</string>
+    <string name="title_activity_main">Bazimoon</string>
+    <string name="package_name">com.bazimoon.app</string>
+    <string name="custom_url_scheme">com.bazimoon.app</string>
+</resources>

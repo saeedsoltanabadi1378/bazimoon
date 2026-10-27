@@ -15,7 +15,7 @@ public sealed class UserRecord
     /// <summary>The admin who marked it, when <see cref="BotReason"/> is "admin".</summary>
     public string? BotMarkedBy { get; set; }
     public string DisplayName { get; set; } = string.Empty;
-    public string Language { get; set; } = "en";
+    public string Language { get; set; } = "fa";
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime LastSeenAt { get; set; } = DateTime.UtcNow;
 }

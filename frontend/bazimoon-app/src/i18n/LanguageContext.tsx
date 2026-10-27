@@ -1,5 +1,4 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
-import { deviceLanguage } from "../lib/platform";
 import { readLocal, writeLocal } from "../lib/storage";
 import { en } from "./en";
 import { fa } from "./fa";
@@ -13,6 +12,8 @@ const STORAGE_KEY = "bazimoon-language";
 
 interface LanguageContextValue {
   language: Language;
+  /** A URL language wins for this visit, including over a saved profile preference. */
+  fromUrl: boolean;
   /** True once the person has picked a language (or we've remembered one). */
   chosen: boolean;
   setLanguage(language: Language): void;
@@ -23,17 +24,18 @@ interface LanguageContextValue {
 
 const LanguageContext = createContext<LanguageContextValue | null>(null);
 
-function detect(): Language {
+function languageFromUrl(): Language | null {
   // Links from the search pages say which language the visitor was reading (?lang=fa).
   const fromLink = new URLSearchParams(window.location.search).get("lang");
   if (fromLink === "fa" || fromLink === "en") return fromLink;
-  return deviceLanguage();
+  return null;
 }
 
 export function LanguageProvider({ children }: { children: ReactNode }) {
+  const fromLink = languageFromUrl();
   const remembered = readLocal<Language | null>(STORAGE_KEY, null);
-  const [language, setLanguageState] = useState<Language>(remembered ?? detect());
-  const [chosen, setChosen] = useState(remembered !== null);
+  const [language, setLanguageState] = useState<Language>(fromLink ?? remembered ?? "fa");
+  const [chosen, setChosen] = useState(fromLink !== null || remembered !== null);
 
   useEffect(() => {
     document.documentElement.lang = language;
@@ -45,6 +47,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     const n = (v: number, options?: Intl.NumberFormatOptions) => v.toLocaleString(locale, options);
     return {
       language,
+      fromUrl: fromLink !== null,
       chosen,
       setLanguage(next) {
         writeLocal(STORAGE_KEY, next);
@@ -62,7 +65,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
         });
       },
     };
-  }, [language, chosen]);
+  }, [language, chosen, fromLink]);
 
   return <LanguageContext.Provider value={value}>{children}</LanguageContext.Provider>;
 }

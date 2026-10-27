@@ -12,7 +12,8 @@ public static class PlayerStatsExtensions
             ?? await db.PlayerStats.FirstOrDefaultAsync(s => s.UserId == userId, ct);
         if (stats is null)
         {
-            stats = new PlayerStatsRecord { UserId = userId, Username = username ?? string.Empty };
+            var language = await db.Users.Where(u => u.Id == userId).Select(u => u.Language).FirstOrDefaultAsync(ct) ?? "fa";
+            stats = new PlayerStatsRecord { UserId = userId, Username = username ?? string.Empty, Language = language };
             db.PlayerStats.Add(stats);
         }
         else if (!string.IsNullOrWhiteSpace(username))

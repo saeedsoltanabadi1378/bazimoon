@@ -150,7 +150,7 @@ public sealed class CoupleService
         couple.PartnerId = userId;
         couple.AcceptedAt = Now;
         couple.StartDay = Today;
-        couple.Language = (await _db.PlayerStats.FindAsync(couple.InviterId))?.Language ?? "en";
+        couple.Language = (await _db.PlayerStats.FindAsync(couple.InviterId))?.Language ?? "fa";
         _activity.Track(userId, ActivityEvents.Couple, ActivityEvents.CoupleInviteAccepted);
         await _db.SaveChangesAsync();
         await _notifier.NotifyAsync(couple.InviterId, new PushText(

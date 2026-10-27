@@ -34,11 +34,6 @@ export function isStandalone() {
   return window.matchMedia?.("(display-mode: standalone)").matches || (navigator as { standalone?: boolean }).standalone === true;
 }
 
-/** The player's device language, used for a new guest. */
-export function deviceLanguage(): "en" | "fa" {
-  return (navigator.language || "").toLowerCase().startsWith("fa") ? "fa" : "en";
-}
-
 export type ShareOutcome = "shared" | "copied" | "failed";
 
 /** Opens the system share sheet with a link and message, or copies the link where sharing isn't available. */

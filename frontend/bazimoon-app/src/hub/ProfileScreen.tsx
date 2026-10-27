@@ -18,7 +18,7 @@ import { useInstallMode } from "../lib/install";
 
 
 export function ProfileScreen() {
-  const { t, n, language, setLanguage } = useLanguage();
+  const { t, n, language } = useLanguage();
   const session = useSession();
   const { profile, saveSettings } = useHub();
   const { push } = useNavigation();
@@ -135,7 +135,7 @@ export function ProfileScreen() {
         </section>
 
         <section className="list">
-          <SettingRow first label={t("languageSetting")} value={t("language")} onClick={() => setLanguage(language === "en" ? "fa" : "en")} />
+          <SettingRow first label={t("languageSetting")} value={t("language")} onClick={() => void saveSettings({ language: language === "en" ? "fa" : "en" })} />
           <SettingRow
             label={t("dailyReminder")}
             value={s.reminderEnabled ? s.reminderTime : t("off")}

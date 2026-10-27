@@ -43,7 +43,7 @@ public sealed class UserAccountService
         {
             IsGuest = false,
             DisplayName = CleanName(displayName),
-            Language = language is { } code && code.StartsWith("fa", StringComparison.OrdinalIgnoreCase) ? "fa" : "en",
+            Language = language is { } code && code.StartsWith("en", StringComparison.OrdinalIgnoreCase) ? "en" : "fa",
             CreatedAt = now,
             LastSeenAt = now,
         };
@@ -68,7 +68,7 @@ public sealed class UserAccountService
             DisplayName = string.IsNullOrWhiteSpace(displayName)
                 ? $"Player {System.Security.Cryptography.RandomNumberGenerator.GetInt32(1000, 10000)}"
                 : CleanName(displayName),
-            Language = language is { } code && code.StartsWith("fa", StringComparison.OrdinalIgnoreCase) ? "fa" : "en",
+            Language = language is { } code && code.StartsWith("en", StringComparison.OrdinalIgnoreCase) ? "en" : "fa",
             CreatedAt = now,
             LastSeenAt = now,
             IsBot = crawler,

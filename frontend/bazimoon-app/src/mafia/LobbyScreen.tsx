@@ -13,7 +13,7 @@ import { InviteBox } from "./InviteBox";
 
 export function LobbyScreen() {
   const { view, busy, joinGame, leaveGame, startGame, setReady } = useGame();
-  const { t, n, language, setLanguage } = useLanguage();
+  const { t, n } = useLanguage();
   const startsIn = useSecondsLeft(view?.autoStartAt);
   const { back } = useNavigation();
   const roleName = useRoleName();
@@ -58,9 +58,6 @@ export function LobbyScreen() {
           </div>
           <div className="display" style={{ fontSize: 22 }}>Bazimoon</div>
         </div>
-        <button type="button" className="btn btn--outline btn--pill" style={{ fontSize: 13, padding: "0 14px" }} onClick={() => setLanguage(language === "en" ? "fa" : "en")}>
-          {t("otherLanguage")}
-        </button>
       </header>
 
       <Body>

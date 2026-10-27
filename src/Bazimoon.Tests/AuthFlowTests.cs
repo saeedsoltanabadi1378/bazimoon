@@ -60,6 +60,22 @@ public class AuthFlowTests : IClassFixture<BazimoonApiFactory>, IAsyncLifetime
     }
 
     [Fact]
+    public async Task Guest_DefaultsToPersian_WhenLanguageIsOmitted()
+    {
+        var session = await PostAsync("/api/auth/guest", new GuestAuthRequest());
+
+        Assert.Equal("fa", session.User.Language);
+    }
+
+    [Fact]
+    public async Task Guest_CanExplicitlyStartInEnglish()
+    {
+        var session = await PostAsync("/api/auth/guest", new GuestAuthRequest(Language: "en"));
+
+        Assert.Equal("en", session.User.Language);
+    }
+
+    [Fact]
     public async Task Guest_StoresFirstTouchAttribution_AndClassifiesKnownReferrers()
     {
         var tagged = await PostAsync("/api/auth/guest", new GuestAuthRequest(

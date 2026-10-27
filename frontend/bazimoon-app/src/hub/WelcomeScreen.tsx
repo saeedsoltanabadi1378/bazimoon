@@ -22,7 +22,7 @@ const features: { icon: IconName; bg: string; fg: string; title: `welcomeF${1 | 
 
 /** First launch: language first (Persian flips the layout), what's inside, then the daily reminder. */
 export function WelcomeScreen() {
-  const { t, language, setLanguage } = useLanguage();
+  const { t, language } = useLanguage();
   const { reset } = useNavigation();
   const { saveSettings } = useHub();
   const [step, setStep] = useState(0);
@@ -30,7 +30,6 @@ export function WelcomeScreen() {
 
   function finish() {
     writeLocal(WELCOMED_KEY, true);
-    setLanguage(language);
     void saveSettings({ language, reminderEnabled: remind });
     haptic.success();
     reset({ name: "home" });
@@ -55,30 +54,6 @@ export function WelcomeScreen() {
             <LogoTiles size={96} />
             <h1 className="display" style={{ fontSize: 36 }}>{t("welcomeTitle")}</h1>
             <p style={{ fontSize: 16, lineHeight: 1.5, color: "var(--text-2)" }}>{t("welcomeBody")}</p>
-            <div className="stack">
-              <span style={{ fontSize: 13, fontWeight: 600, color: "var(--muted)" }}>{t("chooseLanguage")}</span>
-              <div role="radiogroup" aria-label={t("chooseLanguage")} style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 10 }}>
-                {(["en", "fa"] as const).map((lang) => (
-                  <button
-                    key={lang}
-                    type="button"
-                    role="radio"
-                    aria-checked={language === lang}
-                    onClick={() => {
-                      haptic.select();
-                      setLanguage(lang);
-                    }}
-                    style={{
-                      minHeight: 56, borderRadius: 16, border: `2px solid ${language === lang ? AMBER : "#2E3252"}`, background: "var(--surface)",
-                      color: "var(--text)", fontFamily: lang === "fa" ? "Vazirmatn, sans-serif" : "'IBM Plex Sans', sans-serif",
-                      fontSize: lang === "fa" ? 17 : 16, fontWeight: lang === "fa" ? 700 : 600, cursor: "pointer",
-                    }}
-                  >
-                    {lang === "en" ? "English" : "فارسی"}
-                  </button>
-                ))}
-              </div>
-            </div>
           </>
         )}
 
@@ -123,7 +98,7 @@ export function WelcomeScreen() {
         ) : (
           <div className="stack" style={{ gap: 10 }}>
             <button type="button" className="btn" style={{ minHeight: 54, background: AMBER, color: "#1A1206" }} onClick={finish}>{t("startPlaying")}</button>
-            <GoogleButton beforeLeave={() => { writeLocal(WELCOMED_KEY, true); setLanguage(language); }} />
+            <GoogleButton beforeLeave={() => writeLocal(WELCOMED_KEY, true)} />
             <p style={{ margin: 0, textAlign: "center", fontSize: 13, lineHeight: 1.45, color: "var(--muted)" }}>{t("guestNote")}</p>
           </div>
         )}

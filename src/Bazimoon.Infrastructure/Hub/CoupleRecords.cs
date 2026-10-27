@@ -16,7 +16,7 @@ public sealed class CoupleRecord
     public int? StartDay { get; set; }
 
     public string ReminderTime { get; set; } = "21:00";
-    public string Language { get; set; } = "en";
+    public string Language { get; set; } = "fa";
 
     public int Streak { get; set; }
     public int BestStreak { get; set; }

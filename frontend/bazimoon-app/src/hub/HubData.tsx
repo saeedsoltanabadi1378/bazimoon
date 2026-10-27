@@ -26,7 +26,7 @@ const HubDataContext = createContext<HubData | null>(null);
 
 export function HubDataProvider({ children }: { children: ReactNode }) {
   const session = useSession();
-  const { language, setLanguage } = useLanguage();
+  const { language, setLanguage, fromUrl } = useLanguage();
   const api = useMemo(() => hubApi(session.api), [session.api]);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [highContrast, setHighContrast] = useState(() => readLocal<boolean>(CONTRAST_KEY, false));
@@ -49,13 +49,15 @@ export function HubDataProvider({ children }: { children: ReactNode }) {
     try {
       const next = await api.profile();
       setProfile(next);
+      // The server profile is authoritative unless this visit explicitly used ?lang=.
+      if (!fromUrl && next.settings.language !== language) setLanguage(next.settings.language);
       setHapticsEnabled(next.settings.haptics);
       setHighContrast(next.settings.highContrast);
       writeLocal(CONTRAST_KEY, next.settings.highContrast);
     } catch (err) {
       console.warn("[Bazimoon] Could not load profile", err);
     }
-  }, [api]);
+  }, [api, fromUrl, language, setLanguage]);
 
   const flushQueue = useCallback(async () => {
     const pending = readLocal<PuzzleSubmit[]>(QUEUE_KEY, []);
@@ -113,13 +115,6 @@ export function HubDataProvider({ children }: { children: ReactNode }) {
       return null;
     }
   }, [api, refreshProfile]);
-
-  // Remember the person's language choice on the server too.
-  useEffect(() => {
-    if (profile && profile.settings.language !== language) {
-      void api.saveSettings({ ...profile.settings, language }).catch(() => undefined);
-    }
-  }, [api, profile, language]);
 
   const value = useMemo(() => ({ api, profile, refreshProfile, highContrast, saveSettings, submitResult, isGameOn }), [api, profile, refreshProfile, highContrast, saveSettings, submitResult, isGameOn]);
   return <HubDataContext.Provider value={value}>{children}</HubDataContext.Provider>;

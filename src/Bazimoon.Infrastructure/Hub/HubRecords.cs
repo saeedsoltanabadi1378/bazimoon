@@ -15,7 +15,7 @@ public sealed class PlayerStatsRecord
     public int? LastPuzzleDay { get; set; }
     public int StreakFreezes { get; set; } = 1;
 
-    public string Language { get; set; } = "en";
+    public string Language { get; set; } = "fa";
     public bool ReminderEnabled { get; set; } = true;
     public string ReminderTime { get; set; } = "09:00";
     public bool HighContrast { get; set; }
