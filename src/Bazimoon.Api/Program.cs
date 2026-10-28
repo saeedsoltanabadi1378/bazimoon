@@ -33,6 +33,7 @@ builder.Services.AddOptions<GuestSignUpOptions>().Bind(builder.Configuration.Get
 builder.Services.AddOptions<AdminOptions>().Bind(builder.Configuration.GetSection(AdminOptions.SectionName));
 
 builder.Services.AddScoped<GameService>();
+builder.Services.AddScoped<PlayerSafetyService>();
 builder.Services.AddScoped<HubService>();
 builder.Services.AddScoped<TableService>();
 builder.Services.AddScoped<CoupleService>();

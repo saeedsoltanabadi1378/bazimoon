@@ -1,3 +1,4 @@
+import { useCallback, useState } from "react";
 import { useGame } from "./GameProvider";
 import { PushPrompt } from "../hub/PushPrompt";
 import { useLanguage } from "../i18n/LanguageContext";
@@ -12,6 +13,8 @@ import { useHub, useLoad } from "../hub/HubData";
 import { InviteBox } from "./InviteBox";
 import { InviteFriendsButton } from "../hub/InviteFriendsSheet";
 import { RolePortrait } from "./RolePortrait";
+import { VoicePreflight, type VoiceCheckState } from "./VoicePreflight";
+import { PlayerSafetyButton } from "./PlayerSafety";
 
 export function LobbyScreen() {
   const { view, busy, joinGame, leaveGame, startGame, setReady } = useGame();
@@ -22,6 +25,8 @@ export function LobbyScreen() {
   const { api } = useHub();
   const gameId = view?.gameId;
   const table = useLoad(() => (gameId ? api.tableInfo(gameId) : Promise.resolve(null)), [api, gameId]);
+  const [voiceCheck, setVoiceCheck] = useState<VoiceCheckState>("idle");
+  const onVoiceCheck = useCallback((state: VoiceCheckState) => setVoiceCheck(state), []);
   if (!view) return null;
   const info = table.data;
 
@@ -92,6 +97,8 @@ export function LobbyScreen() {
           </div>
         )}
 
+        {joined && <VoicePreflight onChange={onVoiceCheck} />}
+
         {joined && !full && <InviteFriendsButton kind="mafia" target={view.gameId} accent="#9C8CFF" ink="#120D2E" />}
 
         {joined && info?.isHost && info.inviteCode && <InviteBox info={info} onChange={table.setData} />}
@@ -150,6 +157,7 @@ export function LobbyScreen() {
             );
           })}
         </ul>
+        {joined && <PlayerSafetyButton />}
         <ActionError />
       </Body>
 
@@ -165,12 +173,13 @@ export function LobbyScreen() {
             type="button"
             className={`btn ${youReady ? "btn--outline" : "btn--primary"}`}
             aria-pressed={youReady}
-            disabled={busy}
+            disabled={busy || (!youReady && voiceCheck !== "passed")}
             onClick={() => void setReady(!youReady)}
           >
             {youReady ? t("notReady") : t("imReady")}
           </button>
         )}
+        {joined && !youReady && voiceCheck !== "passed" && <span className="tiny muted" style={{ textAlign: "center" }}>{t("voiceCheckReadyHint")}</span>}
         {joined && view.youAreController && startsIn === null && (
           <CreatorBox note={t("creatorStartNote", { min: view.minPlayers })}>
             {startable ? (

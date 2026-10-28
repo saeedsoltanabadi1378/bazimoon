@@ -184,6 +184,16 @@ export interface GraveyardMessage {
   sentAt: string;
 }
 
+export interface PlayerSafetyTarget {
+  playerId: string;
+  voiceUid: number;
+}
+
+export interface PlayerSafety {
+  players: PlayerSafetyTarget[];
+  blockedPlayerIds: string[];
+}
+
 export type MvpPointsKind = "teamWon" | "mafiaFound" | "killBlocked" | "killMade" | "voteOnMafiaOut" | "nightSurvived";
 
 export interface MvpView {

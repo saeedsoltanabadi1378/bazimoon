@@ -21,13 +21,14 @@ public sealed class GameService
     private readonly IGraveyardStore _graveyard;
     private readonly TimeProvider _clock;
     private readonly IActivityTracker _activity;
+    private readonly PlayerSafetyService _safety;
 
     public GameService(
         IGameSessionStore sessionStore,
         IGameHistoryRepository historyRepository,
         IGameNotifier notifier,
         IGameRosterStore rosterStore, IAppSettingsService settings, BazimoonDbContext db, GameMutationLock mutationLock,
-        Lounge.IPushNotifier push, IGraveyardStore graveyard, TimeProvider clock, IActivityTracker activity)
+        Lounge.IPushNotifier push, IGraveyardStore graveyard, TimeProvider clock, IActivityTracker activity, PlayerSafetyService safety)
     {
         _push = push;
         _sessionStore = sessionStore;
@@ -40,6 +41,7 @@ public sealed class GameService
         _graveyard = graveyard;
         _clock = clock;
         _activity = activity;
+        _safety = safety;
     }
 
     /// <summary>Creates a lobby, shared by its table's invite link.</summary>
@@ -79,6 +81,8 @@ public sealed class GameService
 
         if (game.GetPlayer(playerId) is null)
         {
+            if (await _safety.ConflictsWithRosterAsync(gameId, userId))
+                throw new ForbiddenGameActionException("You cannot join a table containing a blocked player.", "blocked_player_at_table");
             game.AddPlayer(new Player(playerId, username));
             await SaveAndNotifyAsync(game);
             await _rosterStore.AddAsync(gameId, userId, username);

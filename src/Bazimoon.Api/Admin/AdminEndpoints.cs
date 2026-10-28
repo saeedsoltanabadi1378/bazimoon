@@ -71,6 +71,32 @@ public static class AdminEndpoints
             await dash.GetPlayerAsync(id) is { } player ? Results.Ok(player) : Results.NotFound());
         group.MapGet("/players/{id:guid}/activity", async (Guid id, string? kind, int? page, int? pageSize, AdminDashboardService dash) =>
             Results.Ok(await dash.GetPlayerActivityAsync(id, kind, Math.Max(1, page ?? 1), Math.Clamp(pageSize ?? 10, 1, 50))));
+        group.MapGet("/player-reports", async (bool? reviewed, int? page, int? pageSize, BazimoonDbContext db) =>
+        {
+            int p = Math.Max(1, page ?? 1), size = Math.Clamp(pageSize ?? 25, 1, 100);
+            var query = db.PlayerReports.AsNoTracking();
+            if (reviewed is not null)
+                query = query.Where(report => (report.ReviewedAt != null) == reviewed.Value);
+            int total = await query.CountAsync();
+            var items = await query.OrderByDescending(report => report.CreatedAt)
+                .Skip((p - 1) * size).Take(size)
+                .Select(report => new AdminPlayerReportDto(
+                    report.Id, report.GameId, report.Category, report.Note, report.CreatedAt, report.ReviewedAt,
+                    report.ReporterUserId, db.Users.Where(user => user.Id == report.ReporterUserId).Select(user => user.DisplayName).FirstOrDefault() ?? "Unknown",
+                    report.ReportedUserId, db.Users.Where(user => user.Id == report.ReportedUserId).Select(user => user.DisplayName).FirstOrDefault() ?? "Unknown"))
+                .ToListAsync();
+            return Results.Ok(new AdminPageDto<AdminPlayerReportDto>(items, total, p, size));
+        });
+        group.MapPost("/player-reports/{id:long}/reviewed", async (long id, HttpContext http, BazimoonDbContext db) =>
+        {
+            if (!ValidCsrf(http)) return Results.BadRequest(new { detail = "Invalid CSRF token." });
+            var report = await db.PlayerReports.SingleOrDefaultAsync(item => item.Id == id);
+            if (report is null) return Results.NotFound();
+            report.ReviewedAt ??= DateTime.UtcNow;
+            db.OperationalEvents.Add(new() { Category = "AdminAudit", Message = "Player report reviewed", IsAdminAudit = true, TargetType = "PlayerReport", TargetId = id.ToString(), MetadataJson = JsonSerializer.Serialize(new { actor = http.User.Identity?.Name }) });
+            await db.SaveChangesAsync();
+            return Results.Ok();
+        });
         group.MapGet("/activity", async (string? flow, long? before, int? pageSize, AdminDashboardService dash) =>
             Results.Ok(await dash.GetActivityFeedAsync(flow, before, Math.Clamp(pageSize ?? 25, 1, 100))));
         group.MapGet("/funnels/{flow}", async (string flow, int? days, AdminDashboardService dash) =>
@@ -119,3 +145,5 @@ public sealed record SettingsRequest(int Version, int MinPlayers, int MaxPlayers
     string? TableStartMessage = null, string? TableStartMessageFa = null, string? CoupleTurnMessage = null, string? CoupleTurnMessageFa = null);
 public sealed record AdminGameView(Guid Id, DateTime CreatedAt, DateTime EndedAt, Bazimoon.Domain.WinCondition Result, string Status, string? CancellationReason, IReadOnlyList<AdminGamePlayerView> Players);
 public sealed record AdminGamePlayerView(Guid PlayerId, Guid? UserId, string DisplayName, Bazimoon.Domain.Role? Role, bool SurvivedToEnd, int? GodfatherRank);
+public sealed record AdminPlayerReportDto(long Id, Guid GameId, string Category, string? Note, DateTime CreatedAt, DateTime? ReviewedAt,
+    Guid ReporterUserId, string ReporterName, Guid ReportedUserId, string ReportedName);

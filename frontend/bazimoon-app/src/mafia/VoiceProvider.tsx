@@ -15,6 +15,8 @@ interface VoiceState {
   /** Players who are out and spectators pick the room (listen) or the graveyard (talk). */
   graveyardChosen: boolean;
   chooseGraveyard(on: boolean): void;
+  isPlayerMuted(playerId: string): boolean;
+  setPlayerMuted(playerId: string, voiceUid: number, muted: boolean): void;
 }
 
 const VoiceContext = createContext<VoiceState | null>(null);
@@ -29,7 +31,7 @@ const voicePhases = new Set(["NightZero", "Night", "Day", "Defence", "Voting", "
  * the phase or the active speaker changes so the token's publish rights stay current.
  */
 export function VoiceProvider({ children }: { children: ReactNode }) {
-  const { view, apiClient } = useGame();
+  const { view, apiClient, blockedPlayers } = useGame();
   const sessionRef = useRef(new VoiceSession());
   const versionRef = useRef(0);
   const [channel, setChannel] = useState<VoiceChannel | null>(null);
@@ -39,6 +41,12 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
   const [failed, setFailed] = useState(false);
   const [attempt, setAttempt] = useState(0);
   const [graveyardChosen, setGraveyardChosen] = useState(false);
+  const [locallyMuted, setLocallyMuted] = useState<Set<string>>(() => new Set());
+
+  useEffect(() => {
+    setLocallyMuted(new Set(blockedPlayers.map((item) => item.playerId)));
+    blockedPlayers.forEach((item) => sessionRef.current.setRemoteMuted(item.voiceUid, true));
+  }, [blockedPlayers]);
 
   const gameId = view?.gameId;
   const phase = view?.phase;
@@ -100,6 +108,15 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
   const value: VoiceState = {
     channel, publishing, muted, connecting, failed, toggleMute, retry: () => setAttempt((a) => a + 1),
     graveyardChosen, chooseGraveyard: setGraveyardChosen,
+    isPlayerMuted: (playerId) => locallyMuted.has(playerId),
+    setPlayerMuted: (playerId, voiceUid, nextMuted) => {
+      sessionRef.current.setRemoteMuted(voiceUid, nextMuted);
+      setLocallyMuted((current) => {
+        const next = new Set(current);
+        if (nextMuted) next.add(playerId); else next.delete(playerId);
+        return next;
+      });
+    },
   };
   return <VoiceContext.Provider value={value}>{children}</VoiceContext.Provider>;
 }

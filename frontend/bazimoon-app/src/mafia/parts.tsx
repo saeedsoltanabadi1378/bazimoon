@@ -7,6 +7,7 @@ import { roleMeta, eliminatedMeta } from "./roles";
 import { useGame } from "./GameProvider";
 import { useSecondsLeft } from "./timers";
 import { useVoice } from "./VoiceProvider";
+import { PlayerSafetyButton } from "./PlayerSafety";
 import { haptic } from "../lib/haptics";
 
 /** The countdown strip for a timed night or vote (the table's Night or Voting timer). Shows nothing when untimed. */
@@ -92,10 +93,20 @@ export function ActionError() {
 }
 
 export function ReconnectingBanner() {
-  const { link } = useGame();
+  const { link, connectionRecovered, retryLive } = useGame();
   const { t } = useLanguage();
+  if (connectionRecovered) return <Banner icon="check" iconColor="#5FD0BE">{t("reconnectedLive")}</Banner>;
   if (link === "connected") return null;
-  return <Banner icon="refresh" iconColor="var(--accent)">{t("reconnectingLive")}</Banner>;
+  return (
+    <Banner icon="refresh" iconColor="var(--accent)">
+      <span className="grow">{link === "closed" ? t("connectionClosed") : t("reconnectingLive")}</span>
+      {link === "closed" && (
+        <button type="button" className="btn btn--ghost btn--auto" style={{ minHeight: 32, padding: "0 8px", fontSize: 13 }} onClick={retryLive}>
+          {t("tryAgain")}
+        </button>
+      )}
+    </Banner>
+  );
 }
 
 /** Footer line that always shows where your voice is going ("voice state is always visible"). */
@@ -198,6 +209,7 @@ export function TableNotices() {
           <span><b>{t("newCreatorTitle")}</b> {t("newCreatorText", { name: firstSeat.displayName })}</span>
         </div>
       )}
+      <PlayerSafetyButton />
     </>
   );
 }

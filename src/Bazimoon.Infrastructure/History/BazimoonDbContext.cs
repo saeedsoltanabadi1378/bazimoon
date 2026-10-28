@@ -30,6 +30,8 @@ public sealed class BazimoonDbContext : DbContext
     public DbSet<UserActivityEventRecord> UserActivityEvents => Set<UserActivityEventRecord>();
     public DbSet<FriendshipRecord> Friendships => Set<FriendshipRecord>();
     public DbSet<GameInviteRecord> GameInvites => Set<GameInviteRecord>();
+    public DbSet<PlayerBlockRecord> PlayerBlocks => Set<PlayerBlockRecord>();
+    public DbSet<PlayerReportRecord> PlayerReports => Set<PlayerReportRecord>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -150,6 +152,28 @@ public sealed class BazimoonDbContext : DbContext
             b.HasIndex(x => new { x.FromUserId, x.CreatedAt });
             b.HasOne<UserRecord>().WithMany().HasForeignKey(x => x.FromUserId).OnDelete(DeleteBehavior.Cascade);
             b.HasOne<UserRecord>().WithMany().HasForeignKey(x => x.ToUserId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<PlayerBlockRecord>(b =>
+        {
+            b.ToTable("player_blocks");
+            b.HasKey(x => x.Id);
+            b.HasIndex(x => new { x.UserId, x.BlockedUserId }).IsUnique();
+            b.HasIndex(x => x.BlockedUserId);
+            b.HasOne<UserRecord>().WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
+            b.HasOne<UserRecord>().WithMany().HasForeignKey(x => x.BlockedUserId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<PlayerReportRecord>(b =>
+        {
+            b.ToTable("player_reports");
+            b.HasKey(x => x.Id);
+            b.Property(x => x.Category).HasMaxLength(24);
+            b.Property(x => x.Note).HasMaxLength(500);
+            b.HasIndex(x => new { x.ReporterUserId, x.ReportedUserId, x.GameId }).IsUnique();
+            b.HasIndex(x => new { x.ReportedUserId, x.CreatedAt });
+            b.HasOne<UserRecord>().WithMany().HasForeignKey(x => x.ReporterUserId).OnDelete(DeleteBehavior.Cascade);
+            b.HasOne<UserRecord>().WithMany().HasForeignKey(x => x.ReportedUserId).OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<PuzzleResultRecord>(b =>

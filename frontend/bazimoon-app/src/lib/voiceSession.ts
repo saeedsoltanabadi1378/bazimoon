@@ -8,6 +8,7 @@ export class VoiceSession {
   private client: IAgoraRTCClient | null = null;
   private micTrack: IMicrophoneAudioTrack | null = null;
   private transition: Promise<void> = Promise.resolve();
+  private locallyMuted = new Set<number>();
 
   get isConnected(): boolean {
     return this.client !== null;
@@ -24,6 +25,7 @@ export class VoiceSession {
       client.on("user-published", async (user, mediaType) => {
         if (mediaType !== "audio") return;
         await client.subscribe(user, mediaType);
+        if (this.locallyMuted.has(Number(user.uid))) user.audioTrack?.setVolume(0);
         user.audioTrack?.play();
       });
 
@@ -36,6 +38,13 @@ export class VoiceSession {
 
   async setMuted(muted: boolean): Promise<void> {
     await this.micTrack?.setEnabled(!muted);
+  }
+
+  setRemoteMuted(uid: number, muted: boolean): void {
+    if (muted) this.locallyMuted.add(uid);
+    else this.locallyMuted.delete(uid);
+    const track = this.client?.remoteUsers.find((user) => Number(user.uid) === uid)?.audioTrack;
+    track?.setVolume(muted ? 0 : 100);
   }
 
   async leave(): Promise<void> {

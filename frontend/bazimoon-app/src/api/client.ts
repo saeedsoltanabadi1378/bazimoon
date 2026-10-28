@@ -8,16 +8,20 @@ import type {
   AuthSession,
   VoiceTokenResponse,
   VotingResult,
+  PlayerSafety,
+  PlayerSafetyTarget,
 } from "./types";
 import type { AcquisitionAttribution } from "../lib/attribution";
 
 export class ApiError extends Error {
   readonly status: number;
+  readonly code: string | null;
 
-  constructor(status: number, message: string) {
+  constructor(status: number, message: string, code: string | null = null) {
     super(message);
     this.name = "ApiError";
     this.status = status;
+    this.code = code;
   }
 }
 
@@ -100,15 +104,17 @@ export class BazimoonApiClient {
 
     if (!response.ok) {
       let detail = response.statusText || `HTTP ${response.status}`;
+      let code: string | null = null;
       try {
         const problem = await response.json();
         if (typeof problem?.detail === "string" && problem.detail.length > 0) {
           detail = problem.detail;
         }
+        if (typeof problem?.code === "string" && problem.code.length > 0) code = problem.code;
       } catch {
         // no JSON body (e.g. a bare 401 from auth middleware) — fall back to statusText above.
       }
-      throw new ApiError(response.status, detail);
+      throw new ApiError(response.status, detail, code);
     }
 
     if (response.status === 204) {
@@ -225,6 +231,18 @@ export class BazimoonApiClient {
 
   sendGraveyard(gameId: string, text: string) {
     return this.request<GraveyardMessage>("POST", `/api/games/${gameId}/graveyard/messages`, { text });
+  }
+
+  getPlayerSafety(gameId: string) {
+    return this.request<PlayerSafety>("GET", `/api/games/${gameId}/safety`);
+  }
+
+  blockPlayer(gameId: string, targetPlayerId: string) {
+    return this.request<PlayerSafetyTarget>("POST", `/api/games/${gameId}/players/${targetPlayerId}/block`);
+  }
+
+  reportPlayer(gameId: string, targetPlayerId: string, category: string, note: string | null) {
+    return this.request<void>("POST", `/api/games/${gameId}/players/${targetPlayerId}/reports`, { category, note });
   }
 
   getVoiceToken(gameId: string, channel: "main" | "mafia" | "graveyard") {

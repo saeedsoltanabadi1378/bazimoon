@@ -163,6 +163,18 @@ public static class GameEndpoints
         group.MapPost("/{gameId:guid}/graveyard/messages", async (Guid gameId, SendGraveyardMessageRequest request, GameService games, HttpContext http) =>
             Results.Ok(await games.SendGraveyardMessageAsync(gameId, http.User.GetUserId(), request.Text))).WithName("SendGraveyardMessage");
 
+        group.MapGet("/{gameId:guid}/safety", async (Guid gameId, PlayerSafetyService safety, HttpContext http) =>
+            Results.Ok(await safety.GetAsync(gameId, http.User.GetUserId()))).WithName("GetPlayerSafety");
+
+        group.MapPost("/{gameId:guid}/players/{targetPlayerId:guid}/block", async (Guid gameId, Guid targetPlayerId, PlayerSafetyService safety, HttpContext http) =>
+            Results.Ok(await safety.BlockAsync(gameId, http.User.GetUserId(), targetPlayerId))).WithName("BlockPlayer");
+
+        group.MapPost("/{gameId:guid}/players/{targetPlayerId:guid}/reports", async (Guid gameId, Guid targetPlayerId, PlayerReportRequest request, PlayerSafetyService safety, HttpContext http) =>
+        {
+            await safety.ReportAsync(gameId, http.User.GetUserId(), targetPlayerId, request.Category, request.Note);
+            return Results.Ok();
+        }).WithName("ReportPlayer");
+
         group.MapGet("/{gameId:guid}/voice-token", async (Guid gameId, string channel, GameService games, IAgoraTokenService agoraTokens, HttpContext http) =>
         {
             var game = await games.LoadOrThrowAsync(gameId);

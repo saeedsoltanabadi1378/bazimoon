@@ -2,10 +2,11 @@ import type { HubConnection } from "@microsoft/signalr";
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { ApiError, type BazimoonApiClient } from "../api/client";
 import { connectToGameHub } from "../api/signalr";
-import type { GameView, GraveyardMessage, NightActionType } from "../api/types";
+import type { GameView, GraveyardMessage, NightActionType, PlayerSafetyTarget } from "../api/types";
 import { useSession } from "../app/session";
 import { useLanguage } from "../i18n/LanguageContext";
 import { haptic } from "../lib/haptics";
+import { localizedGameError } from "./errorText";
 
 export type GameStatus = "loading" | "ready" | "not-found" | "error";
 export type LinkState = "connected" | "reconnecting" | "closed";
@@ -15,6 +16,8 @@ export interface GameContextValue {
   gameId: string;
   status: GameStatus;
   link: LinkState;
+  connectionRecovered: boolean;
+  retryLive(): void;
   view: GameView | null;
   busy: boolean;
   actionError: string | null;
@@ -45,15 +48,23 @@ export interface GameContextValue {
   graveyardUnread: number;
   markGraveyardRead(): void;
   sendGraveyard(text: string): Promise<boolean>;
+  blockedPlayers: PlayerSafetyTarget[];
+  safetyPlayers: PlayerSafetyTarget[];
+  blockPlayer(playerId: string): Promise<boolean>;
+  reportPlayer(playerId: string, category: string, note: string | null): Promise<boolean>;
 }
 
 const GameContext = createContext<GameContextValue | null>(null);
 
 export function GameProvider({ gameId, children }: { gameId: string; children: ReactNode }) {
   const { api } = useSession();
-  const { t, language } = useLanguage();
+  const { t } = useLanguage();
   const [status, setStatus] = useState<GameStatus>("loading");
   const [link, setLink] = useState<LinkState>("connected");
+  const [connectionRecovered, setConnectionRecovered] = useState(false);
+  const [liveAttempt, setLiveAttempt] = useState(0);
+  const wasConnected = useRef(false);
+  const recoveredTimer = useRef<number | null>(null);
   const [view, setView] = useState<GameView | null>(null);
   const [busy, setBusy] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -61,6 +72,8 @@ export function GameProvider({ gameId, children }: { gameId: string; children: R
   const [graveyard, setGraveyard] = useState<GraveyardMessage[]>([]);
   const [graveyardSeen, setGraveyardSeen] = useState(0);
   const [hubVersion, setHubVersion] = useState(0);
+  const [blockedPlayers, setBlockedPlayers] = useState<PlayerSafetyTarget[]>([]);
+  const [safetyPlayers, setSafetyPlayers] = useState<PlayerSafetyTarget[]>([]);
 
   const addGraveyard = useCallback((message: GraveyardMessage) => {
     setGraveyard((list) => (list.some((m) => m.id === message.id) ? list : [...list, message].slice(-200)));
@@ -92,12 +105,27 @@ export function GameProvider({ gameId, children }: { gameId: string; children: R
     };
   }, [api, gameId]);
 
+  useEffect(() => {
+    if (status !== "ready") return;
+    api.getPlayerSafety(gameId).then((result) => {
+      setSafetyPlayers(result.players);
+      const blocked = new Set(result.blockedPlayerIds);
+      setBlockedPlayers(result.players.filter((player) => blocked.has(player.playerId)));
+    }).catch(() => undefined);
+  }, [api, gameId, status]);
+
   // Live updates: the hub only pings "something changed"; we re-fetch our own filtered view.
   useEffect(() => {
     if (status !== "ready") return;
     let cancelled = false;
     connectToGameHub(import.meta.env.VITE_API_BASE_URL, () => api.getToken() ?? "", gameId, () => void refresh(), (state) => {
-      if (!cancelled) setLink(state);
+      if (cancelled) return;
+      if (state === "connected" && wasConnected.current) {
+        setConnectionRecovered(true);
+        if (recoveredTimer.current !== null) window.clearTimeout(recoveredTimer.current);
+        recoveredTimer.current = window.setTimeout(() => setConnectionRecovered(false), 4000);
+      }
+      setLink(state);
     }, addGraveyard)
       .then(async (hub) => {
         if (cancelled) {
@@ -106,6 +134,7 @@ export function GameProvider({ gameId, children }: { gameId: string; children: R
         }
         hubRef.current = hub;
         setLink("connected");
+        wasConnected.current = true;
         setHubVersion((v) => v + 1);
       })
       .catch((err) => {
@@ -117,7 +146,11 @@ export function GameProvider({ gameId, children }: { gameId: string; children: R
       void hubRef.current?.stop();
       hubRef.current = null;
     };
-  }, [api, gameId, status, refresh, addGraveyard]);
+  }, [api, gameId, status, refresh, addGraveyard, liveAttempt]);
+
+  useEffect(() => () => {
+    if (recoveredTimer.current !== null) window.clearTimeout(recoveredTimer.current);
+  }, []);
 
   // Once you're out (or watching), join the graveyard group and load its history.
   const canGraveyard = Boolean(view?.youCanUseGraveyard);
@@ -155,18 +188,23 @@ export function GameProvider({ gameId, children }: { gameId: string; children: R
       return true;
     } catch (err) {
       haptic.warn();
-      setActionError(err instanceof ApiError && err.status === 0 ? t("offlineAction") : err instanceof ApiError && language === "en" ? err.message : t("genericError"));
+      setActionError(err instanceof ApiError ? localizedGameError(err, t) : t("genericError"));
       return false;
     } finally {
       setBusy(false);
     }
-  }, [refresh, t, language]);
+  }, [refresh, t]);
 
   const value: GameContextValue = {
     apiClient: api,
     gameId,
     status,
     link,
+    connectionRecovered,
+    retryLive: () => {
+      setLink("reconnecting");
+      setLiveAttempt((value) => value + 1);
+    },
     view,
     busy,
     actionError,
@@ -202,10 +240,20 @@ export function GameProvider({ gameId, children }: { gameId: string; children: R
         return true;
       } catch (err) {
         haptic.warn();
-        setActionError(err instanceof ApiError && err.status !== 0 && language === "en" ? err.message : t("genericError"));
+        setActionError(err instanceof ApiError ? localizedGameError(err, t) : t("genericError"));
         return false;
       }
     },
+    blockedPlayers,
+    safetyPlayers,
+    blockPlayer: async (playerId) => {
+      const ok = await run(async () => {
+        const target = await api.blockPlayer(gameId, playerId);
+        setBlockedPlayers((current) => current.some((item) => item.playerId === target.playerId) ? current : [...current, target]);
+      });
+      return ok;
+    },
+    reportPlayer: (playerId, category, note) => run(() => api.reportPlayer(gameId, playerId, category, note)),
   };
 
   return <GameContext.Provider value={value}>{children}</GameContext.Provider>;

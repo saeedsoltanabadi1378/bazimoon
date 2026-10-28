@@ -97,7 +97,7 @@ export function GraveyardBar() {
 }
 
 function GraveyardSheet({ onClose }: { onClose(): void }) {
-  const { view, graveyard, markGraveyardRead, sendGraveyard, setSpectatorMuted, busy } = useGame();
+  const { view, graveyard, markGraveyardRead, sendGraveyard, setSpectatorMuted, busy, blockedPlayers } = useGame();
   const { t, n } = useLanguage();
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
@@ -113,6 +113,7 @@ function GraveyardSheet({ onClose }: { onClose(): void }) {
   if (!view) return null;
   const out = view.players.filter((p) => !p.isAlive).length;
   const mutedIds = new Set((view.spectators ?? []).filter((s) => s.muted).map((s) => s.id));
+  const blockedIds = new Set(blockedPlayers.map((player) => player.playerId));
 
   async function submit(e: FormEvent) {
     e.preventDefault();
@@ -142,7 +143,7 @@ function GraveyardSheet({ onClose }: { onClose(): void }) {
         </div>
         <div ref={listRef} className="grow stack" style={{ gap: 10, overflowY: "auto", padding: "4px 16px 12px" }} aria-live="polite">
           {graveyard.length === 0 && <p className="small muted" style={{ textAlign: "center", padding: "24px 0" }}>{t("graveyardEmpty")}</p>}
-          {graveyard.map((m) => {
+          {graveyard.filter((message) => !blockedIds.has(message.senderId)).map((m) => {
             const mine = m.senderId === view.yourPlayerId;
             const canMute = view.youAreController && m.fromSpectator && !mine;
             const isMuted = mutedIds.has(m.senderId);

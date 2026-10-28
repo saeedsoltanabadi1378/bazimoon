@@ -682,6 +682,75 @@ namespace Bazimoon.Infrastructure.History.Migrations
                     b.ToTable("puzzle_results", (string)null);
                 });
 
+            modelBuilder.Entity("Bazimoon.Infrastructure.Identity.PlayerBlockRecord", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<Guid>("BlockedUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BlockedUserId");
+
+                    b.HasIndex("UserId", "BlockedUserId")
+                        .IsUnique();
+
+                    b.ToTable("player_blocks", (string)null);
+                });
+
+            modelBuilder.Entity("Bazimoon.Infrastructure.Identity.PlayerReportRecord", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .HasMaxLength(24)
+                        .HasColumnType("character varying(24)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("GameId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<Guid>("ReportedUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ReporterUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("ReviewedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ReportedUserId", "CreatedAt");
+
+                    b.HasIndex("ReporterUserId", "ReportedUserId", "GameId")
+                        .IsUnique();
+
+                    b.ToTable("player_reports", (string)null);
+                });
+
             modelBuilder.Entity("Bazimoon.Infrastructure.Identity.PushSubscriptionRecord", b =>
                 {
                     b.Property<long>("Id")
@@ -928,6 +997,36 @@ namespace Bazimoon.Infrastructure.History.Migrations
                     b.HasOne("Bazimoon.Infrastructure.Identity.UserRecord", null)
                         .WithMany()
                         .HasForeignKey("ToUserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Bazimoon.Infrastructure.Identity.PlayerBlockRecord", b =>
+                {
+                    b.HasOne("Bazimoon.Infrastructure.Identity.UserRecord", null)
+                        .WithMany()
+                        .HasForeignKey("BlockedUserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Bazimoon.Infrastructure.Identity.UserRecord", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Bazimoon.Infrastructure.Identity.PlayerReportRecord", b =>
+                {
+                    b.HasOne("Bazimoon.Infrastructure.Identity.UserRecord", null)
+                        .WithMany()
+                        .HasForeignKey("ReportedUserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Bazimoon.Infrastructure.Identity.UserRecord", null)
+                        .WithMany()
+                        .HasForeignKey("ReporterUserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
