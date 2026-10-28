@@ -9,6 +9,7 @@ import type { Role, RolePreset } from "../api/types";
 import { OPTIONAL_ROLES, dealRoles, minimumPlayers, roleMeta, rolesFor } from "../mafia/roles";
 import { useRoleName } from "../mafia/parts";
 import { haptic } from "../lib/haptics";
+import { RolePortrait } from "../mafia/RolePortrait";
 
 const MIN_SEATS = 3;
 const MAX_SEATS = 12;
@@ -167,13 +168,10 @@ export function CreateTableScreen() {
                 <button type="button" className="btn btn--outline" aria-label={t("moreMafia")} disabled={mafiaCount >= 5} onClick={() => setMafiaCount((m) => m + 1)} style={{ width: 44, minHeight: 44, padding: 0, fontSize: 18 }}>+</button>
               </div>
               {OPTIONAL_ROLES.map((r) => {
-                const meta = roleMeta[r];
                 const on = optional.includes(r);
                 return (
                   <div key={r} className="row" style={{ gap: 10, minHeight: 50, borderTop: "1px solid #1E2138" }}>
-                    <span style={{ width: 30, height: 30, flex: "none", borderRadius: 999, background: meta.bg, color: meta.fg, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                      <Icon name={meta.icon} size={15} />
-                    </span>
+                    <RolePortrait role={r} size={38} />
                     <span className="grow stack" style={{ gap: 0 }}>
                       <span style={{ fontSize: 14, fontWeight: 600 }}>{roleName(r)}</span>
                       <span className="tiny muted">{teamShort(r)}</span>

@@ -5,6 +5,7 @@ import { Bar, Body, IconDisc, Screen } from "../ui/components";
 import { findPlayer, roleMeta } from "./roles";
 import { useRoleName } from "./parts";
 import { haptic } from "../lib/haptics";
+import { RolePortrait } from "./RolePortrait";
 
 /** Shown once per game right after roles are dealt; the card stays face-down until tapped. */
 export function RoleRevealScreen({ onReady }: { onReady: () => void }) {
@@ -53,7 +54,7 @@ export function RoleRevealScreen({ onReady }: { onReady: () => void }) {
             </>
           ) : (
             <span className="stack center fade-in" style={{ gap: 14 }}>
-              <IconDisc icon={meta.icon} size={104} iconSize={50} bg={meta.bg} fg={meta.fg} />
+              <RolePortrait role={role} size={190} full />
               <span style={{ fontSize: 14, color: "var(--text-2)" }}>{t("youAreThe")}</span>
               <span className="display" style={{ fontSize: 40, lineHeight: 1, color: meta.fg }}>{roleName(role)}</span>
               <span style={{ fontSize: 15, lineHeight: 1.5, color: "var(--text-soft)", maxWidth: 280 }}>

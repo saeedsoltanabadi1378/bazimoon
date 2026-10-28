@@ -6,6 +6,7 @@ import { findPlayer, isMafiaRole, playerColor, roleMeta, voteWeight } from "./ro
 import { ActionError, LeaveGameButton, ReconnectingBanner, useRoleName, TableNotices } from "./parts";
 import { GraveyardBar, SpectatorBanner, SpectatorList } from "./Graveyard";
 import { BallotRows } from "./VotingScreen";
+import { RolePortrait } from "./RolePortrait";
 
 /**
  * Verdict after a vote. When the vote ended the game, `onSeeFinal` is set and the footer leads
@@ -58,9 +59,13 @@ export function ResultsScreen({ onSeeFinal }: { onSeeFinal?: () => void }) {
         <TableNotices />
         {out ? (
           <section className="stack center" style={{ gap: 12, padding: "24px 16px", borderRadius: 24, background: "var(--surface)", textAlign: "center" }}>
-            <span className="avatar display" aria-hidden="true" style={{ width: 96, height: 96, fontSize: 38, fontWeight: 800, background: playerColor(view, out.playerId), filter: "grayscale(0.6)" }}>
-              {Array.from(out.displayName)[0]?.toUpperCase()}
-            </span>
+            {out.revealedRole ? (
+              <RolePortrait role={out.revealedRole} size={128} full muted={!out.isAlive} />
+            ) : (
+              <span className="avatar display" aria-hidden="true" style={{ width: 96, height: 96, fontSize: 38, fontWeight: 800, background: playerColor(view, out.playerId), filter: "grayscale(0.6)" }}>
+                {Array.from(out.displayName)[0]?.toUpperCase()}
+              </span>
+            )}
             <div style={{ fontSize: 15, color: "var(--text-2)" }}>{revote ? t("roundTwoVotedOut") : t("townVotedOut")}</div>
             <div className="display" style={{ fontSize: 30, lineHeight: 1 }}>{name(out.playerId)}</div>
             {meta && out.revealedRole && <RoleTag icon={meta.icon} bg={meta.bg} fg={meta.fg} label={t("theyWereThe", { role: roleName(out.revealedRole) })} />}

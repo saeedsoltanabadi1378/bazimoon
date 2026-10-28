@@ -3,25 +3,26 @@ import type { IconName } from "../ui/Icon";
 
 export interface RoleMeta {
   icon: IconName;
+  image: string;
   bg: string;
   fg: string;
   team: "town" | "mafia" | "independent";
 }
 
 export const roleMeta: Record<Role, RoleMeta> = {
-  Villager: { icon: "villager", bg: "#2A2113", fg: "#F0A83A", team: "town" },
-  Detective: { icon: "detective", bg: "#1B2A44", fg: "#8FA8FF", team: "town" },
-  Doctor: { icon: "doctor", bg: "#13302C", fg: "#5FD0BE", team: "town" },
-  Mafia: { icon: "mafia", bg: "#3A1C1A", fg: "#F08A7A", team: "mafia" },
-  Godfather: { icon: "godfather", bg: "#3A1C1A", fg: "#F08A7A", team: "mafia" },
-  Sniper: { icon: "target", bg: "#1B2A44", fg: "#8FA8FF", team: "town" },
-  DieHard: { icon: "shield", bg: "#13302C", fg: "#5FD0BE", team: "town" },
-  Silencer: { icon: "mute", bg: "#3A1C1A", fg: "#F08A7A", team: "mafia" },
-  Joker: { icon: "star", bg: "#2A1F33", fg: "#B79CF2", team: "independent" },
-  Mayor: { icon: "townHall", bg: "#2A2113", fg: "#F0A83A", team: "town" },
+  Villager: { icon: "villager", image: "/images/mafia-roles/villager.png", bg: "#2A2113", fg: "#F0A83A", team: "town" },
+  Detective: { icon: "detective", image: "/images/mafia-roles/detective.png", bg: "#1B2A44", fg: "#8FA8FF", team: "town" },
+  Doctor: { icon: "doctor", image: "/images/mafia-roles/doctor.png", bg: "#13302C", fg: "#5FD0BE", team: "town" },
+  Mafia: { icon: "mafia", image: "/images/mafia-roles/mafia.png", bg: "#3A1C1A", fg: "#F08A7A", team: "mafia" },
+  Godfather: { icon: "godfather", image: "/images/mafia-roles/godfather.png", bg: "#3A1C1A", fg: "#F08A7A", team: "mafia" },
+  Sniper: { icon: "target", image: "/images/mafia-roles/sniper.png", bg: "#1B2A44", fg: "#8FA8FF", team: "town" },
+  DieHard: { icon: "shield", image: "/images/mafia-roles/die-hard.png", bg: "#13302C", fg: "#5FD0BE", team: "town" },
+  Silencer: { icon: "mute", image: "/images/mafia-roles/silencer.png", bg: "#3A1C1A", fg: "#F08A7A", team: "mafia" },
+  Joker: { icon: "star", image: "/images/mafia-roles/joker.png", bg: "#2A1F33", fg: "#B79CF2", team: "independent" },
+  Mayor: { icon: "townHall", image: "/images/mafia-roles/mayor.png", bg: "#2A2113", fg: "#F0A83A", team: "town" },
 };
 
-export const eliminatedMeta: RoleMeta = { icon: "eliminated", bg: "#1E2138", fg: "#9A9CB8", team: "town" };
+export const eliminatedMeta: Omit<RoleMeta, "image"> = { icon: "eliminated", bg: "#1E2138", fg: "#9A9CB8", team: "town" };
 
 const palette = ["#F0A83A", "#5FD0BE", "#B79CF2", "#8FA8FF", "#E9D8A6", "#F08A7A", "#9ED98C", "#F2B8D0", "#C9C2B6", "#7FC8E8", "#D9A8E8", "#F6C377"];
 export const youColor = "#EDEBF5";

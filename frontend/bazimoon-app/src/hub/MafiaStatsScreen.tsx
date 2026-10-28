@@ -9,6 +9,7 @@ import { roleMeta } from "../mafia/roles";
 import { useRoleName } from "../mafia/parts";
 import { badgeMeta } from "./badges";
 import type { MafiaStats } from "../api/hub";
+import { RolePortrait } from "../mafia/RolePortrait";
 
 type Tab = "roles" | "achievements" | "games";
 
@@ -86,9 +87,7 @@ function ByRole({ data }: { data: MafiaStats }) {
           const meta = roleMeta[r.role];
           return (
             <div key={r.role} className="row" style={{ gap: 10, padding: "10px 14px", borderTop: "1px solid #3D2328" }}>
-              <span style={{ width: 30, height: 30, flex: "none", borderRadius: 999, background: meta.bg, color: meta.fg, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <Icon name={meta.icon} size={15} />
-              </span>
+              <RolePortrait role={r.role} size={38} />
               <span className="stack" style={{ width: 96, gap: 0 }}>
                 <span style={{ fontSize: 14, fontWeight: 600 }}>{roleName(r.role)}</span>
                 <span className="tiny" style={{ color: "#B9A6A9" }}>{t("statsGames", { count: r.games })}</span>

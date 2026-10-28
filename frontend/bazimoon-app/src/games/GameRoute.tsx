@@ -96,6 +96,14 @@ export function GameRoute({ route }: GameRouteProps) {
       if (route.screen === "play") {
         const pack = str(p?.pack, "places");
         const players = clamp(num(p?.players) ?? 5, 3, 12);
+        const names = (() => {
+          try {
+            const parsed: unknown = JSON.parse(str(p?.names, "[]"));
+            return Array.isArray(parsed) ? parsed.slice(0, players).map((name) => String(name).slice(0, 24)) : [];
+          } catch {
+            return [];
+          }
+        })();
         return (
           <SpyPlay
             key={JSON.stringify(p)}
@@ -103,6 +111,7 @@ export function GameRoute({ route }: GameRouteProps) {
             players={players}
             spies={clamp(num(p?.spies) ?? 1, 1, 3)}
             minutes={clamp(num(p?.minutes) ?? 5, 1, 15)}
+            names={names}
           />
         );
       }

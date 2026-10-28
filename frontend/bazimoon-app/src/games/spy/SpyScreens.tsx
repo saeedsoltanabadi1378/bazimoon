@@ -23,12 +23,20 @@ interface SpySetup {
   players: number;
   spies: number;
   minutes: number;
+  names: string[];
 }
 
 const maxSpies = (players: number) => (players >= 7 ? 2 : 1) + (players >= 10 ? 1 : 0);
 
 function readSetup(): SpySetup {
-  return readLocal<SpySetup>(SETUP_KEY, { players: 5, spies: 1, minutes: 5 });
+  const saved = readLocal<Partial<SpySetup>>(SETUP_KEY, { players: 5, spies: 1, minutes: 5, names: [] });
+  const players = Math.max(3, Math.min(12, Number(saved.players) || 5));
+  return {
+    players,
+    spies: Math.max(1, Math.min(maxSpies(players), Number(saved.spies) || 1)),
+    minutes: MINUTES.includes(Number(saved.minutes)) ? Number(saved.minutes) : 5,
+    names: Array.isArray(saved.names) ? saved.names.slice(0, players).map((name) => String(name).slice(0, 24)) : [],
+  };
 }
 
 export function SpyIntro() {
@@ -39,10 +47,17 @@ export function SpyIntro() {
   const update = (patch: Partial<SpySetup>) => {
     const next = { ...setup, ...patch };
     next.spies = Math.min(next.spies, maxSpies(next.players));
+    next.names = Array.from({ length: next.players }, (_, i) => next.names[i] ?? "");
     setSetup(next);
     writeLocal(SETUP_KEY, next);
   };
-  const play = (pack: SpyPack) => push({ name: "game", game: "spy", screen: "play", params: { pack, players: setup.players, spies: setup.spies, minutes: setup.minutes } });
+  const setName = (seat: number, name: string) => update({ names: Array.from({ length: setup.players }, (_, i) => (i === seat ? name : setup.names[i] ?? "")) });
+  const play = (pack: SpyPack) => push({
+    name: "game",
+    game: "spy",
+    screen: "play",
+    params: { pack, players: setup.players, spies: setup.spies, minutes: setup.minutes, names: JSON.stringify(setup.names.map((name) => name.trim())) },
+  });
 
   return (
     <IntroScreen
@@ -86,6 +101,28 @@ export function SpyIntro() {
             onChange={(i) => update({ minutes: MINUTES[i] })}
             format={(i) => t("minutesShort", { count: n(MINUTES[i]) })}
           />
+          <fieldset className="stack" style={{ gap: 8, margin: 0, padding: "10px 0 0", border: 0 }}>
+            <legend style={{ padding: 0, fontSize: 15, fontWeight: 600 }}>{t("spyPlayerNames")}</legend>
+            <p className="tiny muted" style={{ marginTop: -4 }}>{t("spyPlayerNamesHint")}</p>
+            {Array.from({ length: setup.players }, (_, seat) => (
+              <label key={seat} className="row" style={{ gap: 10 }}>
+                <span className="avatar num" aria-hidden="true" style={{ width: 34, height: 34, flex: "none", background: setup.names[seat]?.trim() ? ACCENT : "#2B3042", color: setup.names[seat]?.trim() ? INK : "var(--text-2)", fontSize: 13 }}>
+                  {n(seat + 1)}
+                </span>
+                <input
+                  type="text"
+                  value={setup.names[seat] ?? ""}
+                  maxLength={24}
+                  dir="auto"
+                  autoComplete="off"
+                  aria-label={t("spyPlayerNameLabel", { n: n(seat + 1) })}
+                  placeholder={t("partyPlayerN", { n: n(seat + 1) })}
+                  onChange={(event) => setName(seat, event.target.value)}
+                  style={{ width: "100%", minWidth: 0, minHeight: 44, boxSizing: "border-box", padding: "0 12px", borderRadius: 12, border: "1px solid #3A3F5E", background: "var(--surface)", color: "var(--text)", font: "400 15px inherit", fontFamily: "inherit" }}
+                />
+              </label>
+            ))}
+          </fieldset>
         </section>
       )}
       stats={[
@@ -112,7 +149,7 @@ type Phase =
   | { name: "caught"; accused: number }
   | { name: "guess"; accused: number };
 
-export function SpyPlay({ pack, players, spies, minutes }: { pack: SpyPack; players: number; spies: number; minutes: number }) {
+export function SpyPlay({ pack, players, spies, minutes, names }: { pack: SpyPack; players: number; spies: number; minutes: number; names: string[] }) {
   const { t, n, language } = useLanguage();
   const { back, replace } = useNavigation();
   useTrackStarted("spy");
@@ -130,13 +167,13 @@ export function SpyPlay({ pack, players, spies, minutes }: { pack: SpyPack; play
   const [leftMs, setLeftMs] = useState(minutes * 60_000);
   const [accused, setAccused] = useState<number | null>(null);
   const word = (w: [string, string]) => (language === "fa" ? w[1] : w[0]);
-  const seatName = (seat: number) => t("partyPlayerN", { n: n(seat + 1) });
+  const seatName = (seat: number) => names[seat]?.trim() || t("partyPlayerN", { n: n(seat + 1) });
 
   function end(winner: "town" | "spy", reason: string) {
     bumpPartyStats("spy", ["played", winner, ...(reason === "guessed" ? ["guessed"] : [])]);
     if (winner === "town") haptic.success();
     else haptic.error();
-    const params: ResultParams = { winner, reason, wordEn: game.word[0], wordFa: game.word[1], spies: game.spySeats.join(","), pack, players, spyCount: spies, minutes };
+    const params: ResultParams = { winner, reason, wordEn: game.word[0], wordFa: game.word[1], spies: game.spySeats.join(","), pack, players, spyCount: spies, minutes, names: JSON.stringify(names) };
     replace({ name: "game", game: "spy", screen: "result", params });
   }
 
@@ -335,8 +372,17 @@ export function SpyResult({ params }: { params?: ResultParams }) {
   const reason = String(params?.reason ?? "wrong");
   const spySeats = String(params?.spies ?? "").split(",").filter(Boolean).map(Number);
   const word = String(language === "fa" ? params?.wordFa : params?.wordEn);
-  const names = spySeats.map((s) => t("partyPlayerN", { n: n(s + 1) })).join(language === "fa" ? "، " : ", ");
-  const again = () => replace({ name: "game", game: "spy", screen: "play", params: { pack: String(params?.pack ?? "places"), players: Number(params?.players ?? 5), spies: Number(params?.spyCount ?? 1), minutes: Number(params?.minutes ?? 5), at: Date.now() } });
+  const configuredNames = (() => {
+    try {
+      const parsed: unknown = JSON.parse(String(params?.names ?? "[]"));
+      return Array.isArray(parsed) ? parsed.map((name) => String(name).slice(0, 24)) : [];
+    } catch {
+      return [];
+    }
+  })();
+  const seatName = (seat: number) => configuredNames[seat]?.trim() || t("partyPlayerN", { n: n(seat + 1) });
+  const spyNames = spySeats.map(seatName).join(language === "fa" ? "، " : ", ");
+  const again = () => replace({ name: "game", game: "spy", screen: "play", params: { pack: String(params?.pack ?? "places"), players: Number(params?.players ?? 5), spies: Number(params?.spyCount ?? 1), minutes: Number(params?.minutes ?? 5), names: JSON.stringify(configuredNames), at: Date.now() } });
 
   return (
     <ResultScreen
@@ -345,10 +391,10 @@ export function SpyResult({ params }: { params?: ResultParams }) {
       heroColors={["#13302C", "#5FD0BE"]}
       kicker={town ? t("spyTownWinKicker") : t("spySpyWinKicker")}
       title={town ? t("spyTownWins") : t("spySpyWins")}
-      sub={t(`spyReason_${reason}` as "spyReason_wrong", { name: names })}
+      sub={t(`spyReason_${reason}` as "spyReason_wrong", { name: spyNames })}
       metrics={[
         { value: word, label: t("spySecretWord"), color: "#F6C377" },
-        { value: names, label: spySeats.length > 1 ? t("spySpies") : t("spyTheSpy"), color: ACCENT },
+        { value: spyNames, label: spySeats.length > 1 ? t("spySpies") : t("spyTheSpy"), color: ACCENT },
       ]}
       xp={null}
       hideXp

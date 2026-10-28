@@ -4,12 +4,13 @@ import { useLanguage } from "../i18n/LanguageContext";
 import { useNavigation } from "../app/router";
 import { Avatar, Bar, Body, IconButton, Screen } from "../ui/components";
 import { Icon } from "../ui/Icon";
-import { playerColor, roleMeta, rolesFor } from "./roles";
+import { playerColor, rolesFor } from "./roles";
 import { ActionError, CreatorBox, ReconnectingBanner, useRoleName } from "./parts";
 import { useSecondsLeft } from "./timers";
 import { roomCode } from "./roomCode";
 import { useHub, useLoad } from "../hub/HubData";
 import { InviteBox } from "./InviteBox";
+import { RolePortrait } from "./RolePortrait";
 
 export function LobbyScreen() {
   const { view, busy, joinGame, leaveGame, startGame, setReady } = useGame();
@@ -97,12 +98,9 @@ export function LobbyScreen() {
           {roles.length > 0 && (
             <div className="row row--wrap">
               {roles.map(({ role, n }) => {
-                const meta = roleMeta[role];
                 return (
                   <span key={role} className="row" style={{ gap: 8, padding: "8px 12px 8px 8px", paddingInlineStart: 8, borderRadius: 999, background: "var(--surface)", border: "1px solid var(--edge-soft)" }}>
-                    <span style={{ width: 26, height: 26, borderRadius: 999, background: meta.bg, color: meta.fg, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                      <Icon name={meta.icon} size={15} />
-                    </span>
+                    <RolePortrait role={role} size={30} />
                     <span style={{ fontSize: 14, fontWeight: 600 }}>{n} {role === "Villager" && n !== 1 ? t("villagersPlural") : roleName(role)}</span>
                   </span>
                 );

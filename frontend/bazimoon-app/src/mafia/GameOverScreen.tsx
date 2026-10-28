@@ -12,6 +12,7 @@ import { useRoleName } from "./parts";
 import { shareLink } from "../lib/platform";
 import { appLink } from "../lib/links";
 import { haptic } from "../lib/haptics";
+import { RolePortrait } from "./RolePortrait";
 
 /** Bonus XP for the MVP (Progression.MvpBonusXp on the server). */
 const MVP_XP = 50;
@@ -164,9 +165,13 @@ export function GameOverScreen() {
             const meta = p.revealedRole ? roleMeta[p.revealedRole] : null;
             return (
               <div key={p.playerId} className="list__row">
-                <span className="avatar" aria-hidden="true" style={{ width: 34, height: 34, fontSize: 14, background: playerColor(view, p.playerId), opacity: p.isAlive ? 1 : 0.45 }}>
-                  {Array.from(p.displayName)[0]?.toUpperCase()}
-                </span>
+                {p.revealedRole ? (
+                  <RolePortrait role={p.revealedRole} size={42} muted={!p.isAlive} />
+                ) : (
+                  <span className="avatar" aria-hidden="true" style={{ width: 34, height: 34, fontSize: 14, background: playerColor(view, p.playerId), opacity: p.isAlive ? 1 : 0.45 }}>
+                    {Array.from(p.displayName)[0]?.toUpperCase()}
+                  </span>
+                )}
                 <div className="grow">
                   <div style={{ fontSize: 15, fontWeight: 600 }}>{you ? t("youName", { name: p.displayName }) : p.displayName}</div>
                   <div className="tiny muted">{fate(p)}</div>
