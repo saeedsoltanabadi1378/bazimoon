@@ -6,6 +6,7 @@ import { TabBar } from "../ui/TabBar";
 import { useHub, useLoad } from "./HubData";
 import { roman } from "./HomeScreen";
 import type { LeagueRow } from "../api/hub";
+import { useNavigation } from "../app/router";
 
 const rowColors = ["#5FD0BE", "#B79CF2", "#F0A83A", "#F2EEE6", "#8FA8FF", "#E9D8A6", "#F08A7A", "#9ED98C", "#F2B8D0", "#C9C2B6"];
 
@@ -18,11 +19,14 @@ const zoneStyle = {
 export function LeagueScreen() {
   const { t, n } = useLanguage();
   const { api } = useHub();
+  const { push } = useNavigation();
   const [board, setBoard] = useState<"mafia" | "puzzles">("puzzles");
-  const { data, loading, error, reload } = useLoad(() => api.league(board), [api, board]);
+  const [scope, setScope] = useState<"division" | "friends">("division");
+  const { data, loading, error, reload } = useLoad(() => api.league(board, scope), [api, board, scope]);
   const mafia = board === "mafia";
+  const friends = scope === "friends";
 
-  const unranked = data && data.you.rank === null;
+  const unranked = data && data.you.rank === null && !friends;
   const remaining = data ? Math.max(0, data.qualification.needed - data.qualification.played) : 0;
 
   return (
@@ -33,7 +37,7 @@ export function LeagueScreen() {
             {data ? t("seasonEnds", { season: data.season, days: data.daysLeft }) : " "}
           </span>
           <div className="row row--between">
-            <h1 className="h1">{data ? `${t(`division${data.division}` as "divisionGold")} ${roman(data.tier)}` : t("tabLeague")}</h1>
+            <h1 className="h1">{friends ? t("leagueFriendsTitle") : data ? `${t(`division${data.division}` as "divisionGold")} ${roman(data.tier)}` : t("tabLeague")}</h1>
             {data && (
               <span className="pill" style={{ background: "#2A2113", color: "#F0A83A" }}>
                 <Icon name="trophy" size={16} />
@@ -42,6 +46,13 @@ export function LeagueScreen() {
             )}
           </div>
         </header>
+
+        <Segmented
+          label={`${t("leagueScopeDivision")} / ${t("leagueScopeFriends")}`}
+          value={scope}
+          onChange={setScope}
+          options={[{ value: "division", label: t("leagueScopeDivision") }, { value: "friends", label: t("leagueScopeFriends") }]}
+        />
 
         <Segmented
           role="tablist"
@@ -88,7 +99,7 @@ export function LeagueScreen() {
               const showZone = !prev || prev.zone !== row.zone || prev.rank + 1 !== row.rank;
               return (
                 <Fragment key={`${row.rank}-${row.name}`}>
-                  {showZone && (!prev || prev.zone !== row.zone) && (
+                  {!friends && showZone && (!prev || prev.zone !== row.zone) && (
                     <div style={{ padding: "8px 14px", background: zoneStyle[row.zone].bg, color: zoneStyle[row.zone].fg, fontSize: 11, fontWeight: 700, letterSpacing: 1, textTransform: "uppercase" }}>
                       {t(`zoneTitle_${row.zone}`)}
                     </div>
@@ -100,9 +111,16 @@ export function LeagueScreen() {
           </section>
         )}
 
-        {data && data.rows.length === 0 && !unranked && <p className="small muted">{t("leagueEmpty")}</p>}
+        {data && data.rows.length === 0 && !unranked && !friends && <p className="small muted">{t("leagueEmpty")}</p>}
 
-        <p className="small muted">{t("leagueRules", { needed: data?.qualification.needed ?? 15 })}</p>
+        {friends && data && data.playerCount <= 1 && (
+          <div className="card stack center" style={{ gap: 12 }}>
+            <p className="small muted" style={{ textAlign: "center" }}>{t("leagueFriendsEmpty")}</p>
+            <button type="button" className="btn btn--outline btn--pill" onClick={() => push({ name: "friends" })}>{t("inviteAddFriends")}</button>
+          </div>
+        )}
+
+        <p className="small muted">{friends ? t("leagueFriendsRules") : t("leagueRules", { needed: data?.qualification.needed ?? 15 })}</p>
       </Body>
       <TabBar />
     </Screen>

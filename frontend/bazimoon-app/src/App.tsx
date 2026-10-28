@@ -10,6 +10,7 @@ import { readDeepLink } from "./lib/links";
 import { GoogleButton } from "./ui/GoogleButton";
 import { UpdatePrompt } from "./app/UpdatePrompt";
 import { GoogleResultSheet } from "./hub/SaveProgress";
+import { InviteBanner } from "./hub/InviteBanner";
 
 // Screens past Home load on demand so the first paint only needs the hub.
 const MafiaRoute = lazy(() => import("./mafia/MafiaRoute").then((m) => ({ default: m.MafiaRoute })));
@@ -21,12 +22,14 @@ const ProfileScreen = lazy(() => import("./hub/ProfileScreen").then((m) => ({ de
 const MafiaStatsScreen = lazy(() => import("./hub/MafiaStatsScreen").then((m) => ({ default: m.MafiaStatsScreen })));
 const RecapScreen = lazy(() => import("./mafia/RecapScreen").then((m) => ({ default: m.RecapScreen })));
 const GameRoute = lazy(() => import("./games/GameRoute").then((m) => ({ default: m.GameRoute })));
+const FriendsScreen = lazy(() => import("./hub/FriendsScreen").then((m) => ({ default: m.FriendsScreen })));
+const FriendLinkScreen = lazy(() => import("./hub/FriendsScreen").then((m) => ({ default: m.FriendLinkScreen })));
 const CoupleRoute = lazy(() => import("./couple/CoupleRoute").then((m) => ({ default: m.CoupleRoute })));
 
 const gameKeys: GameKey[] = ["zip", "queens", "merge", "mines", "memory", "word", "ladder", "stack", "blocks", "sudoku", "snake", "dooz", "spy", "esmfamil"];
 const isGameKey = (key: string): key is GameKey => (gameKeys as string[]).includes(key);
 
-/** Where the app opens: an invite or game link (/t/CODE, /g/ID, /couple/TOKEN, /ef/CODE, /play/GAME), or home. */
+/** Where the app opens: an invite or game link (/t/CODE, /g/ID, /couple/TOKEN, /ef/CODE, /f/CODE, /friends, /play/GAME), or home. */
 function initialRoutes(): Route[] {
   const link = readDeepLink();
   // The link has been read; keep the address bar on the app root so reloads open Home.
@@ -42,6 +45,10 @@ function initialRoutes(): Route[] {
       return [{ name: "home" }, { name: "couple", screen: "home" }];
     case "esmfamil":
       return [{ name: "home" }, { name: "game", game: "esmfamil", screen: "lobby", params: { code: `EF-${link.code}` } }];
+    case "friend":
+      return [{ name: "home" }, { name: "friendLink", code: link.code }];
+    case "friends":
+      return [{ name: "home" }, { name: "friends" }];
     case "play":
       if (link.game === "mafia") return [{ name: "home" }, { name: "mafia" }];
       if (link.game === "couple") return [{ name: "home" }, { name: "couple", screen: "home" }];
@@ -68,6 +75,10 @@ function CurrentScreen() {
       return <CreateTableScreen />;
     case "mafiaStats":
       return <MafiaStatsScreen />;
+    case "friends":
+      return <FriendsScreen />;
+    case "friendLink":
+      return <FriendLinkScreen code={route.code} />;
     case "recap":
       return <RecapScreen gameId={route.gameId} />;
     case "game":
@@ -104,6 +115,7 @@ function SessionGate() {
             <Suspense fallback={<LoadingScreen />}>
               <CurrentScreen />
             </Suspense>
+            <InviteBanner />
           </NavigationProvider>
           <GoogleResultSheet />
         </HubDataProvider>

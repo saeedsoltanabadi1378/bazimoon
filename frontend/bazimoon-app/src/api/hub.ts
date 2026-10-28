@@ -322,7 +322,8 @@ export const hubApi = (api: BazimoonApiClient) => ({
   tableInfo: (gameId: string) => api.request<TableInfo>("GET", `/api/tables/${gameId}`),
   setTableOpen: (gameId: string, isOpen: boolean) => api.request<TableInfo>("PUT", `/api/tables/${gameId}/open`, { isOpen }),
   quickMatch: () => api.request<{ gameId: string }>("POST", "/api/hub/quick-match"),
-  league: (board: "mafia" | "puzzles") => api.request<League>("GET", `/api/hub/league?board=${board}`),
+  league: (board: "mafia" | "puzzles", scope: "division" | "friends" = "division") =>
+    api.request<League>("GET", `/api/hub/league?board=${board}${scope === "friends" ? "&scope=friends" : ""}`),
   submit: (result: PuzzleSubmit) => api.request<PuzzleResult>("POST", "/api/puzzles/results", { hints: 0, ...result }),
   stats: (game: string) => api.request<GameStats>("GET", `/api/puzzles/${game}/stats`),
   board: (game: string, number?: number | null, mode?: string) => {

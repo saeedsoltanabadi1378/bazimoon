@@ -300,6 +300,7 @@ public sealed class AdminDashboardService
         [ActivityEvents.Mafia] = [ActivityEvents.MafiaLobbyJoined, ActivityEvents.MafiaGameStarted, ActivityEvents.MafiaGameEnded],
         [ActivityEvents.Puzzle] = [ActivityEvents.PuzzleIntroViewed, ActivityEvents.PuzzleStarted, ActivityEvents.PuzzleCompleted],
         [ActivityEvents.Couple] = [ActivityEvents.CoupleInviteSent, ActivityEvents.CoupleInviteAccepted, ActivityEvents.CoupleQuestionAnswered],
+        [ActivityEvents.Friends] = [ActivityEvents.FriendAdded, ActivityEvents.GameInviteSent, ActivityEvents.GameInviteAccepted],
     };
 
     /// <summary>Distinct players reaching each step of a flow's funnel in the last <paramref name="days"/>

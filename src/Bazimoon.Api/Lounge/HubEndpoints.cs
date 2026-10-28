@@ -46,8 +46,8 @@ public static class HubEndpoints
             return Results.Ok(new Games.CreateGameResponse(gameId.Value));
         }).WithName("QuickMatch");
 
-        hubGroup.MapGet("/league", (string? board, HubService hub, HttpContext http) =>
-            hub.GetLeagueAsync(http.User.GetUserId(), http.User.GetDisplayName(), board == "puzzles" ? "puzzles" : "mafia"))
+        hubGroup.MapGet("/league", (string? board, string? scope, HubService hub, HttpContext http) =>
+            hub.GetLeagueAsync(http.User.GetUserId(), http.User.GetDisplayName(), board == "puzzles" ? "puzzles" : "mafia", scope == "friends"))
             .WithName("GetLeague");
 
         var puzzles = app.MapGroup("/api/puzzles").RequireAuthorization();

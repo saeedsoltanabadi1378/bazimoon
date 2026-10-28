@@ -11,6 +11,7 @@ public static class ActivityEvents
     public const string Puzzle = "puzzle";
     public const string Couple = "couple";
     public const string Navigation = "navigation";
+    public const string Friends = "friends";
 
     public const string SignupGuest = "signup_guest";
     public const string SignupGoogle = "signup_google";
@@ -28,6 +29,11 @@ public static class ActivityEvents
     public const string CoupleInviteSent = "couple_invite_sent";
     public const string CoupleInviteAccepted = "couple_invite_accepted";
     public const string CoupleQuestionAnswered = "couple_question_answered";
+
+    public const string FriendRequestSent = "friend_request_sent";
+    public const string FriendAdded = "friend_added";
+    public const string GameInviteSent = "game_invite_sent";
+    public const string GameInviteAccepted = "game_invite_accepted";
 
     /// <summary>Every screen in the app, logged from one place in the router (see router.tsx) rather
     /// than from each screen. ScreenLeft fires when the tab is hidden or closed — the only signal that

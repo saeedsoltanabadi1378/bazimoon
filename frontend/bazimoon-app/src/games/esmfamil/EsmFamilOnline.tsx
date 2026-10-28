@@ -11,6 +11,7 @@ import { shareLink } from "../../lib/platform";
 import { appLink } from "../../lib/links";
 import { categoryLabel, startsWithLetter } from "./logic";
 import { EsmLetterChip } from "./parts";
+import { InviteFriendsButton } from "../../hub/InviteFriendsSheet";
 
 const ACCENT = "#F6C377";
 const INK = "#2A1A06";
@@ -139,6 +140,7 @@ export function EsmFamilLobby({ code }: { code: string }) {
                   <span aria-live="polite">{copied ? t("linkCopied") : t("copyLink")}</span>
                 </button>
               </div>
+              <InviteFriendsButton kind="esmfamil" target={room.code} accent="#3A2A16" ink={ACCENT} />
             </section>
 
             <section className="stack" style={{ gap: 8 }}>

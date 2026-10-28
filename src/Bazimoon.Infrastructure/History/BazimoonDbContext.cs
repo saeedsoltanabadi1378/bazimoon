@@ -28,6 +28,8 @@ public sealed class BazimoonDbContext : DbContext
     public DbSet<CoupleAnswerRecord> CoupleAnswers => Set<CoupleAnswerRecord>();
     public DbSet<MafiaTableRecord> MafiaTables => Set<MafiaTableRecord>();
     public DbSet<UserActivityEventRecord> UserActivityEvents => Set<UserActivityEventRecord>();
+    public DbSet<FriendshipRecord> Friendships => Set<FriendshipRecord>();
+    public DbSet<GameInviteRecord> GameInvites => Set<GameInviteRecord>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -122,7 +124,32 @@ public sealed class BazimoonDbContext : DbContext
             b.Property(x => x.Username).HasMaxLength(256);
             b.Property(x => x.Language).HasMaxLength(8);
             b.Property(x => x.ReminderTime).HasMaxLength(5);
+            b.Property(x => x.FriendCode).HasMaxLength(8);
             b.HasIndex(x => x.Rating);
+            b.HasIndex(x => x.FriendCode).IsUnique();
+        });
+
+        modelBuilder.Entity<FriendshipRecord>(b =>
+        {
+            b.ToTable("friendships");
+            b.HasKey(x => x.Id);
+            b.HasIndex(x => new { x.RequesterId, x.AddresseeId }).IsUnique();
+            b.HasIndex(x => x.AddresseeId);
+            b.HasOne<UserRecord>().WithMany().HasForeignKey(x => x.RequesterId).OnDelete(DeleteBehavior.Cascade);
+            b.HasOne<UserRecord>().WithMany().HasForeignKey(x => x.AddresseeId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<GameInviteRecord>(b =>
+        {
+            b.ToTable("game_invites");
+            b.HasKey(x => x.Id);
+            b.Property(x => x.Kind).HasMaxLength(16);
+            b.Property(x => x.Target).HasMaxLength(40);
+            b.Property(x => x.Status).HasMaxLength(16);
+            b.HasIndex(x => new { x.ToUserId, x.Status });
+            b.HasIndex(x => new { x.FromUserId, x.CreatedAt });
+            b.HasOne<UserRecord>().WithMany().HasForeignKey(x => x.FromUserId).OnDelete(DeleteBehavior.Cascade);
+            b.HasOne<UserRecord>().WithMany().HasForeignKey(x => x.ToUserId).OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<PuzzleResultRecord>(b =>

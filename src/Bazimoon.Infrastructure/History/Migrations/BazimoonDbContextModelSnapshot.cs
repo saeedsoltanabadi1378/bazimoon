@@ -404,6 +404,83 @@ namespace Bazimoon.Infrastructure.History.Migrations
                     b.ToTable("couples", (string)null);
                 });
 
+            modelBuilder.Entity("Bazimoon.Infrastructure.Hub.FriendshipRecord", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<bool>("Accepted")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime?>("AcceptedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("AddresseeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("RequesterId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AddresseeId");
+
+                    b.HasIndex("RequesterId", "AddresseeId")
+                        .IsUnique();
+
+                    b.ToTable("friendships", (string)null);
+                });
+
+            modelBuilder.Entity("Bazimoon.Infrastructure.Hub.GameInviteRecord", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("FromUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<string>("Target")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
+
+                    b.Property<Guid>("ToUserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FromUserId", "CreatedAt");
+
+                    b.HasIndex("ToUserId", "Status");
+
+                    b.ToTable("game_invites", (string)null);
+                });
+
             modelBuilder.Entity("Bazimoon.Infrastructure.Hub.MafiaTableRecord", b =>
                 {
                     b.Property<Guid>("GameId")
@@ -449,6 +526,10 @@ namespace Bazimoon.Infrastructure.History.Migrations
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("FriendCode")
+                        .HasMaxLength(8)
+                        .HasColumnType("character varying(8)");
 
                     b.Property<bool>("Haptics")
                         .HasColumnType("boolean");
@@ -496,6 +577,9 @@ namespace Bazimoon.Infrastructure.History.Migrations
                         .HasColumnType("integer");
 
                     b.HasKey("UserId");
+
+                    b.HasIndex("FriendCode")
+                        .IsUnique();
 
                     b.HasIndex("Rating");
 
@@ -816,6 +900,36 @@ namespace Bazimoon.Infrastructure.History.Migrations
                         .IsRequired();
 
                     b.Navigation("GameRecord");
+                });
+
+            modelBuilder.Entity("Bazimoon.Infrastructure.Hub.FriendshipRecord", b =>
+                {
+                    b.HasOne("Bazimoon.Infrastructure.Identity.UserRecord", null)
+                        .WithMany()
+                        .HasForeignKey("AddresseeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Bazimoon.Infrastructure.Identity.UserRecord", null)
+                        .WithMany()
+                        .HasForeignKey("RequesterId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Bazimoon.Infrastructure.Hub.GameInviteRecord", b =>
+                {
+                    b.HasOne("Bazimoon.Infrastructure.Identity.UserRecord", null)
+                        .WithMany()
+                        .HasForeignKey("FromUserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Bazimoon.Infrastructure.Identity.UserRecord", null)
+                        .WithMany()
+                        .HasForeignKey("ToUserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Bazimoon.Infrastructure.Identity.PushSubscriptionRecord", b =>

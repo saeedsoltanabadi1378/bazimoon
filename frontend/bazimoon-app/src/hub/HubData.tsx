@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { ApiError } from "../api/client";
 import { hubApi, type Profile, type PuzzleResult, type PuzzleSubmit, type Settings } from "../api/hub";
+import { friendsApi } from "../api/friends";
 import { useSession } from "../app/session";
 import { readLocal, writeLocal } from "../lib/storage";
 import { setHapticsEnabled } from "../lib/haptics";
@@ -12,6 +13,7 @@ const DISABLED_KEY = "bazimoon-disabled-games";
 
 interface HubData {
   api: ReturnType<typeof hubApi>;
+  friends: ReturnType<typeof friendsApi>;
   profile: Profile | null;
   refreshProfile(): Promise<void>;
   highContrast: boolean;
@@ -28,6 +30,7 @@ export function HubDataProvider({ children }: { children: ReactNode }) {
   const session = useSession();
   const { language, setLanguage, fromUrl } = useLanguage();
   const api = useMemo(() => hubApi(session.api), [session.api]);
+  const friends = useMemo(() => friendsApi(session.api), [session.api]);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [highContrast, setHighContrast] = useState(() => readLocal<boolean>(CONTRAST_KEY, false));
   const [disabledGames, setDisabledGames] = useState<string[]>(() => readLocal<string[]>(DISABLED_KEY, []));
@@ -116,7 +119,7 @@ export function HubDataProvider({ children }: { children: ReactNode }) {
     }
   }, [api, refreshProfile]);
 
-  const value = useMemo(() => ({ api, profile, refreshProfile, highContrast, saveSettings, submitResult, isGameOn }), [api, profile, refreshProfile, highContrast, saveSettings, submitResult, isGameOn]);
+  const value = useMemo(() => ({ api, friends, profile, refreshProfile, highContrast, saveSettings, submitResult, isGameOn }), [api, friends, profile, refreshProfile, highContrast, saveSettings, submitResult, isGameOn]);
   return <HubDataContext.Provider value={value}>{children}</HubDataContext.Provider>;
 }
 

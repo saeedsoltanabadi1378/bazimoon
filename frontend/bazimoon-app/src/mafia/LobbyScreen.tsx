@@ -10,6 +10,7 @@ import { useSecondsLeft } from "./timers";
 import { roomCode } from "./roomCode";
 import { useHub, useLoad } from "../hub/HubData";
 import { InviteBox } from "./InviteBox";
+import { InviteFriendsButton } from "../hub/InviteFriendsSheet";
 import { RolePortrait } from "./RolePortrait";
 
 export function LobbyScreen() {
@@ -90,6 +91,8 @@ export function LobbyScreen() {
             </div>
           </div>
         )}
+
+        {joined && !full && <InviteFriendsButton kind="mafia" target={view.gameId} accent="#9C8CFF" ink="#120D2E" />}
 
         {joined && info?.isHost && info.inviteCode && <InviteBox info={info} onChange={table.setData} />}
 

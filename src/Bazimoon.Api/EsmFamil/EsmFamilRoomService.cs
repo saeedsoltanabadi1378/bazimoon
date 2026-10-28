@@ -45,6 +45,18 @@ public sealed class EsmFamilRoomService
         }
     }
 
+    /// <summary>Whether the room is still a lobby with a free seat, so friends can be invited in. With
+    /// <paramref name="member"/>, also that this player sits in it.</summary>
+    public bool IsOpenLobby(string code, Guid? member = null)
+    {
+        lock (_gate)
+        {
+            if (!_rooms.TryGetValue(NormalizeCode(code), out var room)) return false;
+            if (member is { } id && !room.Active.Any(p => p.UserId == id)) return false;
+            return room.Phase == EsmPhase.Lobby && room.Active.Count() < EsmFamilRules.MaxPlayers;
+        }
+    }
+
     public async Task<EsmRoomView> GetAsync(string code, Guid userId) => await Act(code, userId, (_, _) => { }, requireMember: true);
 
     public async Task<EsmRoomView> JoinAsync(string code, Guid userId, string name)

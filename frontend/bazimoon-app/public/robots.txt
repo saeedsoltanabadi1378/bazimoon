@@ -7,5 +7,7 @@ Disallow: /t/
 Disallow: /g/
 Disallow: /couple/
 Disallow: /ef/
+Disallow: /f/
+Disallow: /friends
 
 Sitemap: https://bazimoon.com/sitemap.xml

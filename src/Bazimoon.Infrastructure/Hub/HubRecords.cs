@@ -22,6 +22,8 @@ public sealed class PlayerStatsRecord
     public bool Haptics { get; set; } = true;
     /// <summary>Last puzzle day a daily reminder was sent, so a player is nudged at most once a day.</summary>
     public int? LastReminderDay { get; set; }
+    /// <summary>The code friends add this player with, made the first time they open Friends.</summary>
+    public string? FriendCode { get; set; }
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;

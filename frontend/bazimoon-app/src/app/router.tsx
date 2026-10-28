@@ -11,6 +11,8 @@ export type Route =
   | { name: "solo" }
   | { name: "league" }
   | { name: "profile" }
+  | { name: "friends" }
+  | { name: "friendLink"; code: string }
   | { name: "mafia"; gameId?: string; code?: string }
   | { name: "createTable" }
   | { name: "mafiaStats" }
@@ -134,6 +136,7 @@ export function tabFor(route: Route): TabKey | null {
       return "league";
     case "profile":
     case "mafiaStats":
+    case "friends":
       return "profile";
     default:
       return null;

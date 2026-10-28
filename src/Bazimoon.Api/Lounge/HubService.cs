@@ -188,7 +188,9 @@ public sealed class HubService
 
     // ------------------------------------------------------------------ league
 
-    public async Task<LeagueDto> GetLeagueAsync(Guid userId, string username, string board)
+    /// <summary>The season board of the player's division, or with <paramref name="friends"/> the same
+    /// board ranking only the player and their friends: everyone is ranked, with no zones.</summary>
+    public async Task<LeagueDto> GetLeagueAsync(Guid userId, string username, string board, bool friends = false)
     {
         var me = await _db.GetOrCreateStatsAsync(userId, username);
         await _db.SaveChangesAsync();
@@ -199,7 +201,10 @@ public sealed class HubService
         var (division, tier) = Progression.Division(me.Rating);
         var bots = await BotIdsExceptAsync(userId);
         var everyone = await _db.PlayerStats.AsNoTracking().ToListAsync();
-        var sameDivision = everyone.Where(s => !bots.Contains(s.UserId) && Progression.Division(s.Rating).Division == division).ToDictionary(s => s.UserId);
+        HashSet<Guid>? circle = friends ? [.. await FriendService.FriendIdsAsync(_db, userId), userId] : null;
+        var sameDivision = everyone
+            .Where(s => !bots.Contains(s.UserId) && (circle is null ? Progression.Division(s.Rating).Division == division : circle.Contains(s.UserId)))
+            .ToDictionary(s => s.UserId);
 
         List<LeagueEntry> entries;
         QualificationDto qualification;
@@ -240,16 +245,25 @@ public sealed class HubService
             qualification = new QualificationDto(myGames, Progression.MafiaQualifyingGames);
         }
 
+        if (circle is not null)
+        {
+            // Friends who have not played this season still show, at the bottom.
+            foreach (var s in sameDivision.Values.Where(s => entries.All(e => e.UserId != s.UserId)))
+                entries.Add(new LeagueEntry(s.UserId, s.Username, board == "puzzles" ? 0 : s.Rating, 0,
+                    board == "puzzles" ? Progression.CurrentStreak(s.PuzzleStreak, s.LastPuzzleDay, s.StreakFreezes, today) : 0, 0, true));
+            entries = entries.Select(e => e with { Qualified = true }).ToList();
+        }
+
         var ranked = entries.Where(e => e.Qualified).OrderByDescending(e => e.Score).ThenBy(e => e.Name).ToList();
         int n = ranked.Count;
-        string ZoneFor(int rank) => n >= 10 && rank <= 5 ? "promotion" : n >= 10 && rank > n - 5 ? "relegation" : "safe";
+        string ZoneFor(int rank) => circle is null && n >= 10 && rank <= 5 ? "promotion" : circle is null && n >= 10 && rank > n - 5 ? "relegation" : "safe";
 
         var rows = new List<LeagueRowDto>();
         for (int i = 0; i < n; i++)
         {
             var e = ranked[i];
             int rank = i + 1;
-            bool show = rank <= 7 || rank > n - 3 || e.UserId == userId;
+            bool show = circle is not null || rank <= 7 || rank > n - 3 || e.UserId == userId;
             if (!show) continue;
             rows.Add(new LeagueRowDto(rank, e.Name, e.UserId == userId, e.Score, e.Delta, e.Games, e.WinRateOrStreak, ZoneFor(rank)));
         }

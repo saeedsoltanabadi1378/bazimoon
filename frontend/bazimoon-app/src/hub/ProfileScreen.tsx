@@ -6,7 +6,7 @@ import { useSession } from "../app/session";
 import { Body, ProgressBar, Screen, Switch } from "../ui/components";
 import { Icon } from "../ui/Icon";
 import { TabBar } from "../ui/TabBar";
-import { useHub } from "./HubData";
+import { useHub, useLoad } from "./HubData";
 import { roman } from "./HomeScreen";
 import { formatClock } from "../lib/format";
 import { shareLink } from "../lib/platform";
@@ -20,7 +20,8 @@ import { useInstallMode } from "../lib/install";
 export function ProfileScreen() {
   const { t, n, language } = useLanguage();
   const session = useSession();
-  const { profile, saveSettings } = useHub();
+  const { profile, saveSettings, friends: fapi } = useHub();
+  const friendList = useLoad(() => fapi.list(), [fapi]);
   const { push } = useNavigation();
   const [editingTime, setEditingTime] = useState(false);
   const installMode = useInstallMode();
@@ -42,6 +43,8 @@ export function ProfileScreen() {
   const p = profile;
   const s = p.settings;
   const name = session.displayName || p.name;
+  const incoming = friendList.data?.incoming.length ?? 0;
+  const friendsValue = incoming > 0 ? t("profileFriendsNew", { count: incoming }) : t("profileFriendsCount", { count: friendList.data?.friends.length ?? 0 });
   const badges = [...p.badges].sort((a, b) => Number(b.earned) - Number(a.earned));
   const sides = [
     { label: t("asTown"), pct: p.mafia.asTown.winRate, games: p.mafia.asTown.games, color: "#5FD0BE" },
@@ -167,6 +170,7 @@ export function ProfileScreen() {
           {(installMode === "prompt" || installMode === "ios") && (
             <SettingRow label={t("installApp")} value={t("addToHomeScreen")} onClick={() => setShowInstall(true)} />
           )}
+          <SettingRow label={t("profileFriends")} value={friendsValue} onClick={() => push({ name: "friends" })} />
           <SettingRow label={t("inviteFriends")} value={t("share")} onClick={() => void shareLink(appLink(), t("inviteText"))} />
           {!session.isGuest && (
             <button type="button" onClick={() => void session.logout()} style={{ width: "100%", minHeight: 52, padding: "0 16px", border: 0, borderTop: "1px solid #232734", background: "transparent", color: "#F08A7A", fontSize: 15, fontWeight: 600, textAlign: "start", cursor: "pointer" }}>
