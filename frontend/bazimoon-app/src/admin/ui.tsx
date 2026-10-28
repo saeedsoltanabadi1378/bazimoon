@@ -3,14 +3,15 @@ import { adminApi } from "./adminApi";
 import type { LiveGame, ServiceStatus } from "./adminApi";
 import { useAdminI18n, type AdminLang } from "./i18n";
 
-export type AdminPage = "overview" | "games" | "players" | "puzzles" | "activity" | "settings" | "system";
+export type AdminPage = "overview" | "games" | "players" | "puzzles" | "activity" | "marketing" | "settings" | "system";
 
-export const NAV: { page: AdminPage; label: "navOverview" | "navGames" | "navPlayers" | "navPuzzles" | "navActivity" | "navSettings" | "navSystem"; icon: string }[] = [
+export const NAV: { page: AdminPage; label: "navOverview" | "navGames" | "navPlayers" | "navPuzzles" | "navActivity" | "navMarketing" | "navSettings" | "navSystem"; icon: string }[] = [
   { page: "overview", label: "navOverview", icon: "M3 11.5 12 4l9 7.5M5 10v10h14V10" },
   { page: "games", label: "navGames", icon: "M12 3a9 9 0 1 0 9 9M12 3v9h9" },
   { page: "players", label: "navPlayers", icon: "M16 19v-1a4 4 0 0 0-8 0v1M12 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM20 19v-1a3 3 0 0 0-2-2.8M4 19v-1a3 3 0 0 1 2-2.8" },
   { page: "puzzles", label: "navPuzzles", icon: "M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z" },
   { page: "activity", label: "navActivity", icon: "M3 17h4v4H3zM10 10h4v11h-4zM17 4h4v17h-4z" },
+  { page: "marketing", label: "navMarketing", icon: "M4 13V6l16-3v14l-16-3zM8 14l1 6h4l-1-5" },
   { page: "settings", label: "navSettings", icon: "M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19 12a7 7 0 0 0-.1-1.2l2-1.6-2-3.4-2.4 1a7 7 0 0 0-2-1.2L14 3h-4l-.5 2.6a7 7 0 0 0-2 1.2l-2.4-1-2 3.4 2 1.6a7 7 0 0 0 0 2.4l-2 1.6 2 3.4 2.4-1a7 7 0 0 0 2 1.2L10 21h4l.5-2.6a7 7 0 0 0 2-1.2l2.4 1 2-3.4-2-1.6c.1-.4.1-.8.1-1.2z" },
   { page: "system", label: "navSystem", icon: "M3 12h4l3-8 4 16 3-8h4" },
 ];

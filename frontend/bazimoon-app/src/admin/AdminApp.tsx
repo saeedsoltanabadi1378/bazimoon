@@ -7,6 +7,7 @@ import { GamesPage } from "./pages/Games";
 import { PlayersPage } from "./pages/Players";
 import { PuzzlesPage } from "./pages/Puzzles";
 import { ActivityPage } from "./pages/Activity";
+import { MarketingPage } from "./pages/Marketing";
 import { SettingsPage } from "./pages/Settings";
 import { SystemPage } from "./pages/System";
 import "./admin.css";
@@ -75,6 +76,7 @@ function AdminRoot() {
       {page === "players" && <PlayersPage />}
       {page === "puzzles" && <PuzzlesPage />}
       {page === "activity" && <ActivityPage />}
+      {page === "marketing" && <MarketingPage />}
       {page === "settings" && <SettingsPage />}
       {page === "system" && <SystemPage />}
     </div>
