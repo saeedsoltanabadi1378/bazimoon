@@ -221,12 +221,15 @@ function Lobby({ room, busy, voiceOn, micMuted, localMutes, onVoice, onMic, onPl
 function GameTable({ room, voiceOn, micMuted, localMutes, onVoice, onMic, onPlayerMute }: { room: ShelemRoom; voiceOn: boolean; micMuted: boolean; localMutes: Set<number>; onVoice(): void; onMic(): void; onPlayerMute(uid: number): void }) {
   const { t, n } = useLanguage();
   const own = room.yourSeat ?? 0;
+  const biddingWinner = room.phase !== 'bidding' && room.phase !== 'lobby'
+    ? room.players.find(player => player.seat === room.declarerSeat) : undefined;
   const at = (delta: number) => room.players.find((p) => p.seat === (own + delta) % 4);
   const spots = [{ delta: 2, pos: "top" }, { delta: 1, pos: "left" }, { delta: 3, pos: "right" }];
   return <div className="shelem-table">
     <div className="shelem-felt-glow" />
     {spots.map(({ delta, pos }) => { const p = at(delta); if (!p) return null; return <div className={`shelem-player shelem-player--${pos}${p.seat === room.turnSeat ? " is-turn" : ""}`} key={p.seat}><span>{p.isBot ? "✦" : p.name[0]}</span><b>{p.name}</b><small>{n(p.cards)}</small><CardBackFan count={p.cards} vertical={pos !== "top"} /></div>; })}
     <div className="shelem-contract"><span>{room.highestBid ? n(room.highestBid) : "—"}</span>{room.trump && <b className={room.trump === "hearts" || room.trump === "diamonds" ? "is-red" : ""}>{SUITS.find((s) => s.key === room.trump)?.symbol}</b>}<small>{t("shelemContract")}</small></div>
+    {biddingWinner && <div className="shelem-bidding-winner" role="status"><small>{t('shelemBiddingWinner')}</small><strong dir="auto">{biddingWinner.isYou ? t('you') : biddingWinner.name}</strong></div>}
     <div className="shelem-trick" dir="ltr">{room.trick.map((play) => <PlayingCard key={`${play.seat}-${play.card}`} code={play.card} size="table" style={{ gridArea: play.seat === own ? "south" : play.seat === (own + 1) % 4 ? "west" : play.seat === (own + 2) % 4 ? "north" : "east" }} />)}{room.trick.length === 0 && <span className="shelem-table-mark">✦</span>}</div>
     <div className={`shelem-player shelem-player--bottom${room.turnSeat === own ? " is-turn" : ""}`}><span>{at(0)?.name[0]}</span><b>{t("you")}</b></div>
     <div className="shelem-voice-float"><VoicePanel compact room={room} voiceOn={voiceOn} micMuted={micMuted} localMutes={localMutes} onVoice={onVoice} onMic={onMic} onPlayerMute={onPlayerMute} /></div>

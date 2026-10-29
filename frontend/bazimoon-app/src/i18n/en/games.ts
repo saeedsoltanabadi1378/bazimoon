@@ -806,6 +806,7 @@ export const games = {
   shelemChooseTrump: "Choose the trump suit",
   shelemYourTurn: "Your turn — play a highlighted card",
   shelemContract: "CONTRACT",
+  shelemBiddingWinner: "Bidding winner",
   shelemNextRound: "Deal the next round",
   shelemWaitingHost: "Waiting for the host to deal…",
   shelemYouWon: "Your team won",
