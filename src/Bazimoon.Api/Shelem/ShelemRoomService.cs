@@ -13,9 +13,10 @@ public sealed class ShelemRoomService
     private readonly Dictionary<string, Room> _rooms = new(StringComparer.Ordinal);
     private readonly TimeProvider _clock;
     private readonly IAppSettingsService _settings;
+    private readonly IShelemNotifier _notifier;
     private static readonly string[] BotNames = ["Roya", "Arman", "Nika", "Kian"];
 
-    public ShelemRoomService(TimeProvider clock, IAppSettingsService settings) { _clock = clock; _settings = settings; }
+    public ShelemRoomService(TimeProvider clock, IAppSettingsService settings, IShelemNotifier notifier) { _clock = clock; _settings = settings; _notifier = notifier; }
     private DateTimeOffset Now => _clock.GetUtcNow();
 
     public async Task<ShelemRoomView> CreateAsync(Guid userId, string name, bool withBots)
@@ -39,16 +40,39 @@ public sealed class ShelemRoomService
         }
     }
 
-    public Task<ShelemRoomView> GetAsync(string code, Guid userId)
+    public async Task<ShelemRoomView> GetAsync(string code, Guid userId)
     {
+        ShelemRoomView view;
+        long before;
         lock (_gate)
         {
             var room = Find(code);
+            before = room.Version;
             Tick(room);
             if (room.Game.Players.All(p => p.UserId != userId)) throw new ForbiddenGameActionException("You are not in this room.");
             room.LastActivity = Now;
-            return Task.FromResult(View(room, userId));
+            view = View(room, userId);
         }
+        if (view.Version != before) await _notifier.RoomChangedAsync(view.Code, view.Version);
+        return view;
+    }
+
+    /// <summary>Runs every room whose bot or completed-trick timer is due; returns the rooms that changed.</summary>
+    public IReadOnlyList<(string Code, long Version)> TickDue()
+    {
+        var changed = new List<(string, long)>();
+        lock (_gate)
+        {
+            foreach (var room in _rooms.Values)
+            {
+                bool due = (room.BotActAt is { } at && Now >= at) || (room.TrickVisibleUntil != default && Now >= room.TrickVisibleUntil);
+                if (!due) continue;
+                long before = room.Version;
+                Tick(room);
+                if (room.Version != before) changed.Add((room.Code, room.Version));
+            }
+        }
+        return changed;
     }
 
     public Task<ShelemRoomView> JoinAsync(string code, Guid userId, string name) => Act(code, userId, (room, me) =>
@@ -77,7 +101,14 @@ public sealed class ShelemRoomService
         lock (_gate) return _rooms.TryGetValue(NormalizeCode(code), out var room) && room.Game.Players.Any(p => p.UserId == userId);
     }
 
-    private Task<ShelemRoomView> Act(string code, Guid userId, Action<Room, ShelemPlayer?> action, bool requireMember = true)
+    private async Task<ShelemRoomView> Act(string code, Guid userId, Action<Room, ShelemPlayer?> action, bool requireMember = true)
+    {
+        var view = ActLocked(code, userId, action, requireMember);
+        await _notifier.RoomChangedAsync(view.Code, view.Version);
+        return view;
+    }
+
+    private ShelemRoomView ActLocked(string code, Guid userId, Action<Room, ShelemPlayer?> action, bool requireMember)
     {
         lock (_gate)
         {
@@ -90,7 +121,7 @@ public sealed class ShelemRoomService
             room.Version++;
             room.LastActivity = Now;
             ScheduleBot(room);
-            return Task.FromResult(View(room, userId));
+            return View(room, userId);
         }
     }
 

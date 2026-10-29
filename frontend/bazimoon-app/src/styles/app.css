@@ -1462,7 +1462,7 @@ html[lang="fa"] .kicker {
 .shelem-bidding-winner small { font-size:9px; color:#B7B9CD; }
 .shelem-bidding-winner strong { font-size:12px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .shelem-trick { position:absolute; inset:28% 24% 24%; display:grid; grid-template-areas:". north ." "west . east" ". south ."; grid-template-columns:1fr 1fr 1fr; grid-template-rows:1fr 1fr 1fr; place-items:center; }
-.shelem-trick .playing-card { animation:shelem-card-play 300ms cubic-bezier(.16,1,.3,1) both; }
+.shelem-trick .playing-card { animation:shelem-card-play 460ms cubic-bezier(.16,1,.3,1) both; }
 .shelem-table-mark { grid-area:2/2; color:rgba(226,184,107,.35); font-size:42px; }
 .shelem-trick-winner { position:absolute; top:24%; width:100%; text-align:center; color:#F7E3B4; font-size:12px; z-index:6; }
 .shelem-trick.is-collecting { animation:shelem-collect 320ms 1100ms ease-in both; }
@@ -1471,7 +1471,8 @@ html[lang="fa"] .kicker {
 @media(prefers-reduced-motion:reduce) { .shelem-trick.is-collecting { animation:none; } }
 .shelem-actions { flex-shrink:0; padding:10px 14px; background:#0E1121; border-top:1px solid #202441; }
 .shelem-actions:empty { display:none; }
-.shelem-network { flex-shrink:0; padding:6px 12px; font-size:12px; background:#29243A; color:#F7E3B4; }
+/* Floats over the table so sending a move never resizes the room. */
+.shelem-network { position:absolute; z-index:20; top:calc(var(--safe-top, 0px) + 74px); inset-inline:12px; padding:6px 12px; border:1px solid rgba(226,184,107,.3); border-radius:10px; font-size:12px; background:rgba(41,36,58,.94); color:#F7E3B4; box-shadow:0 8px 20px rgba(0,0,0,.35); pointer-events:auto; }
 .shelem-network button { margin-inline-start:8px; color:inherit; background:transparent; border:1px solid currentColor; border-radius:6px; padding:5px; }
 .shelem-turn-guidance { text-align:center; color:#F7E3B4; font-size:13px; padding:4px; }
 .shelem-turn-guidance small { margin-top:4px; }
@@ -1539,7 +1540,7 @@ html[lang="fa"] .kicker {
 .shelem-result .btn,.shelem-result > small { grid-column:1/-1; }
 .shelem-final { display:flex; align-items:center; justify-content:center; gap:10px; min-height:54px; }.shelem-final > span{font-size:30px;color:#E2B86B}.shelem-final b{font-size:20px}.shelem-final small{color:#B7B9CD}
 @keyframes shelem-deal-in { from { opacity:0; transform:translateY(-50px) scale(.8) rotate(0deg); } }
-@keyframes shelem-card-play { from { opacity:0; transform:translateY(24px) rotate(-7deg) scale(.92); } 75% { opacity:1; transform:translateY(-3px) rotate(1deg) scale(1.025); } to { opacity:1; transform:translateY(0) rotate(0) scale(1); } }
+@keyframes shelem-card-play { from { opacity:0; transform:translate(var(--from-x,0px),var(--from-y,24px)) rotate(var(--from-turn,-7deg)) scale(.7); } 20% { opacity:1; } 80% { transform:translate(0,0) rotate(1deg) scale(1.04); } to { opacity:1; transform:translate(0,0) rotate(0) scale(1); } }
 @keyframes shelem-thinking { 0%,100%{transform:translateY(0);opacity:.35}50%{transform:translateY(-4px);opacity:1} }
 @media (max-height:700px) { .shelem-table{min-height:310px}.shelem-hand{min-height:96px}.shelem-hand .playing-card{--card-w:clamp(44px,13vw,56px)} }
 @media (prefers-reduced-motion:reduce) { .shelem-hero__cards .playing-card,.shelem-trick .playing-card,.shelem-thinking span,.shelem-player-status,.shelem-player-status i{animation:none}.playing-card{transition:none} }

@@ -40,6 +40,8 @@ builder.Services.AddScoped<CoupleService>();
 builder.Services.AddScoped<FriendService>();
 builder.Services.AddSingleton<Bazimoon.Api.EsmFamil.EsmFamilRoomService>();
 builder.Services.AddSingleton<Bazimoon.Api.Shelem.ShelemRoomService>();
+builder.Services.AddSingleton<Bazimoon.Api.Shelem.IShelemNotifier, Bazimoon.Api.Shelem.SignalRShelemNotifier>();
+builder.Services.AddHostedService<Bazimoon.Api.Shelem.ShelemTicker>();
 builder.Services.AddSingleton<ReminderStatus>();
 builder.Services.AddScoped<Bazimoon.Api.Admin.AdminDashboardService>();
 builder.Services.AddOptions<PushOptions>().Bind(builder.Configuration.GetSection(PushOptions.SectionName));

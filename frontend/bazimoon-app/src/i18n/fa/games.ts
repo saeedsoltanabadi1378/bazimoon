@@ -819,6 +819,7 @@ export const games: Record<keyof typeof en, string> = {
   shelemSettings: "تنظیمات بازی",
   shelemVoiceSettings: "گفت‌وگوی صوتی اتاق",
   shelemYourTurnShort: "نوبت شما",
+  shelemYourTurnFollow: "نوبت شما · خال {suit} را بازی کن",
   shelemPassed: "پاس داد",
   shelemTurnStatus_bidding: "در حال خواندن…",
   shelemTurnStatus_discard: "در حال چیدن زمین…",

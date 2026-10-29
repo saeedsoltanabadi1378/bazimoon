@@ -4,6 +4,7 @@ import { useNavigation } from "../../app/router";
 import { useSession } from "../../app/session";
 import { shelemApi, type ShelemRoom, type ShelemSuit } from "../../api/shelem";
 import { ApiError } from "../../api/client";
+import { connectToShelemRoom } from "../../api/signalr";
 import { Body, IconButton, Screen, Switch, TopBar } from "../../ui/components";
 import { Icon } from "../../ui/Icon";
 import { VoiceSession } from "../../lib/voiceSession";
@@ -95,6 +96,8 @@ export function ShelemRoomScreen({ code }: { code: string }) {
   const voice = useRef(new VoiceSession());
   const version = useRef(-1);
   const polling = useRef(false);
+  const queued = useRef(false);
+  const [live, setLive] = useState(false);
   const submitting = useRef(false);
   const [reconnecting, setReconnecting] = useState(false);
   const [moveRejected, setMoveRejected] = useState(false);
@@ -115,18 +118,31 @@ export function ShelemRoomScreen({ code }: { code: string }) {
     return () => window.clearTimeout(timer);
   }, [round]);
 
-  const load = useCallback(async () => {
-    if (polling.current || submitting.current) return;
+  const load = useCallback(async function refresh(): Promise<void> {
+    // A push that lands mid-request must not be lost: fetch once more when the current request ends.
+    if (polling.current || submitting.current) { queued.current = true; return; }
     polling.current = true;
     try {
       const next = await api.get(code);
       if (next.version > version.current) { version.current = next.version; setRoom(next); }
       setReconnecting(false);
     } catch { setReconnecting(true); }
-    finally { polling.current = false; }
-  }, [api, code, t]);
+    finally {
+      polling.current = false;
+      if (queued.current) { queued.current = false; void refresh(); }
+    }
+  }, [api, code]);
 
-  useEffect(() => { void load(); const id = window.setInterval(() => void load(), 550); return () => window.clearInterval(id); }, [load]);
+  useEffect(() => {
+    let cancelled = false;
+    let hub: Awaited<ReturnType<typeof connectToShelemRoom>> | null = null;
+    connectToShelemRoom(import.meta.env.VITE_API_BASE_URL, () => session.api.getToken() ?? "", code, () => void load(), (state) => { if (!cancelled) setLive(state === "connected"); })
+      .then((connection) => { if (cancelled) void connection.stop(); else hub = connection; })
+      .catch(() => { if (!cancelled) setLive(false); });
+    return () => { cancelled = true; void hub?.stop(); };
+  }, [code, load, session.api]);
+  // Pushes drive the room; polling stays as a slow safety net, and takes over while the live link is down.
+  useEffect(() => { void load(); const id = window.setInterval(() => void load(), live ? 5000 : 550); return () => window.clearInterval(id); }, [load, live]);
   useEffect(() => () => { void voice.current.leave(); }, []);
   useEffect(() => { setSelected([]); }, [room?.phase, room?.round]);
   useEffect(() => { if (room?.highestBid != null) setBid(Math.min(165, room.highestBid + 5)); }, [room?.highestBid]);
@@ -188,7 +204,6 @@ export function ShelemRoomScreen({ code }: { code: string }) {
         </div> : null)}
       {room.phase === "discard" && myTurn && <div className="row row--between"><span><b>{t("shelemChooseFour")}</b><small>{t("shelemChosen", { n: selected.length })}</small></span><button className="btn btn--auto" disabled={busy || selected.length !== 4} onClick={() => void act(() => api.discard(code, selected))}>{t("shelemDiscard")}</button></div>}
       {room.phase === "trump" && myTurn && <div className="stack stack--sm"><b>{t("shelemChooseTrump")}</b><div className="shelem-suits">{SUITS.map((s) => <button key={s.key} className={s.red ? "is-red" : ""} onClick={() => void act(() => api.trump(code, s.key))}>{s.symbol}</button>)}</div></div>}
-      {room.phase === "playing" && myTurn && room.trick.length > 0 && room.legalCards.length < room.hand.length && <div className="shelem-turn-guidance" role="status"><small>{t('shelemFollowSuit', {suit: SUITS.find(s=>s.key[0].toUpperCase()===room.trick[0].card.at(-1))?.symbol ?? ''})}</small></div>}
       {room.phase === "roundresult" && <RoundResult room={room} onNext={() => void act(() => api.next(code))} />}
       {room.phase === "finished" && <FinalResult room={room} />}
     </div>
@@ -258,7 +273,7 @@ function GameTable({ room }: { room: ShelemRoom }) {
     <div className="shelem-contract"><span>{room.highestBid ? n(room.highestBid) : "—"}</span>{room.trump && <b className={room.trump === "hearts" || room.trump === "diamonds" ? "is-red" : ""}>{SUITS.find((s) => s.key === room.trump)?.symbol}</b>}<small>{t("shelemContract")}</small></div>
     {biddingWinner && <div className="shelem-bidding-winner" role="status"><small>{t('shelemBiddingWinner')}</small><strong dir="auto">{biddingWinner.isYou ? t('you') : biddingWinner.name}</strong></div>}
     {collecting && <div className="shelem-trick-winner" role="status">{t('shelemTrickWon', {name: winner?.isYou ? t('you') : winner?.name ?? '', points})}</div>}
-    <div className={`shelem-trick${collecting ? ` is-collecting collect-${direction}` : ''}`} dir="ltr">{room.trick.map((play) => <PlayingCard key={`${play.seat}-${play.card}`} code={play.card} size="table" selected={collecting && play.seat === room.lastTrickWinner} style={{ gridArea: play.seat === own ? "south" : play.seat === (own + 1) % 4 ? "west" : play.seat === (own + 2) % 4 ? "north" : "east" }} />)}{room.trick.length === 0 && <span className="shelem-table-mark">✦</span>}</div>
+    <div className={`shelem-trick${collecting ? ` is-collecting collect-${direction}` : ''}`} dir="ltr">{room.trick.map((play) => <PlayingCard key={`${play.seat}-${play.card}`} code={play.card} size="table" selected={collecting && play.seat === room.lastTrickWinner} style={trickStyle((play.seat - own + 4) % 4)} />)}{room.trick.length === 0 && <span className="shelem-table-mark">✦</span>}</div>
     <div className={`shelem-player shelem-player--bottom${room.turnSeat === own ? " is-turn" : ""}`}><span>{at(0)?.name[0]}</span><b>{t("you")}</b><PlayerStatus room={room} seat={own} /></div>
     {room.lastTrick.length === 4 && <details className="shelem-last-trick" key={`${room.round}-${room.lastTrick.map(p=>p.card).join('')}`}><summary>{t('shelemLastTrick')}</summary><div>{room.lastTrick.map(play=><figure key={play.seat}><PlayingCard code={play.card} size="table" selected={play.seat===room.lastTrickWinner}/><figcaption>{room.players.find(p=>p.seat===play.seat)?.name}{play.seat===room.lastTrickWinner ? ` · ${t('shelemWinner')}` : ''}</figcaption></figure>)}</div></details>}
   </div>;
@@ -266,12 +281,26 @@ function GameTable({ room }: { room: ShelemRoom }) {
 
 const ACTIVE_PHASES = ['bidding', 'discard', 'trump', 'playing'];
 
+// Each card flies in from the seat that played it: you, then clockwise left, across and right.
+const TRICK_SEATS = [
+  { area: 'south', x: '0%', y: '140%', turn: '-8deg' }, { area: 'west', x: '-110%', y: '0%', turn: '-14deg' },
+  { area: 'north', x: '0%', y: '-150%', turn: '10deg' }, { area: 'east', x: '110%', y: '0%', turn: '14deg' },
+];
+function trickStyle(relativeSeat: number) {
+  const seat = TRICK_SEATS[relativeSeat];
+  return { gridArea: seat.area, '--from-x': seat.x, '--from-y': seat.y, '--from-turn': seat.turn } as CSSProperties;
+}
+
 function PlayerStatus({ room, seat }: { room: ShelemRoom; seat: number }) {
   const { t } = useLanguage();
   const player = room.players.find(p => p.seat === seat);
   if (!player || !ACTIVE_PHASES.includes(room.phase)) return null;
   if (seat !== room.turnSeat) return room.phase === 'bidding' && player.passed ? <em className="shelem-player-status is-passed">{t('shelemPassed')}</em> : null;
-  if (player.isYou) return <em className="shelem-player-status is-you" role="status">{t('shelemYourTurnShort')}</em>;
+  if (player.isYou) {
+    const mustFollow = room.phase === 'playing' && room.trick.length > 0 && room.legalCards.length < room.hand.length;
+    const suit = mustFollow ? SUITS.find(s => s.key[0].toUpperCase() === room.trick[0].card.at(-1))?.symbol ?? '' : '';
+    return <em className="shelem-player-status is-you" role="status">{mustFollow ? t('shelemYourTurnFollow', { suit }) : t('shelemYourTurnShort')}</em>;
+  }
   const label = player.isBot && room.botThinking ? t('shelemThinking') : t(`shelemTurnStatus_${room.phase}` as 'shelemTurnStatus_bidding');
   return <em className="shelem-player-status" role="status"><i /><i /><i />{label}</em>;
 }

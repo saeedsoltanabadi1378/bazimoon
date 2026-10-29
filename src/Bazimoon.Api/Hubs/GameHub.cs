@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 using Bazimoon.Api.Auth;
+using Bazimoon.Api.Shelem;
 using Bazimoon.Infrastructure;
 using Bazimoon.Infrastructure.Sessions;
 
@@ -10,11 +11,23 @@ namespace Bazimoon.Api.Hubs;
 public sealed class GameHub : Hub
 {
     private readonly IGameSessionStore _sessionStore;
+    private readonly ShelemRoomService _shelem;
 
-    public GameHub(IGameSessionStore sessionStore)
+    public GameHub(IGameSessionStore sessionStore, ShelemRoomService shelem)
     {
         _sessionStore = sessionStore;
+        _shelem = shelem;
     }
+
+    /// <summary>Joins a Shelem room's update pings. Only seated players may listen.</summary>
+    public async Task JoinShelem(string code)
+    {
+        if (!_shelem.IsMember(code, Context.User!.GetUserId()))
+            throw new HubException("You are not in this room.");
+        await Groups.AddToGroupAsync(Context.ConnectionId, ShelemGroupName(code));
+    }
+
+    public Task LeaveShelem(string code) => Groups.RemoveFromGroupAsync(Context.ConnectionId, ShelemGroupName(code));
 
     /// <summary>Joins the caller's connection to a game's broadcast group, after verifying they're
     /// actually a player or a spectator in that game (derived from their authenticated user id).</summary>
@@ -51,4 +64,6 @@ public sealed class GameHub : Hub
     internal static string GroupName(Guid gameId) => $"game:{gameId}";
 
     internal static string GraveyardGroupName(Guid gameId) => $"graveyard:{gameId}";
+
+    internal static string ShelemGroupName(string code) => $"shelem:{ShelemRoomService.NormalizeCode(code)}";
 }

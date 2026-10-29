@@ -818,6 +818,7 @@ export const games = {
   shelemSettings: "Game settings",
   shelemVoiceSettings: "Room voice",
   shelemYourTurnShort: "Your turn",
+  shelemYourTurnFollow: "Your turn · follow {suit}",
   shelemPassed: "Passed",
   shelemTurnStatus_bidding: "Bidding…",
   shelemTurnStatus_discard: "Picking Zamin…",
