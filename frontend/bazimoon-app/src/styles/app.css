@@ -1472,6 +1472,9 @@ html[lang="fa"] .kicker {
 .shelem-voice-float { position:absolute; left:10px; bottom:10px; z-index:8; }
 .shelem-actions { flex-shrink:0; padding:10px 14px; background:#0E1121; border-top:1px solid #202441; }
 .shelem-actions:empty { display:none; }
+.shelem-feedback-controls { display:flex; justify-content:center; gap:8px; padding:4px; flex-shrink:0; }
+.shelem-feedback-controls button { border:1px solid #343956; border-radius:8px; background:#171A30; color:#B7B9CD; padding:5px 10px; min-height:32px; }
+.shelem-feedback-controls button[aria-pressed=true] { color:#F7E3B4; border-color:#E2B86B; }
 .shelem-turn-guidance { text-align:center; color:#F7E3B4; font-size:13px; padding:4px; }
 .shelem-turn-guidance small { margin-top:4px; }
 .shelem-contract-progress { display:grid; gap:3px; margin-bottom:6px; }

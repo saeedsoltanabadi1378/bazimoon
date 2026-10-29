@@ -11,6 +11,7 @@ import { appLink } from "../../lib/links";
 import { shareLink } from "../../lib/platform";
 import { haptic } from "../../lib/haptics";
 import { CardBackFan, PlayingCard } from "../cards/PlayingCard";
+import { GameFeedback } from './GameFeedback';
 
 const ACCENT = "#E2B86B";
 const SUITS: { key: ShelemSuit; symbol: string; red: boolean }[] = [
@@ -154,6 +155,7 @@ export function ShelemRoomScreen({ code }: { code: string }) {
       <div className="grow"><div className="kicker">{phaseTitle}</div><div className="display" style={{ fontSize: 20 }}>{room.phase === "lobby" ? room.code : t("shelemRoundN", { n: room.round })}</div></div>
       <div className="shelem-score"><small>{t("shelemMatchScore")}</small><span>{t("shelemUs")} <b>{n(room.teamScores[team])}</b></span><span>{t("shelemThem")} <b>{n(room.teamScores[1 - team])}</b></span>{room.phase === 'playing' && <small>{t("shelemCapturedScore", { us: room.roundPoints[team], them: room.roundPoints[1-team] })}</small>}</div>
     </header>
+    <GameFeedback room={room} />
 
     {room.phase === "lobby" ? <Lobby room={room} busy={busy} voiceOn={voiceOn} micMuted={micMuted} localMutes={localMutes} onVoice={() => void joinVoice()} onMic={() => void toggleMic()} onPlayerMute={togglePlayer}
       onReady={() => void act(() => api.ready(code, !me?.ready))} onStart={(fill) => void act(() => api.start(code, fill))} /> :
