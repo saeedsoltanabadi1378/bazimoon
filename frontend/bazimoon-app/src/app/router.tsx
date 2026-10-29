@@ -33,6 +33,7 @@ function screenKey(route: Route): string {
 interface Navigation {
   route: Route;
   depth: number;
+  transition: "forward" | "back" | "replace" | "tab";
   push(route: Route): void;
   replace(route: Route): void;
   /** Switches to a top-level tab, dropping the history (tabs are siblings, not a stack). */
@@ -44,16 +45,27 @@ const NavigationContext = createContext<Navigation | null>(null);
 
 export function NavigationProvider({ initial, children }: { initial: Route[]; children: ReactNode }) {
   const [stack, setStack] = useState<Route[]>(initial);
+  const [transition, setTransition] = useState<Navigation["transition"]>("replace");
 
   // Each pushed screen gets a browser history entry, so the system back gesture (Android, browser
   // back button) pops it like the in-app back button does.
   const push = useCallback((route: Route) => {
     window.history.pushState({ bazimoon: true }, "");
+    setTransition("forward");
     setStack((s) => [...s, route]);
   }, []);
-  const replace = useCallback((route: Route) => setStack((s) => [...s.slice(0, -1), route]), []);
-  const reset = useCallback((route: Route) => setStack([route]), []);
-  const pop = useCallback(() => setStack((s) => (s.length > 1 ? s.slice(0, -1) : [{ name: "home" }])), []);
+  const replace = useCallback((route: Route) => {
+    setTransition("replace");
+    setStack((s) => [...s.slice(0, -1), route]);
+  }, []);
+  const reset = useCallback((route: Route) => {
+    setTransition("tab");
+    setStack([route]);
+  }, []);
+  const pop = useCallback(() => {
+    setTransition("back");
+    setStack((s) => (s.length > 1 ? s.slice(0, -1) : [{ name: "home" }]));
+  }, []);
   const back = useCallback(() => {
     if (window.history.state?.bazimoon) window.history.back();
     else pop();
@@ -110,7 +122,7 @@ export function NavigationProvider({ initial, children }: { initial: Route[]; ch
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const value = useMemo(() => ({ route, depth, push, replace, reset, back }), [route, depth, push, replace, reset, back]);
+  const value = useMemo(() => ({ route, depth, transition, push, replace, reset, back }), [route, depth, transition, push, replace, reset, back]);
   return <NavigationContext.Provider value={value}>{children}</NavigationContext.Provider>;
 }
 

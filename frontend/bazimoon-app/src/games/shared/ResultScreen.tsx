@@ -57,20 +57,21 @@ export function ResultScreen({
 
   return (
     <Screen theme="night">
+      {win && <CelebrationBurst />}
       <div className="row" style={{ justifyContent: "flex-end", padding: "14px 16px 0" }}>
         <IconButton icon="close" label={t("close")} onClick={onClose ?? (() => reset({ name: "home" }))} />
       </div>
       <Body style={{ paddingTop: 0, paddingBottom: 20 }}>
-        <section className="stack center" style={{ gap: 8, textAlign: "center" }}>
+        <section className="stack center result-hero" style={{ gap: 8, textAlign: "center" }}>
           {hero ?? <IconDisc icon={heroIcon ?? (win ? "check" : "warning")} size={76} iconSize={36} bg={heroBg} fg={heroFg} strokeWidth={2} />}
           <div className="kicker" style={{ color: heroFg }}>{kicker}</div>
           <h1 className="display" style={{ fontSize: 32, lineHeight: 1.05 }}>{title}</h1>
           <p style={{ fontSize: 15, color: "var(--text-2)" }}>{sub}</p>
         </section>
 
-        <div className="stat-grid">
-          {metrics.map((m) => (
-            <div key={m.label} className="stat stat--center">
+        <div className="stat-grid result-metrics">
+          {metrics.map((m, index) => (
+            <div key={m.label} className="stat stat--center" style={{ animationDelay: `${180 + index * 55}ms` }}>
               <div className="stat__value" style={{ color: m.color }}>{m.value}</div>
               <div className="stat__label">{m.label}</div>
             </div>
@@ -115,18 +116,26 @@ export function XpCard({ xp, note }: { xp: PuzzleResult; note?: string }) {
   const base = leveledUp ? 0 : (xp.xpIntoLevelBefore / xp.xpForNext) * 100;
   const gain = leveledUp ? (xp.xpIntoLevel / xp.xpForNext) * 100 : Math.max(1, (xp.xpGained / xp.xpForNext) * 100);
   return (
-    <section className="stack" style={{ gap: 8, padding: 14, borderRadius: 18, background: "var(--surface)" }}>
+    <section className="stack result-xp-card" style={{ gap: 8, padding: 14, borderRadius: 18, background: "var(--surface)" }}>
       <div className="row row--between row--baseline">
         <span style={{ fontSize: 14, fontWeight: 600 }}>{t("xpGained", { xp: n(xp.xpGained) })}</span>
         <span className="tiny muted">{t("levelProgress", { level: xp.level, xp: n(xp.xpIntoLevel), next: n(xp.xpForNext) })}</span>
       </div>
       <div className="progress progress--8" style={{ background: "#262A44" }} aria-hidden="true">
-        <span style={{ width: `${base}%`, background: "#F0A83A", borderRadius: 0 }} />
-        <span style={{ width: `${Math.min(100 - base, gain)}%`, background: "#F6C377", borderRadius: 0 }} />
+        <span className="xp-progress__part" style={{ width: `${base}%`, background: "#F0A83A", borderRadius: 0 }} />
+        <span className="xp-progress__part xp-progress__part--gain" style={{ width: `${Math.min(100 - base, gain)}%`, background: "#F6C377", borderRadius: 0 }} />
       </div>
       {leveledUp && <div className="small" style={{ color: "#F0A83A", fontWeight: 600 }}>{t("levelUp", { level: xp.level })}</div>}
       {note && <div className="small" style={{ color: "var(--text-2)" }}>{note}</div>}
     </section>
+  );
+}
+
+function CelebrationBurst() {
+  return (
+    <div className="result-burst" aria-hidden="true">
+      {Array.from({ length: 10 }, (_, index) => <span key={index} />)}
+    </div>
   );
 }
 

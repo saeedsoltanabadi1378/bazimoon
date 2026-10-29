@@ -44,7 +44,7 @@ export function HomeScreen() {
   return (
     <Screen theme="hub">
       <Body style={{ padding: "20px 16px 24px", gap: 22 }}>
-        <header className="row row--between">
+        <header className="row row--between motion-item">
           <div className="row" style={{ gap: 10 }}>
             <LogoTiles />
             <div className="display" style={{ fontSize: 28, letterSpacing: -0.5 }}>Bazimoon</div>
@@ -65,7 +65,7 @@ export function HomeScreen() {
           </div>
         </header>
 
-        <section className="stack" style={{ gap: 12 }}>
+        <section className="stack motion-item" style={{ gap: 12 }}>
           <div className="row row--between row--baseline">
             <h2 className="display" style={{ fontSize: 20, fontWeight: 700 }}>{t("yourPuzzles")}</h2>
           </div>
@@ -131,7 +131,7 @@ export function HomeScreen() {
     const ranked = league.rank !== null;
     const pct = ranked && league.playerCount > 0 ? 100 - ((league.rank! - 1) / league.playerCount) * 100 : 0;
     return (
-      <button type="button" onClick={onOpen} className="stack" style={{ gap: 12, padding: 16, borderRadius: 18, background: "var(--surface)", border: 0, color: "var(--text)", textAlign: "start", cursor: "pointer" }}>
+      <button type="button" onClick={onOpen} className="stack interactive-card motion-item" style={{ gap: 12, padding: 16, borderRadius: 18, background: "var(--surface)", border: 0, color: "var(--text)", textAlign: "start", cursor: "pointer" }}>
         <div className="row row--between small muted" style={{ width: "100%" }}>
           <span>{t("seasonDivision", { season: league.season, division: t(`division${league.division}` as "divisionGold"), tier: roman(league.tier) })}</span>
           <span>{t("daysLeft", { count: league.daysLeft })}</span>
@@ -163,8 +163,8 @@ function LevelRow({ icon, iconBg, iconFg, title, sub, status, primary, onPlay }:
 }) {
   const { t } = useLanguage();
   return (
-    <div className="row" style={{ gap: 12, padding: 14, borderRadius: 18, background: "var(--surface)" }}>
-      <span style={{ width: 48, height: 48, flex: "none", borderRadius: 14, background: iconBg, color: iconFg, display: "flex", alignItems: "center", justifyContent: "center" }}>{icon}</span>
+    <div className="row interactive-card" style={{ gap: 12, padding: 14, borderRadius: 18, background: "var(--surface)" }}>
+      <span className="interactive-card__icon" style={{ width: 48, height: 48, flex: "none", borderRadius: 14, background: iconBg, color: iconFg, display: "flex", alignItems: "center", justifyContent: "center" }}>{icon}</span>
       <div className="grow">
         <div style={{ fontWeight: 600, fontSize: 16 }}>{title}</div>
         <div className="small muted">{sub}</div>
@@ -218,14 +218,14 @@ function PlayTogether({ data }: { data: Home | null }) {
 
   if (!mafiaOn && !coupleOn) return null;
   return (
-    <section className="stack" style={{ gap: 12 }} aria-labelledby="together-title">
+    <section className="stack motion-item" style={{ gap: 12 }} aria-labelledby="together-title">
       <div className="row row--between row--baseline">
         <h2 id="together-title" className="display" style={{ fontSize: 20, fontWeight: 700 }}>{t("playTogether")}</h2>
         <button type="button" onClick={() => push({ name: "mafia" })} style={{ background: "none", border: 0, padding: 0, color: "#F0A83A", font: "inherit", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>{t("seeAll")}</button>
       </div>
       <div style={{ display: "grid", gridTemplateColumns: `repeat(${mafiaOn && coupleOn ? 2 : 1}, minmax(0, 1fr))`, gap: 10 }}>
-        {mafiaOn && <button type="button" style={tile} onClick={() => push(table && table.phase === "Lobby" ? { name: "mafia", gameId: table.gameId } : { name: "mafia" })}>
-          <span style={iconBox("#2E2340", "#B79CF2")}><Icon name="moon" size={22} /></span>
+        {mafiaOn && <button type="button" className="interactive-card" style={tile} onClick={() => push(table && table.phase === "Lobby" ? { name: "mafia", gameId: table.gameId } : { name: "mafia" })}>
+          <span className="interactive-card__icon" style={iconBox("#2E2340", "#B79CF2")}><Icon name="moon" size={22} /></span>
           <span>
             <span style={{ display: "block", fontWeight: 600, fontSize: 16 }}>{t("roleMafia")}</span>
             <span style={{ display: "block", fontSize: 13, color: "var(--muted)" }}>{mafiaSub}</span>
@@ -240,8 +240,8 @@ function PlayTogether({ data }: { data: Home | null }) {
             </span>
           )}
         </button>}
-        {coupleOn && <button type="button" style={tile} onClick={() => push({ name: "couple", screen: couple.couple ? "home" : "invite" })}>
-          <span style={iconBox("#24121C", "#F2A7C3")}><Icon name="heart" size={22} /></span>
+        {coupleOn && <button type="button" className="interactive-card" style={tile} onClick={() => push({ name: "couple", screen: couple.couple ? "home" : "invite" })}>
+          <span className="interactive-card__icon" style={iconBox("#24121C", "#F2A7C3")}><Icon name="heart" size={22} /></span>
           <span>
             <span style={{ display: "block", fontWeight: 600, fontSize: 16 }}>{t("coupleQuiz")}</span>
             <span style={{ display: "block", fontSize: 13, color: "var(--muted)" }}>{couple.couple ? couple.sub : t("coupleTileInvite")}</span>

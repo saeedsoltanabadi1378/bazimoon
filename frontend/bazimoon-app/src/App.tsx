@@ -59,33 +59,47 @@ function initialRoutes(): Route[] {
 }
 
 function CurrentScreen() {
-  const { route } = useNavigation();
+  const { route, transition } = useNavigation();
+  let screen;
   switch (route.name) {
     case "home":
-      return <HomeScreen />;
+      screen = <HomeScreen />;
+      break;
     case "solo":
-      return <SoloScreen />;
+      screen = <SoloScreen />;
+      break;
     case "league":
-      return <LeagueScreen />;
+      screen = <LeagueScreen />;
+      break;
     case "profile":
-      return <ProfileScreen />;
+      screen = <ProfileScreen />;
+      break;
     case "mafia":
-      return route.gameId ? <MafiaRoute gameId={route.gameId} /> : <MafiaTablesScreen code={route.code} />;
+      screen = route.gameId ? <MafiaRoute gameId={route.gameId} /> : <MafiaTablesScreen code={route.code} />;
+      break;
     case "createTable":
-      return <CreateTableScreen />;
+      screen = <CreateTableScreen />;
+      break;
     case "mafiaStats":
-      return <MafiaStatsScreen />;
+      screen = <MafiaStatsScreen />;
+      break;
     case "friends":
-      return <FriendsScreen />;
+      screen = <FriendsScreen />;
+      break;
     case "friendLink":
-      return <FriendLinkScreen code={route.code} />;
+      screen = <FriendLinkScreen code={route.code} />;
+      break;
     case "recap":
-      return <RecapScreen gameId={route.gameId} />;
+      screen = <RecapScreen gameId={route.gameId} />;
+      break;
     case "game":
-      return <GameRoute route={route} />;
+      screen = <GameRoute route={route} />;
+      break;
     case "couple":
-      return <CoupleRoute route={route} />;
+      screen = <CoupleRoute route={route} />;
+      break;
   }
+  return <div key={JSON.stringify(route)} className="route-stage" data-transition={transition}>{screen}</div>;
 }
 
 function SessionGate() {

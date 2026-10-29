@@ -46,7 +46,7 @@ export function SoloScreen() {
           <button
             type="button"
             onClick={() => push({ name: "game", game: "merge", screen: "play", params: { mode: "classic" } })}
-            className="row"
+            className="row interactive-card"
             style={{ gap: 12, padding: 14, borderRadius: 20, background: "#1A1740", border: "1px solid #2E2A66", color: "var(--text)", textAlign: "start", cursor: "pointer" }}
           >
             <span style={{ width: 52, height: 52, flex: "none", borderRadius: 14, background: "#2A2650", display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 3, padding: 10 }} aria-hidden="true">
@@ -76,14 +76,14 @@ export function SoloScreen() {
                 key={g.key}
                 type="button"
                 onClick={() => open(g.key)}
-                className="stack"
+                className="stack interactive-card"
                 style={{
                   gap: 10, padding: 14, borderRadius: 20, background: "var(--surface)", border: "1px solid var(--surface-2)",
                   color: "var(--text)", textAlign: "start", cursor: "pointer",
                 }}
               >
                 <span className="row row--between" style={{ alignItems: "flex-start", width: "100%" }}>
-                  <span style={{ width: 46, height: 46, borderRadius: 14, background: g.bg, color: g.fg, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <span className="interactive-card__icon" style={{ width: 46, height: 46, borderRadius: 14, background: g.bg, color: g.fg, display: "flex", alignItems: "center", justifyContent: "center" }}>
                     <Icon name={g.icon} size={24} />
                   </span>
                   <span className="tag" style={{ background: tagBg, color: tagFg }}>{t(`tag${g.tag}`)}</span>

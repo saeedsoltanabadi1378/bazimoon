@@ -32,8 +32,8 @@ export function TabBar() {
             reset(tab.route);
           }}
         >
-          <Icon name={tab.icon} />
-          {labels[tab.key]}
+          <span className="tabbar__icon"><Icon name={tab.icon} /></span>
+          <span className="tabbar__label">{labels[tab.key]}</span>
         </button>
       ))}
     </nav>
