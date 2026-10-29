@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { ApiError } from "../api/client";
 import { hubApi, type Profile, type PuzzleResult, type PuzzleSubmit, type Settings } from "../api/hub";
 import { friendsApi } from "../api/friends";
@@ -34,6 +34,10 @@ export function HubDataProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [highContrast, setHighContrast] = useState(() => readLocal<boolean>(CONTRAST_KEY, false));
   const [disabledGames, setDisabledGames] = useState<string[]>(() => readLocal<string[]>(DISABLED_KEY, []));
+  const languageRef = useRef(language);
+  const savingLanguageRef = useRef<Settings["language"] | null>(null);
+  const languageVersionRef = useRef(0);
+  languageRef.current = language;
 
   // Switched-off games: read at start and whenever the app comes back to the foreground.
   useEffect(() => {
@@ -49,18 +53,22 @@ export function HubDataProvider({ children }: { children: ReactNode }) {
   const isGameOn = useCallback((game: string) => !disabledGames.includes(game), [disabledGames]);
 
   const refreshProfile = useCallback(async () => {
+    const languageVersion = languageVersionRef.current;
     try {
       const next = await api.profile();
       setProfile(next);
       // The server profile is authoritative unless this visit explicitly used ?lang=.
-      if (!fromUrl && next.settings.language !== language) setLanguage(next.settings.language);
+      if (!fromUrl && !savingLanguageRef.current && languageVersion === languageVersionRef.current && next.settings.language !== languageRef.current) {
+        languageRef.current = next.settings.language;
+        setLanguage(next.settings.language);
+      }
       setHapticsEnabled(next.settings.haptics);
       setHighContrast(next.settings.highContrast);
       writeLocal(CONTRAST_KEY, next.settings.highContrast);
     } catch (err) {
       console.warn("[Bazimoon] Could not load profile", err);
     }
-  }, [api, fromUrl, language, setLanguage]);
+  }, [api, fromUrl, setLanguage]);
 
   const flushQueue = useCallback(async () => {
     const pending = readLocal<PuzzleSubmit[]>(QUEUE_KEY, []);
@@ -90,7 +98,12 @@ export function HubDataProvider({ children }: { children: ReactNode }) {
   const saveSettings = useCallback(async (patch: Partial<Settings>) => {
     const base: Settings = profile?.settings ?? { language, reminderEnabled: true, reminderTime: "09:00", highContrast, haptics: true };
     const next = { ...base, ...patch };
-    if (patch.language && patch.language !== language) setLanguage(patch.language);
+    if (patch.language) {
+      languageVersionRef.current += 1;
+      savingLanguageRef.current = patch.language;
+      languageRef.current = patch.language;
+      if (patch.language !== language) setLanguage(patch.language);
+    }
     if (patch.haptics !== undefined) setHapticsEnabled(patch.haptics);
     if (patch.highContrast !== undefined) {
       setHighContrast(patch.highContrast);
@@ -101,6 +114,8 @@ export function HubDataProvider({ children }: { children: ReactNode }) {
       await api.saveSettings(next);
     } catch (err) {
       console.warn("[Bazimoon] Could not save settings", err);
+    } finally {
+      if (patch.language && savingLanguageRef.current === patch.language) savingLanguageRef.current = null;
     }
   }, [api, profile, language, highContrast, setLanguage]);
 

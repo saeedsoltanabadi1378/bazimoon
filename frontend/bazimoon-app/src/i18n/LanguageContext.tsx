@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { readLocal, writeLocal } from "../lib/storage";
 import { en } from "./en";
 import { fa } from "./fa";
@@ -36,6 +36,11 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   const remembered = readLocal<Language | null>(STORAGE_KEY, null);
   const [language, setLanguageState] = useState<Language>(fromLink ?? remembered ?? "fa");
   const [chosen, setChosen] = useState(fromLink !== null || remembered !== null);
+  const setLanguage = useCallback((next: Language) => {
+    writeLocal(STORAGE_KEY, next);
+    setChosen(true);
+    setLanguageState(next);
+  }, []);
 
   useEffect(() => {
     document.documentElement.lang = language;
@@ -49,11 +54,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
       language,
       fromUrl: fromLink !== null,
       chosen,
-      setLanguage(next) {
-        writeLocal(STORAGE_KEY, next);
-        setChosen(true);
-        setLanguageState(next);
-      },
+      setLanguage,
       n,
       t(key, values) {
         const template = dictionaries[language][key] ?? en[key] ?? key;
@@ -65,7 +66,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
         });
       },
     };
-  }, [language, chosen, fromLink]);
+  }, [language, chosen, fromLink, setLanguage]);
 
   return <LanguageContext.Provider value={value}>{children}</LanguageContext.Provider>;
 }

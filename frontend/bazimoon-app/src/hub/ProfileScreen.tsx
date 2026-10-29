@@ -86,6 +86,31 @@ export function ProfileScreen() {
           </section>
         )}
 
+        <section className="row row--between row--wrap" style={{ minHeight: 68, padding: "10px 16px", borderRadius: 18, background: "var(--surface)" }}>
+          <span className="row" style={{ fontSize: 15, fontWeight: 600 }}>
+            <span style={{ width: 34, height: 34, borderRadius: 10, background: "#2A2113", color: "#F0A83A", display: "flex", alignItems: "center", justifyContent: "center" }} aria-hidden="true">
+              <Icon name="globe" size={18} />
+            </span>
+            {t("languageSetting")}
+          </span>
+          <div style={{ width: 190, maxWidth: "100%" }}>
+            <Segmented<Language>
+              label={t("languageSetting")}
+              value={language}
+              options={[
+                { value: "en", label: t("languageEnglish") },
+                { value: "fa", label: t("languagePersian") },
+              ]}
+              onChange={(next) => {
+                if (next === language) return;
+                haptic.select();
+                void saveSettings({ language: next });
+              }}
+              soft
+            />
+          </div>
+        </section>
+
         <section className="stack" style={{ gap: 12, padding: 16, borderRadius: 18, background: "var(--surface)" }}>
           <h2 style={{ fontSize: 16, fontWeight: 600 }}>{t("sectionPuzzles")}</h2>
           <div className="stat-grid">
@@ -138,25 +163,6 @@ export function ProfileScreen() {
         </section>
 
         <section className="list">
-          <div className="row row--between row--wrap" style={{ minHeight: 68, padding: "8px 16px" }}>
-            <span style={{ fontSize: 15 }}>{t("languageSetting")}</span>
-            <div style={{ width: 190, maxWidth: "100%" }}>
-              <Segmented<Language>
-                label={t("languageSetting")}
-                value={language}
-                options={[
-                  { value: "en", label: t("languageEnglish") },
-                  { value: "fa", label: t("languagePersian") },
-                ]}
-                onChange={(next) => {
-                  if (next === language) return;
-                  haptic.select();
-                  void saveSettings({ language: next });
-                }}
-                soft
-              />
-            </div>
-          </div>
           <SettingRow
             label={t("dailyReminder")}
             value={s.reminderEnabled ? s.reminderTime : t("off")}
