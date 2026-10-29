@@ -163,6 +163,8 @@ export function ShelemRoomScreen({ code }: { code: string }) {
     {dealing && <DealSequence room={room} />}
 
     <div className="shelem-actions" hidden={dealing}>
+      {room.declarerSeat != null && room.highestBid != null && room.phase === 'playing' && <div className="shelem-contract-progress"><small>{t('shelemProgress', {points:room.roundPoints[room.declarerSeat%2], target:room.highestBid})}</small><progress max={room.highestBid} value={room.roundPoints[room.declarerSeat%2]} aria-label={t('shelemContract')} /><small>{t('shelemZaminPending')}</small></div>}
+      {(room.phase === 'roundresult' || room.phase === 'finished') && room.declarerSeat != null && <p className="small">{t(room.roundDelta[room.declarerSeat%2]>=0 ? 'shelemContractMade' : 'shelemContractMissed', {points:room.roundPoints[room.declarerSeat%2], target:room.highestBid ?? 0, delta:room.roundDelta[room.declarerSeat%2]})}</p>}
       {room.phase === 'discard' && myTurn && <div className="shelem-zamin" dir="ltr" aria-label={t('shelemChooseFour')}><small>{t('shelemDropFour')}</small>{Array.from({length:4},(_,i)=>selected[i] ? <PlayingCard key={selected[i]} code={selected[i]} size="table" dropTarget=".shelem-hand" onClick={busy ? undefined : ()=>setSelected(old=>old.filter(c=>c!==selected[i]))} /> : <span className="shelem-zamin-slot" key={i}>{n(i+1)}</span>)}</div>}
       {room.phase === "bidding" && (myTurn ? <div className="stack" style={{ gap: 10 }}>
           <div className="row row--between"><b>{t("shelemYourBid")}</b><output className="display" style={{ fontSize: 24, color: ACCENT }}>{n(bid)}</output></div>
