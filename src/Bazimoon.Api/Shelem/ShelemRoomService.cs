@@ -85,6 +85,7 @@ public sealed class ShelemRoomService
             Tick(room);
             var me = room.Game.Players.FirstOrDefault(p => p.UserId == userId);
             if (requireMember && me is null) throw new ForbiddenGameActionException("You are not in this room.");
+            if (room.TrickVisibleUntil > Now) throw new GameException("Wait for the completed trick.", "trick_pending");
             action(room, me);
             room.Version++;
             room.LastActivity = Now;
@@ -95,6 +96,11 @@ public sealed class ShelemRoomService
 
     private void Tick(Room room)
     {
+        if (room.TrickVisibleUntil != default && Now >= room.TrickVisibleUntil)
+        {
+            room.TrickVisibleUntil = default;
+            room.Version++;
+        }
         if (room.BotActAt is null || Now < room.BotActAt) return;
         var game = room.Game;
         var bot = game.Players.FirstOrDefault(p => p.Seat == game.TurnSeat && p.IsBot);
@@ -124,24 +130,31 @@ public sealed class ShelemRoomService
     private void ScheduleBot(Room room)
     {
         var game = room.Game;
+        var trickKey = string.Join(',', game.LastTrick.Select(p => p.Card.Code));
+        if (trickKey.Length > 0 && trickKey != room.CompletedTrickKey)
+        {
+            room.CompletedTrickKey = trickKey;
+            room.TrickVisibleUntil = Now.AddMilliseconds(1800);
+        }
         if ((game.Phase is ShelemPhase.Bidding or ShelemPhase.Discard or ShelemPhase.Trump or ShelemPhase.Playing) &&
             game.Players.FirstOrDefault(p => p.Seat == game.TurnSeat)?.IsBot == true)
-            room.BotActAt = Now.AddMilliseconds(room.Random.Next(520, 950));
+            room.BotActAt = (room.TrickVisibleUntil > Now ? room.TrickVisibleUntil : Now).AddMilliseconds(room.Random.Next(350, 600));
     }
 
     private ShelemRoomView View(Room room, Guid userId)
     {
         var game = room.Game;
         var me = game.Players.FirstOrDefault(p => p.UserId == userId);
+        bool holdingTrick = room.TrickVisibleUntil > Now;
         var legal = me is not null && game.Phase == ShelemPhase.Playing && game.TurnSeat == me.Seat ? game.LegalCards(me.Seat).Select(c => c.Code).ToArray() : [];
         return new ShelemRoomView(
-            room.Code, game.Id, room.Version, game.Phase.ToString().ToLowerInvariant(), game.Round, game.DealerSeat, game.TurnSeat,
+            room.Code, game.Id, room.Version, holdingTrick ? "playing" : game.Phase.ToString().ToLowerInvariant(), game.Round, game.DealerSeat, holdingTrick ? -1 : game.TurnSeat,
             game.HighestBid, game.DeclarerSeat, game.ShelemCalled, game.Trump?.ToString().ToLowerInvariant(), game.TeamScores.ToArray(),
             game.Phase == ShelemPhase.Playing ? Enumerable.Range(0, 2).Select(team => game.Players.Where(p => p.Seat % 2 == team).Sum(p => p.Captured.Sum(ShelemGame.CardPoints) + p.Tricks * 5)).ToArray() : game.RoundPoints.ToArray(),
             game.RoundDelta, game.WinnerTeam, me?.Seat, room.HostUserId == userId, me?.Hand.OrderBy(c => c.Suit).ThenBy(c => c.Rank).Select(c => c.Code).ToArray() ?? [], legal,
             game.Players.Select(p => new ShelemPlayerView(p.Seat, p.Name, p.IsBot, p.Ready, p.Passed, p.Hand.Count, p.UserId == userId,
                 p.UserId is { } id ? VoiceUid(id) : 0)).ToArray(),
-            game.Trick.Select(p => new ShelemPlayView(p.Seat, p.Card.Code)).ToArray(),
+            (holdingTrick ? game.LastTrick : game.Trick).Select(p => new ShelemPlayView(p.Seat, p.Card.Code)).ToArray(),
             game.LastTrick.Select(p => new ShelemPlayView(p.Seat, p.Card.Code)).ToArray(), game.LastTrickWinner,
             game.Zamin.Count, game.Discards.Count, room.BotActAt is not null);
     }
@@ -165,6 +178,8 @@ public sealed class ShelemRoomService
         public long Version;
         public DateTimeOffset LastActivity;
         public DateTimeOffset? BotActAt;
+        public DateTimeOffset TrickVisibleUntil;
+        public string CompletedTrickKey = "";
         public Random Random { get; } = new();
     }
 }
