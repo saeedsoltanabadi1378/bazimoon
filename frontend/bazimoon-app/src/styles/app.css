@@ -1444,6 +1444,14 @@ html[lang="fa"] .kicker {
 .shelem-player { position:absolute; z-index:4; display:flex; align-items:center; gap:5px; padding:5px 8px; border:1px solid transparent; border-radius:999px; background:rgba(10,13,25,.72); backdrop-filter:blur(8px); font-size:11px; }
 .shelem-player > span { width:28px; height:28px; display:grid; place-items:center; border-radius:999px; background:#292E50; color:#E2B86B; font-weight:800; }
 .shelem-player > small { color:#A8ABC5; }
+.shelem-player > span { position:relative; }
+.shelem-turn-ring { position:absolute; inset:-5px; width:calc(100% + 10px); height:calc(100% + 10px); transform:rotate(-90deg); overflow:visible; pointer-events:none; }
+.shelem-turn-ring circle { fill:none; stroke-width:3; }
+.shelem-turn-ring__track { stroke:rgba(255,255,255,.14); }
+/* Drains clockwise over the turn and turns coral for the last ten seconds. */
+.shelem-turn-ring__left { stroke:#E2B86B; stroke-linecap:round; stroke-dasharray:100; animation:shelem-turn-drain var(--turn-limit) linear var(--turn-delay) both, shelem-turn-warn var(--turn-limit) linear var(--turn-delay) both; }
+@keyframes shelem-turn-drain { from { stroke-dashoffset:0; } to { stroke-dashoffset:100; } }
+@keyframes shelem-turn-warn { 0%, 66% { stroke:#E2B86B; } 67%, 100% { stroke:#F08A7A; } }
 .shelem-player.is-turn { border-color:#E2B86B; box-shadow:0 0 0 3px rgba(226,184,107,.13),0 0 24px rgba(226,184,107,.18); }
 .shelem-player--top { top:12px; left:50%; transform:translateX(-50%); }
 .shelem-player--left { top:43%; left:8px; transform:translateY(-50%); }

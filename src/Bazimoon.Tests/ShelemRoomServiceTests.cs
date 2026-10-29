@@ -39,6 +39,33 @@ public sealed class ShelemRoomServiceTests
     }
 
     [Fact]
+    public async Task TurnTimer_MovesForAPersonWhoRunsOutOfTime()
+    {
+        var clock = new FakeClock();
+        var service = new ShelemRoomService(clock, new Settings(), new RecordingNotifier());
+        var me = Guid.NewGuid();
+        var room = await service.CreateAsync(me, "Saeed", withBots: true);
+        for (int i = 0; i < 20 && room.TurnSeat != room.YourSeat; i++)
+        {
+            clock.Now = clock.Now.AddSeconds(1);
+            service.TickDue();
+            room = await service.GetAsync(room.Code, me);
+        }
+        Assert.Equal(room.YourSeat, room.TurnSeat);
+        Assert.Equal(30_000, room.TurnRemainingMs);
+
+        clock.Now = clock.Now.AddSeconds(29);
+        Assert.Empty(service.TickDue());
+        clock.Now = clock.Now.AddSeconds(1);
+        Assert.Single(service.TickDue());
+
+        var after = await service.GetAsync(room.Code, me);
+        Assert.True(after.Version > room.Version);
+        // A timed-out bid is a pass: either the auction went on without us, or every seat passed and the cards were redealt.
+        if (after.Phase == "bidding" && after.DealerSeat == room.DealerSeat) Assert.True(after.Players.Single(p => p.IsYou).Passed);
+    }
+
+    [Fact]
     public async Task Moves_PingTheRoomWithTheNewVersion()
     {
         var notifier = new RecordingNotifier();

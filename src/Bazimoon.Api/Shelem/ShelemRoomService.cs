@@ -15,6 +15,8 @@ public sealed class ShelemRoomService
     private readonly IAppSettingsService _settings;
     private readonly IShelemNotifier _notifier;
     private static readonly string[] BotNames = ["Roya", "Arman", "Nika", "Kian"];
+    /// <summary>How long a person has for each move before the room moves for them.</summary>
+    public static readonly TimeSpan TurnLimit = TimeSpan.FromSeconds(30);
 
     public ShelemRoomService(TimeProvider clock, IAppSettingsService settings, IShelemNotifier notifier) { _clock = clock; _settings = settings; _notifier = notifier; }
     private DateTimeOffset Now => _clock.GetUtcNow();
@@ -65,7 +67,8 @@ public sealed class ShelemRoomService
         {
             foreach (var room in _rooms.Values)
             {
-                bool due = (room.BotActAt is { } at && Now >= at) || (room.TrickVisibleUntil != default && Now >= room.TrickVisibleUntil);
+                bool due = (room.BotActAt is { } at && Now >= at) || (room.TurnDeadline is { } deadline && Now >= deadline)
+                    || (room.TrickVisibleUntil != default && Now >= room.TrickVisibleUntil);
                 if (!due) continue;
                 long before = room.Version;
                 Tick(room);
@@ -132,31 +135,52 @@ public sealed class ShelemRoomService
             room.TrickVisibleUntil = default;
             room.Version++;
         }
-        if (room.BotActAt is null || Now < room.BotActAt) return;
         var game = room.Game;
+        if (room.TurnDeadline is { } deadline && Now >= deadline)
+        {
+            room.TurnDeadline = null;
+            var idle = game.Players.FirstOrDefault(p => p.Seat == game.TurnSeat && !p.IsBot);
+            if (idle is not null && IsMovePhase(game.Phase))
+            {
+                MoveFor(room, idle.Seat, timedOut: true);
+                room.Version++;
+                ScheduleBot(room);
+            }
+            return;
+        }
+        if (room.BotActAt is null || Now < room.BotActAt) return;
         var bot = game.Players.FirstOrDefault(p => p.Seat == game.TurnSeat && p.IsBot);
         room.BotActAt = null;
         if (bot is null) return;
-        var random = room.Random;
-        switch (game.Phase)
-        {
-            case ShelemPhase.Bidding:
-                var choice = ShelemBot.ChooseBid(game, bot.Seat, random);
-                game.Bid(bot.Seat, choice.Bid, choice.Shelem);
-                break;
-            case ShelemPhase.Discard:
-                game.Discard(bot.Seat, ShelemBot.ChooseDiscards(game, bot.Seat));
-                break;
-            case ShelemPhase.Trump:
-                game.ChooseTrump(bot.Seat, ShelemBot.BestTrump(game, bot.Seat));
-                break;
-            case ShelemPhase.Playing:
-                game.Play(bot.Seat, ShelemBot.ChoosePlay(game, bot.Seat, random));
-                break;
-        }
+        MoveFor(room, bot.Seat, timedOut: false);
         room.Version++;
         ScheduleBot(room);
     }
+
+    /// <summary>Makes a legal move with the bot's judgement. A person who ran out of time passes the bidding
+    /// rather than being committed to a contract they never chose.</summary>
+    private static void MoveFor(Room room, int seat, bool timedOut)
+    {
+        var game = room.Game;
+        switch (game.Phase)
+        {
+            case ShelemPhase.Bidding:
+                var choice = timedOut ? (Bid: (int?)null, Shelem: false) : ShelemBot.ChooseBid(game, seat, room.Random);
+                game.Bid(seat, choice.Bid, choice.Shelem);
+                break;
+            case ShelemPhase.Discard:
+                game.Discard(seat, ShelemBot.ChooseDiscards(game, seat));
+                break;
+            case ShelemPhase.Trump:
+                game.ChooseTrump(seat, ShelemBot.BestTrump(game, seat));
+                break;
+            case ShelemPhase.Playing:
+                game.Play(seat, ShelemBot.ChoosePlay(game, seat, room.Random));
+                break;
+        }
+    }
+
+    private static bool IsMovePhase(ShelemPhase phase) => phase is ShelemPhase.Bidding or ShelemPhase.Discard or ShelemPhase.Trump or ShelemPhase.Playing;
 
     private void ScheduleBot(Room room)
     {
@@ -167,9 +191,12 @@ public sealed class ShelemRoomService
             room.CompletedTrickKey = trickKey;
             room.TrickVisibleUntil = Now.AddMilliseconds(1800);
         }
-        if (room.BotActAt is null && (game.Phase is ShelemPhase.Bidding or ShelemPhase.Discard or ShelemPhase.Trump or ShelemPhase.Playing) &&
-            game.Players.FirstOrDefault(p => p.Seat == game.TurnSeat)?.IsBot == true)
-            room.BotActAt = (room.TrickVisibleUntil > Now ? room.TrickVisibleUntil : Now).AddMilliseconds(800);
+        var turnStarts = room.TrickVisibleUntil > Now ? room.TrickVisibleUntil : Now;
+        var current = game.Players.FirstOrDefault(p => p.Seat == game.TurnSeat);
+        if (room.BotActAt is null && IsMovePhase(game.Phase) && current?.IsBot == true)
+            room.BotActAt = turnStarts.AddMilliseconds(800);
+        // Called after every change, so each new turn for a person gets a fresh clock.
+        room.TurnDeadline = IsMovePhase(game.Phase) && current is { IsBot: false } ? turnStarts + TurnLimit : null;
     }
 
     private ShelemRoomView View(Room room, Guid userId)
@@ -187,7 +214,9 @@ public sealed class ShelemRoomService
                 p.UserId is { } id ? VoiceUid(id) : 0)).ToArray(),
             (holdingTrick ? game.LastTrick : game.Trick).Select(p => new ShelemPlayView(p.Seat, p.Card.Code)).ToArray(),
             game.LastTrick.Select(p => new ShelemPlayView(p.Seat, p.Card.Code)).ToArray(), game.LastTrickWinner,
-            game.Zamin.Count, game.Discards.Count, room.BotActAt is not null);
+            game.Zamin.Count, game.Discards.Count, room.BotActAt is not null,
+            !holdingTrick && room.TurnDeadline is { } deadline ? (int)Math.Clamp((deadline - Now).TotalMilliseconds, 0, TurnLimit.TotalMilliseconds) : null,
+            (int)TurnLimit.TotalMilliseconds);
     }
 
     private Room Find(string code) => _rooms.TryGetValue(NormalizeCode(code), out var room) ? room : throw new GameException("No room has that code.", "room_not_found");
@@ -209,6 +238,7 @@ public sealed class ShelemRoomService
         public long Version;
         public DateTimeOffset LastActivity;
         public DateTimeOffset? BotActAt;
+        public DateTimeOffset? TurnDeadline;
         public DateTimeOffset TrickVisibleUntil;
         public string CompletedTrickKey = "";
         public Random Random { get; } = new();
@@ -220,4 +250,5 @@ public sealed record ShelemPlayView(int Seat, string Card);
 public sealed record ShelemRoomView(string Code, Guid GameId, long Version, string Phase, int Round, int DealerSeat, int TurnSeat,
     int? HighestBid, int? DeclarerSeat, bool ShelemCalled, string? Trump, int[] TeamScores, int[] RoundPoints, int[] RoundDelta,
     int? WinnerTeam, int? YourSeat, bool YouAreHost, string[] Hand, string[] LegalCards, ShelemPlayerView[] Players,
-    ShelemPlayView[] Trick, ShelemPlayView[] LastTrick, int? LastTrickWinner, int ZaminCount, int DiscardCount, bool BotThinking);
+    ShelemPlayView[] Trick, ShelemPlayView[] LastTrick, int? LastTrickWinner, int ZaminCount, int DiscardCount, bool BotThinking,
+    int? TurnRemainingMs, int TurnLimitMs);

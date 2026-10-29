@@ -269,17 +269,27 @@ function GameTable({ room }: { room: ShelemRoom }) {
   const spots = [{ delta: 2, pos: "top" }, { delta: 1, pos: "left" }, { delta: 3, pos: "right" }];
   return <div className="shelem-table">
     <div className="shelem-felt-glow" />
-    {spots.map(({ delta, pos }) => { const p = at(delta); if (!p) return null; return <div className={`shelem-player shelem-player--${pos}${p.seat === room.turnSeat ? " is-turn" : ""}`} key={p.seat}><span>{p.isBot ? "✦" : p.name[0]}</span><b>{p.name}</b><small>{n(p.cards)}</small><CardBackFan count={p.cards} vertical={pos !== "top"} /><PlayerStatus room={room} seat={p.seat} /></div>; })}
+    {spots.map(({ delta, pos }) => { const p = at(delta); if (!p) return null; return <div className={`shelem-player shelem-player--${pos}${p.seat === room.turnSeat ? " is-turn" : ""}`} key={p.seat}><span>{p.isBot ? "✦" : p.name[0]}<TurnRing room={room} seat={p.seat} /></span><b>{p.name}</b><small>{n(p.cards)}</small><CardBackFan count={p.cards} vertical={pos !== "top"} /><PlayerStatus room={room} seat={p.seat} /></div>; })}
     <div className="shelem-contract"><span>{room.highestBid ? n(room.highestBid) : "—"}</span>{room.trump && <b className={room.trump === "hearts" || room.trump === "diamonds" ? "is-red" : ""}>{SUITS.find((s) => s.key === room.trump)?.symbol}</b>}<small>{t("shelemContract")}</small></div>
     {biddingWinner && <div className="shelem-bidding-winner" role="status"><small>{t('shelemBiddingWinner')}</small><strong dir="auto">{biddingWinner.isYou ? t('you') : biddingWinner.name}</strong></div>}
     {collecting && <div className="shelem-trick-winner" role="status">{t('shelemTrickWon', {name: winner?.isYou ? t('you') : winner?.name ?? '', points})}</div>}
     <div className={`shelem-trick${collecting ? ` is-collecting collect-${direction}` : ''}`} dir="ltr">{room.trick.map((play) => <PlayingCard key={`${play.seat}-${play.card}`} code={play.card} size="table" selected={collecting && play.seat === room.lastTrickWinner} style={trickStyle((play.seat - own + 4) % 4)} />)}{room.trick.length === 0 && <span className="shelem-table-mark">✦</span>}</div>
-    <div className={`shelem-player shelem-player--bottom${room.turnSeat === own ? " is-turn" : ""}`}><span>{at(0)?.name[0]}</span><b>{t("you")}</b><PlayerStatus room={room} seat={own} /></div>
+    <div className={`shelem-player shelem-player--bottom${room.turnSeat === own ? " is-turn" : ""}`}><span>{at(0)?.name[0]}<TurnRing room={room} seat={own} /></span><b>{t("you")}</b><PlayerStatus room={room} seat={own} /></div>
     {room.lastTrick.length === 4 && <details className="shelem-last-trick" key={`${room.round}-${room.lastTrick.map(p=>p.card).join('')}`}><summary>{t('shelemLastTrick')}</summary><div>{room.lastTrick.map(play=><figure key={play.seat}><PlayingCard code={play.card} size="table" selected={play.seat===room.lastTrickWinner}/><figcaption>{room.players.find(p=>p.seat===play.seat)?.name}{play.seat===room.lastTrickWinner ? ` · ${t('shelemWinner')}` : ''}</figcaption></figure>)}</div></details>}
   </div>;
 }
 
 const ACTIVE_PHASES = ['bidding', 'discard', 'trump', 'playing'];
+
+/** Drains over the move's time limit. Remounted for every new room version, so it restarts from the server's clock. */
+function TurnRing({ room, seat }: { room: ShelemRoom; seat: number }) {
+  if (seat !== room.turnSeat || room.turnRemainingMs == null || !ACTIVE_PHASES.includes(room.phase)) return null;
+  const style = { '--turn-limit': `${room.turnLimitMs}ms`, '--turn-delay': `${room.turnRemainingMs - room.turnLimitMs}ms` } as CSSProperties;
+  return <svg key={room.version} className="shelem-turn-ring" viewBox="0 0 36 36" aria-hidden="true" style={style}>
+    <circle className="shelem-turn-ring__track" cx="18" cy="18" r="16" />
+    <circle className="shelem-turn-ring__left" cx="18" cy="18" r="16" pathLength={100} />
+  </svg>;
+}
 
 // Each card flies in from the seat that played it: you, then clockwise left, across and right.
 const TRICK_SEATS = [

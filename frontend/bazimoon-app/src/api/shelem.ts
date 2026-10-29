@@ -14,6 +14,8 @@ export interface ShelemRoom {
   teamScores: number[]; roundPoints: number[]; roundDelta: number[]; winnerTeam: number | null;
   yourSeat: number | null; youAreHost: boolean; hand: string[]; legalCards: string[]; players: ShelemPlayer[];
   trick: ShelemPlay[]; lastTrick: ShelemPlay[]; lastTrickWinner: number | null; zaminCount: number; discardCount: number; botThinking: boolean;
+  /** Time left for a person's move, from when this view was sent; null on a bot's turn. */
+  turnRemainingMs: number | null; turnLimitMs: number;
 }
 
 const base = (code: string) => `/api/shelem/rooms/${encodeURIComponent(code)}`;
