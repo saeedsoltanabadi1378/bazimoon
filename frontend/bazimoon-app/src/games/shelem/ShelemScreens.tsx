@@ -156,6 +156,7 @@ export function ShelemRoomScreen({ code }: { code: string }) {
       <div className="shelem-score"><small>{t("shelemMatchScore")}</small><span>{t("shelemUs")} <b>{n(room.teamScores[team])}</b></span><span>{t("shelemThem")} <b>{n(room.teamScores[1 - team])}</b></span>{room.phase === 'playing' && <small>{t("shelemCapturedScore", { us: room.roundPoints[team], them: room.roundPoints[1-team] })}</small>}</div>
     </header>
     <GameFeedback room={room} />
+    {room.lastTrick.length === 4 && <details className="shelem-last-trick" key={`${room.round}-${room.lastTrick.map(p=>p.card).join('')}`}><summary>{t('shelemLastTrick')}</summary><div>{room.lastTrick.map(play=><figure key={play.seat}><PlayingCard code={play.card} size="table" selected={play.seat===room.lastTrickWinner}/><figcaption>{room.players.find(p=>p.seat===play.seat)?.name}{play.seat===room.lastTrickWinner ? ` · ${t('shelemWinner')}` : ''}</figcaption></figure>)}</div></details>}
 
     {room.phase === "lobby" ? <Lobby room={room} busy={busy} voiceOn={voiceOn} micMuted={micMuted} localMutes={localMutes} onVoice={() => void joinVoice()} onMic={() => void toggleMic()} onPlayerMute={togglePlayer}
       onReady={() => void act(() => api.ready(code, !me?.ready))} onStart={(fill) => void act(() => api.start(code, fill))} /> :

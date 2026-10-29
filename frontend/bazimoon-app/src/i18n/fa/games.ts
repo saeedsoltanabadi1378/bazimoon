@@ -807,6 +807,8 @@ export const games: Record<keyof typeof en, string> = {
   shelemChooseTrump: "خال حکم را انتخاب کن",
   shelemYourTurn: "نوبت شماست — یکی از کارت‌های روشن را بازی کن",
   shelemContract: "تعهد",
+  shelemLastTrick: "دست قبلی",
+  shelemWinner: "برنده",
   shelemGameSound: "صدای بازی",
   shelemGameVibration: "لرزش نوبت",
   shelemProgress: "تیم خواننده: {points} از {target}",
