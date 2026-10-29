@@ -26,7 +26,7 @@ const FriendsScreen = lazy(() => import("./hub/FriendsScreen").then((m) => ({ de
 const FriendLinkScreen = lazy(() => import("./hub/FriendsScreen").then((m) => ({ default: m.FriendLinkScreen })));
 const CoupleRoute = lazy(() => import("./couple/CoupleRoute").then((m) => ({ default: m.CoupleRoute })));
 
-const gameKeys: GameKey[] = ["zip", "queens", "merge", "mines", "memory", "word", "ladder", "stack", "blocks", "sudoku", "snake", "dooz", "spy", "esmfamil"];
+const gameKeys: GameKey[] = ["zip", "queens", "merge", "mines", "memory", "word", "ladder", "stack", "blocks", "sudoku", "snake", "dooz", "spy", "esmfamil", "shelem"];
 const isGameKey = (key: string): key is GameKey => (gameKeys as string[]).includes(key);
 
 /** Where the app opens: an invite or game link (/t/CODE, /g/ID, /couple/TOKEN, /ef/CODE, /f/CODE, /friends, /play/GAME), or home. */
@@ -45,6 +45,8 @@ function initialRoutes(): Route[] {
       return [{ name: "home" }, { name: "couple", screen: "home" }];
     case "esmfamil":
       return [{ name: "home" }, { name: "game", game: "esmfamil", screen: "lobby", params: { code: `EF-${link.code}` } }];
+    case "shelem":
+      return [{ name: "home" }, { name: "game", game: "shelem", screen: "lobby", params: { code: `SH-${link.code}` } }];
     case "friend":
       return [{ name: "home" }, { name: "friendLink", code: link.code }];
     case "friends":

@@ -19,6 +19,7 @@ import { SpyIntro, SpyPlay, SpyResult } from "./spy/SpyScreens";
 import { EsmFamilIntro, EsmFamilPlay, EsmFamilResult, EsmFamilSetup } from "./esmfamil/EsmFamilScreens";
 import { EsmFamilSolo } from "./esmfamil/EsmFamilSolo";
 import { EsmFamilLobby, EsmFamilOnline } from "./esmfamil/EsmFamilOnline";
+import { ShelemIntro, ShelemRoomScreen } from "./shelem/ShelemScreens";
 
 type GameRouteProps = { route: Extract<Route, { name: "game" }> };
 
@@ -127,6 +128,9 @@ export function GameRoute({ route }: GameRouteProps) {
       if (route.screen === "result") return <EsmFamilResult params={p} />;
       return <EsmFamilIntro />;
     }
+    case "shelem":
+      if (route.screen === "lobby" || route.screen === "online" || route.screen === "play") return <ShelemRoomScreen key={str(p?.code, "")} code={str(p?.code, "")} />;
+      return <ShelemIntro />;
     default:
       return null;
   }

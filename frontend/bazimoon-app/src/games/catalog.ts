@@ -30,6 +30,7 @@ export const catalog: CatalogEntry[] = [
   { key: "stack", name: "gameStack", sub: "subStack", category: "Arcade", tag: "Endless", icon: "stack", bg: "#13302C", fg: "#5FD0BE", accent: "#5FD0BE" },
   { key: "couple", name: "gameCouple", sub: "subCouple", category: "Couples", tag: "Daily", icon: "heart", bg: "#24121C", fg: "#F2A7C3", accent: "#F2A7C3" },
   { key: "esmfamil", name: "gameEsmFamil", sub: "subEsmFamil", category: "Party", tag: "New", icon: "esmFamil", bg: "#2A2113", fg: "#F6C377", accent: "#F6C377" },
+  { key: "shelem", name: "gameShelem", sub: "subShelem", category: "Classics", tag: "New", icon: "cards", bg: "#24213D", fg: "#E2B86B", accent: "#E2B86B" },
   { key: "spy", name: "gameSpy", sub: "subSpy", category: "Party", tag: "New", icon: "spy", bg: "#2A1418", fg: "#F08A7A", accent: "#F08A7A" },
   { key: "dooz", name: "gameDooz", sub: "subDooz", category: "Classics", tag: "vsBot", icon: "dooz", bg: "#1E2138", fg: "#C3B9FF", accent: "#C3B9FF" },
   { key: "snake", name: "gameSnake", sub: "subSnake", category: "Arcade", tag: "Endless", icon: "snake", bg: "#14241A", fg: "#9ED98C", accent: "#9ED98C" },

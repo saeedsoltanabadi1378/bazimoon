@@ -180,6 +180,7 @@ const GAMES: Record<string, [string, string]> = {
   dooz: ["Dooz", "دوز"],
   spy: ["Spy", "جاسوس"],
   esmfamil: ["Esm-Famil", "اسم فامیل"],
+  shelem: ["Shelem", "شلم"],
 };
 
 export function gameName(game: string | null, lang: AdminLang) {

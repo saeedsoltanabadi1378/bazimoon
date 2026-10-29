@@ -16,4 +16,5 @@ export const GAME_STYLE: Record<string, [string, string, string]> = {
   dooz: ["#1E2138", "#C3B9FF", "M9 3v18M15 3v18M3 9h18M3 15h18"],
   spy: ["#2A1418", "#F08A7A", "M3 11h18M6 11l1.5-6h9L18 11M8 17a2.5 2.5 0 1 0 0-.01M16 17a2.5 2.5 0 1 0 0-.01M10.5 17h3"],
   esmfamil: ["#2A2113", "#F6C377", "M5 4h14v16H5zM8 8h8M8 12h8M8 16h5"],
+  shelem: ["#24213D", "#E2B86B", "M6 3h12v18H6zM12 8c-2 2-3 3-3 4.5a3 3 0 0 0 6 0C15 11 14 10 12 8z"],
 };

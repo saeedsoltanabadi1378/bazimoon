@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useHub } from "../hub/HubData";
 
-export type GameKey = "zip" | "queens" | "merge" | "mines" | "memory" | "word" | "ladder" | "stack" | "blocks" | "sudoku" | "snake" | "dooz" | "spy" | "esmfamil";
+export type GameKey = "zip" | "queens" | "merge" | "mines" | "memory" | "word" | "ladder" | "stack" | "blocks" | "sudoku" | "snake" | "dooz" | "spy" | "esmfamil" | "shelem";
 export type GameScreen = "intro" | "play" | "result" | "levels" | "setup" | "lobby" | "online" | "solo";
 export type CoupleScreen = "home" | "invite" | "quiz" | "reveal";
 export type TabKey = "home" | "solo" | "mafia" | "league" | "profile";

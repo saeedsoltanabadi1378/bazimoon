@@ -39,6 +39,7 @@ builder.Services.AddScoped<TableService>();
 builder.Services.AddScoped<CoupleService>();
 builder.Services.AddScoped<FriendService>();
 builder.Services.AddSingleton<Bazimoon.Api.EsmFamil.EsmFamilRoomService>();
+builder.Services.AddSingleton<Bazimoon.Api.Shelem.ShelemRoomService>();
 builder.Services.AddSingleton<ReminderStatus>();
 builder.Services.AddScoped<Bazimoon.Api.Admin.AdminDashboardService>();
 builder.Services.AddOptions<PushOptions>().Bind(builder.Configuration.GetSection(PushOptions.SectionName));
@@ -168,6 +169,7 @@ app.MapFriendEndpoints();
 app.MapPushEndpoints();
 Bazimoon.Api.Activity.ActivityEndpoints.MapActivityEndpoints(app);
 Bazimoon.Api.EsmFamil.EsmFamilEndpoints.MapEsmFamilEndpoints(app);
+Bazimoon.Api.Shelem.ShelemEndpoints.MapShelemEndpoints(app);
 app.MapHub<GameHub>("/hubs/game");
 
 // Applies pending EF Core migrations before serving traffic. IsRelational() guards this so it's a
