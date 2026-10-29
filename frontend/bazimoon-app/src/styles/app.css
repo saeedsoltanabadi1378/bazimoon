@@ -1422,6 +1422,9 @@ html[lang="fa"] .kicker {
 .shelem-topbar { min-height:68px; display:flex; align-items:center; gap:10px; padding:10px max(14px,env(safe-area-inset-left)); background:#0B0D1A; border-bottom:1px solid #1C203A; }
 .shelem-score { display:flex; flex-direction:column; gap:2px; padding:7px 10px; border-radius:12px; background:#15182D; font-size:11px; color:var(--text-2); }
 .shelem-score b { color:#F7E3B4; font-size:13px; margin-inline-start:3px; }
+.shelem-topbar > .grow { min-width:0; }
+.shelem-topbar .display { white-space:nowrap; }
+.shelem-score { max-width:46%; }
 .shelem-room-code { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:14px 16px; border-radius:18px; background:linear-gradient(135deg,#1E2245,#15182D); }
 .shelem-room-code small,.shelem-room-code b { display:block; }
 .shelem-room-code b { color:#F7E3B4; font-size:24px; letter-spacing:2px; }
@@ -1432,12 +1435,9 @@ html[lang="fa"] .kicker {
 .shelem-lobby-seat small { color:var(--text-2); }
 .shelem-seat-avatar { width:40px; height:40px; display:grid; place-items:center; margin-bottom:3px; border-radius:13px; background:#252A4A; color:#E2B86B; font-weight:800; }
 .shelem-voice { display:flex; flex-wrap:wrap; gap:7px; }
-.shelem-voice button,.shelem-voice-button { min-height:42px; display:inline-flex; align-items:center; gap:7px; padding:8px 11px; border:1px solid #343956; border-radius:12px; background:#171A30; color:var(--text); cursor:pointer; }
+.shelem-voice button { min-height:42px; display:inline-flex; align-items:center; gap:7px; padding:8px 11px; border:1px solid #343956; border-radius:12px; background:#171A30; color:var(--text); cursor:pointer; }
 .shelem-voice button.is-muted { color:#F08A7A; background:#2A171D; }
-.shelem-voice.is-compact button { width:42px; padding:0; justify-content:center; border-radius:999px; }
 .shelem-voice-peers { display:contents; }
-.shelem-voice-menu { position:absolute; left:0; bottom:50px; width:max-content; max-width:min(300px,80vw); display:flex; flex-direction:column; gap:6px; padding:8px; border:1px solid #343956; border-radius:14px; background:#111427; box-shadow:0 12px 28px rgba(0,0,0,.45); }
-.shelem-voice-menu button { width:auto!important; min-width:150px; padding-inline:10px!important; justify-content:flex-start!important; border-radius:10px!important; }
 .shelem-table { position:relative; min-height:calc(100dvh - 278px); overflow:hidden; background:radial-gradient(ellipse at 50% 44%,#234C47 0,#173936 48%,#102523 74%,#0B1617 100%); border-bottom:1px solid rgba(255,255,255,.06); box-shadow:inset 0 0 80px rgba(0,0,0,.45); }
 .shelem-table::before { content:""; position:absolute; inset:6% 7%; border:1px solid rgba(226,184,107,.15); border-radius:42% / 30%; }
 .shelem-felt-glow { position:absolute; inset:20% 22%; border-radius:50%; box-shadow:0 0 80px rgba(95,208,190,.08); }
@@ -1469,19 +1469,10 @@ html[lang="fa"] .kicker {
 .collect-south { --collect-x:0px; --collect-y:100px; }.collect-north { --collect-x:0px; --collect-y:-100px; }.collect-west { --collect-x:-120px; --collect-y:0px; }.collect-east { --collect-x:120px; --collect-y:0px; }
 @keyframes shelem-collect { to { transform:translate(var(--collect-x),var(--collect-y)) scale(.3); opacity:0; } }
 @media(prefers-reduced-motion:reduce) { .shelem-trick.is-collecting { animation:none; } }
-.shelem-voice-float { position:absolute; left:10px; bottom:10px; z-index:8; }
 .shelem-actions { flex-shrink:0; padding:10px 14px; background:#0E1121; border-top:1px solid #202441; }
 .shelem-actions:empty { display:none; }
 .shelem-network { flex-shrink:0; padding:6px 12px; font-size:12px; background:#29243A; color:#F7E3B4; }
 .shelem-network button { margin-inline-start:8px; color:inherit; background:transparent; border:1px solid currentColor; border-radius:6px; padding:5px; }
-.shelem-last-trick { flex-shrink:0; padding:6px 12px; background:#111427; font-size:12px; }
-.shelem-last-trick summary { cursor:pointer; min-height:28px; color:#F7E3B4; }
-.shelem-last-trick > div { display:flex; justify-content:space-around; padding-top:20px; }
-.shelem-last-trick figure { margin:0; text-align:center; width:24%; }
-.shelem-last-trick figcaption { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; margin-top:4px; }
-.shelem-feedback-controls { display:flex; justify-content:center; gap:8px; padding:4px; flex-shrink:0; }
-.shelem-feedback-controls button { border:1px solid #343956; border-radius:8px; background:#171A30; color:#B7B9CD; padding:5px 10px; min-height:32px; }
-.shelem-feedback-controls button[aria-pressed=true] { color:#F7E3B4; border-color:#E2B86B; }
 .shelem-turn-guidance { text-align:center; color:#F7E3B4; font-size:13px; padding:4px; }
 .shelem-turn-guidance small { margin-top:4px; }
 .shelem-contract-progress { display:grid; gap:3px; margin-bottom:6px; }
@@ -1490,13 +1481,7 @@ html[lang="fa"] .kicker {
 .shelem-bid-values button { min-height:40px; padding:3px; border:1px solid #555B77; border-radius:8px; background:#171A30; color:#fff; cursor:pointer; }
 .shelem-bid-values button[aria-pressed=true] { background:#E2B86B; color:#171924; border-color:#E2B86B; }
 .shelem-bid-values button:disabled { opacity:.3; cursor:default; }
-.screen > .shelem-hand { display:grid; grid-template-columns:repeat(8,minmax(0,1fr)); gap:4px 0; padding-inline:10px; }
-.screen > .shelem-hand .playing-card { --card-w:clamp(38px,11vw,52px); margin:0; animation:none; }
 .playing-card:active { transition:none; }
-.screen > .shelem-hand { display:flex; flex-wrap:wrap; align-items:flex-start; gap:8px; max-height:32%; overflow-y:auto; }
-.shelem-hand-suit { display:flex; flex-wrap:wrap; gap:3px; align-items:center; max-width:100%; }
-.shelem-hand-suit > small { align-self:center; padding-inline:2px; }
-.screen > .shelem-hand .playing-card { --card-w:42px; }
 .shelem-actions[hidden] { display:none; }
 .shelem-dealing { position:absolute; inset:110px 0 0; z-index:15; background:radial-gradient(ellipse,#234C47,#0B1617); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px; pointer-events:auto; color:#F7E3B4; }
 .shelem-dealing-stage { width:100%; height:350px; position:relative; display:grid; place-items:center; }
@@ -1520,9 +1505,30 @@ html[lang="fa"] .kicker {
 .shelem-suits { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; direction:ltr; }
 .shelem-suits button { min-height:54px; border:1px solid #343956; border-radius:14px; background:#F8F3E8; color:#171924; font-size:30px; cursor:pointer; }
 .shelem-suits button.is-red { color:#C63F4D; }
-.shelem-hand { min-height:112px; display:flex; justify-content:center; align-items:flex-end; overflow:visible; padding:8px 8px max(8px,env(safe-area-inset-bottom)); background:linear-gradient(#0D1020,#090B16); }
-.shelem-hand .playing-card { --card-w:clamp(48px,16vw,72px); margin-left:calc(var(--card-w) * -.57); }
+.shelem-hand { container-type:inline-size; min-height:112px; display:flex; justify-content:center; align-items:flex-end; overflow:visible; padding:22px 10px max(8px,env(safe-area-inset-bottom)); background:linear-gradient(#0D1020,#090B16); }
+/* One continuous fan: overlap only as much as the row needs, but always enough to read as a held hand. */
+.shelem-hand .playing-card { --card-w:clamp(48px,15vw,70px); margin-left:max(calc(var(--card-w) * -.8), min(calc(var(--card-w) * -.32), calc((100cqw - var(--hand-n) * var(--card-w)) / (var(--hand-n) - 1)))); }
 .shelem-hand .playing-card:first-child { margin-left:0; }
+.shelem-player-status { position:absolute; z-index:5; display:inline-flex; align-items:center; gap:3px; padding:3px 8px; border-radius:999px; background:#E2B86B; color:#1B1606; font-size:10px; font-style:normal; font-weight:800; white-space:nowrap; box-shadow:0 4px 14px rgba(0,0,0,.35); animation:shelem-status-in 220ms ease-out both; }
+.shelem-player-status i { width:4px; height:4px; border-radius:999px; background:currentColor; animation:shelem-thinking 900ms ease-in-out infinite; }
+.shelem-player-status i:nth-child(2){animation-delay:150ms}.shelem-player-status i:nth-child(3){animation-delay:300ms}
+.shelem-player-status i:last-of-type { margin-inline-end:3px; }
+.shelem-player-status.is-you { background:#5FD0BE; color:#06211D; }
+.shelem-player-status.is-passed { background:#2A2E4A; color:#B7B9CD; box-shadow:none; }
+.shelem-player--top .shelem-player-status { top:calc(100% + 52px); left:50%; transform:translateX(-50%); }
+.shelem-player--left .shelem-player-status { bottom:calc(100% + 5px); left:0; }
+.shelem-player--right .shelem-player-status { bottom:calc(100% + 5px); right:0; }
+.shelem-player--bottom .shelem-player-status { bottom:calc(100% + 5px); left:50%; transform:translateX(-50%); }
+@keyframes shelem-status-in { from { opacity:0; scale:.85; } }
+.shelem-last-trick { position:absolute; z-index:8; inset-block-end:10px; inset-inline-start:10px; max-width:calc(100% - 20px); padding:4px 10px; border:1px solid rgba(226,184,107,.25); border-radius:12px; background:rgba(10,13,25,.88); font-size:12px; }
+.shelem-last-trick[open] { inset-inline-end:10px; z-index:12; padding-bottom:10px; }
+.shelem-last-trick summary { cursor:pointer; min-height:28px; display:flex; align-items:center; color:#F7E3B4; }
+.shelem-last-trick > div { display:flex; justify-content:space-around; padding-top:20px; }
+.shelem-last-trick figure { margin:0; text-align:center; width:24%; }
+.shelem-last-trick figcaption { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; margin-top:4px; }
+.shelem-settings__group { display:flex; flex-direction:column; border:1px solid #2A2E4A; border-radius:16px; overflow:hidden; background:#121529; }
+.shelem-settings__group button { min-height:54px; display:flex; align-items:center; justify-content:space-between; gap:12px; padding:0 16px; border:0; background:transparent; color:var(--text); font-size:15px; text-align:start; cursor:pointer; }
+.shelem-settings__group button + button { border-top:1px solid #232734; }
 .shelem-thinking { display:flex; align-items:center; justify-content:center; gap:5px; min-height:40px; color:#B7B9CD; }
 .shelem-thinking span { width:6px; height:6px; border-radius:999px; background:#E2B86B; animation:shelem-thinking 900ms ease-in-out infinite; }
 .shelem-thinking span:nth-child(2){animation-delay:150ms}.shelem-thinking span:nth-child(3){animation-delay:300ms}
@@ -1535,8 +1541,8 @@ html[lang="fa"] .kicker {
 @keyframes shelem-deal-in { from { opacity:0; transform:translateY(-50px) scale(.8) rotate(0deg); } }
 @keyframes shelem-card-play { from { opacity:0; transform:translateY(24px) rotate(-7deg) scale(.92); } 75% { opacity:1; transform:translateY(-3px) rotate(1deg) scale(1.025); } to { opacity:1; transform:translateY(0) rotate(0) scale(1); } }
 @keyframes shelem-thinking { 0%,100%{transform:translateY(0);opacity:.35}50%{transform:translateY(-4px);opacity:1} }
-@media (max-height:700px) { .shelem-table{min-height:310px}.shelem-hand{min-height:96px}.shelem-hand .playing-card{--card-w:54px} }
-@media (prefers-reduced-motion:reduce) { .shelem-hero__cards .playing-card,.shelem-trick .playing-card,.shelem-thinking span{animation:none}.playing-card{transition:none} }
+@media (max-height:700px) { .shelem-table{min-height:310px}.shelem-hand{min-height:96px}.shelem-hand .playing-card{--card-w:clamp(44px,13vw,56px)} }
+@media (prefers-reduced-motion:reduce) { .shelem-hero__cards .playing-card,.shelem-trick .playing-card,.shelem-thinking span,.shelem-player-status,.shelem-player-status i{animation:none}.playing-card{transition:none} }
 
 /* Sudoku: a placed number pops; a finished row, column or box flashes once. */
 .cell-pop {

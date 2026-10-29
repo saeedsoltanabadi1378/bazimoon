@@ -1,10 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import type { ShelemRoom } from '../../api/shelem';
-import { useLanguage } from '../../i18n/LanguageContext';
 import { haptic } from '../../lib/haptics';
 
-export function GameFeedback({ room }: { room: ShelemRoom }) {
-  const { t } = useLanguage();
+export function useGameFeedback(room: ShelemRoom | null) {
   const [sound, setSound] = useState(false);
   const [vibration, setVibration] = useState(false);
   const audio = useRef<AudioContext | null>(null);
@@ -13,7 +11,7 @@ export function GameFeedback({ room }: { room: ShelemRoom }) {
   useEffect(() => {
     const old = previous.current;
     previous.current = room;
-    if (!old) return;
+    if (!old || !room) return;
     const deal = old.round !== room.round;
     const win = room.trick.length === 4 && old.trick.length !== 4;
     const turn = room.turnSeat === room.yourSeat && old.turnSeat !== room.turnSeat;
@@ -37,11 +35,9 @@ export function GameFeedback({ room }: { room: ShelemRoom }) {
       oscillator.onended = () => { oscillator.disconnect(); gain.disconnect(); };
     });
   }, [room, sound, vibration]);
-  return <div className="shelem-feedback-controls">
-    <button type="button" aria-pressed={sound} onClick={async () => {
-      if (sound) { setSound(false); return; }
-      try { audio.current ??= new AudioContext(); await audio.current.resume(); setSound(true); } catch { setSound(false); }
-    }}>{t('shelemGameSound')}</button>
-    <button type="button" aria-pressed={vibration} onClick={()=>setVibration(value=>!value)}>{t('shelemGameVibration')}</button>
-  </div>;
+  async function toggleSound() {
+    if (sound) { setSound(false); return; }
+    try { audio.current ??= new AudioContext(); await audio.current.resume(); setSound(true); } catch { setSound(false); }
+  }
+  return { sound, vibration, toggleSound, toggleVibration: () => setVibration(value => !value) };
 }
