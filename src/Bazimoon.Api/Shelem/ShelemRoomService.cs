@@ -32,7 +32,7 @@ public sealed class ShelemRoomService
             {
                 FillBots(game);
                 game.Start();
-                room.BotActAt = Now.AddMilliseconds(700);
+                ScheduleBot(room);
             }
             _rooms[code] = room;
             return View(room, userId);
@@ -136,9 +136,9 @@ public sealed class ShelemRoomService
             room.CompletedTrickKey = trickKey;
             room.TrickVisibleUntil = Now.AddMilliseconds(1800);
         }
-        if ((game.Phase is ShelemPhase.Bidding or ShelemPhase.Discard or ShelemPhase.Trump or ShelemPhase.Playing) &&
+        if (room.BotActAt is null && (game.Phase is ShelemPhase.Bidding or ShelemPhase.Discard or ShelemPhase.Trump or ShelemPhase.Playing) &&
             game.Players.FirstOrDefault(p => p.Seat == game.TurnSeat)?.IsBot == true)
-            room.BotActAt = (room.TrickVisibleUntil > Now ? room.TrickVisibleUntil : Now).AddMilliseconds(room.Random.Next(350, 600));
+            room.BotActAt = (room.TrickVisibleUntil > Now ? room.TrickVisibleUntil : Now).AddMilliseconds(800);
     }
 
     private ShelemRoomView View(Room room, Guid userId)
