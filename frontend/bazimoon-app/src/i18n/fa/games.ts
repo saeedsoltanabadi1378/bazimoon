@@ -792,6 +792,7 @@ export const games: Record<keyof typeof en, string> = {
   shelemPlayerAudio: "کنترل صدای بازیکن‌ها",
   shelemVoiceFailed: "صدا وصل نشد. اجازه میکروفن را بررسی و دوباره تلاش کن.",
   shelemThinking: "در حال فکر…",
+  shelemWaitingBid: "منتظر پیشنهاد {name}…",
   shelemYourBid: "پیشنهاد شما",
   shelemPass: "پاس",
   shelemBidN: "خواندن {n}",

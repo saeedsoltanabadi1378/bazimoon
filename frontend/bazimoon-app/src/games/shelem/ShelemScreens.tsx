@@ -128,6 +128,7 @@ export function ShelemRoomScreen({ code }: { code: string }) {
   if (!room) return <Screen theme="night"><TopBar onBack={back} title={t("gameShelem")} /><Body><div className="skeleton" style={{ height: 420 }} /></Body></Screen>;
   const me = room.players.find((p) => p.isYou);
   const myTurn = room.yourSeat === room.turnSeat;
+  const currentPlayer = room.players.find((p) => p.seat === room.turnSeat);
   const minBid = Math.max(100, (room.highestBid ?? 95) + 5);
   const team = (room.yourSeat ?? 0) % 2;
   const phaseTitle = t(`shelemPhase_${room.phase}` as "shelemPhase_lobby");
@@ -146,12 +147,11 @@ export function ShelemRoomScreen({ code }: { code: string }) {
     {error && <div className="shelem-toast" role="alert">{error}</div>}
 
     <div className="shelem-actions">
-      {room.botThinking && !myTurn && <div className="shelem-thinking"><span /><span /><span /> {t("shelemThinking")}</div>}
-      {room.phase === "bidding" && myTurn && <div className="stack" style={{ gap: 10 }}>
-        <div className="row row--between"><b>{t("shelemYourBid")}</b><output className="display" style={{ fontSize: 24, color: ACCENT }}>{n(bid)}</output></div>
-        <input type="range" min={Math.min(165, minBid)} max="165" step="5" value={Math.min(165, Math.max(minBid, bid))} disabled={minBid > 165} onChange={(e) => setBid(Number(e.target.value))} aria-label={t("shelemYourBid")} />
-        <div className="row" style={{ gap: 8 }}><button className="btn btn--outline" disabled={busy} onClick={() => void act(() => api.bid(code, null))}>{t("shelemPass")}</button><button className="btn" disabled={busy || minBid > 165} onClick={() => void act(() => api.bid(code, Math.max(minBid, bid)))}>{t("shelemBidN", { n: Math.max(minBid, bid) })}</button><button className="btn shelem-slam" disabled={busy} onClick={() => void act(() => api.bid(code, 165, true))}>{t("gameShelem")}</button></div>
-      </div>}
+      {room.phase === "bidding" && (myTurn ? <div className="stack" style={{ gap: 10 }}>
+          <div className="row row--between"><b>{t("shelemYourBid")}</b><output className="display" style={{ fontSize: 24, color: ACCENT }}>{n(bid)}</output></div>
+          <input type="range" min={Math.min(165, minBid)} max="165" step="5" value={Math.min(165, Math.max(minBid, bid))} disabled={minBid > 165} onChange={(e) => setBid(Number(e.target.value))} aria-label={t("shelemYourBid")} />
+          <div className="row" style={{ gap: 8 }}><button className="btn btn--outline" disabled={busy} onClick={() => void act(() => api.bid(code, null))}>{t("shelemPass")}</button><button className="btn" disabled={busy || minBid > 165} onClick={() => void act(() => api.bid(code, Math.max(minBid, bid)))}>{t("shelemBidN", { n: Math.max(minBid, bid) })}</button><button className="btn shelem-slam" disabled={busy} onClick={() => void act(() => api.bid(code, 165, true))}>{t("gameShelem")}</button></div>
+        </div> : <div className="shelem-thinking"><span /><span /><span /> {t("shelemWaitingBid", { name: currentPlayer?.name ?? "" })}</div>)}
       {room.phase === "discard" && myTurn && <div className="row row--between"><span><b>{t("shelemChooseFour")}</b><small>{t("shelemChosen", { n: selected.length })}</small></span><button className="btn btn--auto" disabled={busy || selected.length !== 4} onClick={() => void act(() => api.discard(code, selected))}>{t("shelemDiscard")}</button></div>}
       {room.phase === "trump" && myTurn && <div className="stack stack--sm"><b>{t("shelemChooseTrump")}</b><div className="shelem-suits">{SUITS.map((s) => <button key={s.key} className={s.red ? "is-red" : ""} onClick={() => void act(() => api.trump(code, s.key))}>{s.symbol}</button>)}</div></div>}
       {room.phase === "playing" && myTurn && <div className="tiny" style={{ textAlign: "center", color: ACCENT }}>{t("shelemYourTurn")}</div>}

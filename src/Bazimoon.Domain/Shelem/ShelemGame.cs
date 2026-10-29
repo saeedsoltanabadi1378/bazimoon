@@ -26,7 +26,9 @@ public sealed class ShelemGame
     public Guid Id { get; } = Guid.NewGuid();
     public ShelemPhase Phase { get; private set; } = ShelemPhase.Lobby;
     public List<ShelemPlayer> Players { get; } = [];
-    public int DealerSeat { get; private set; } = 3;
+    // BeginRound advances the dealer before dealing. Starting at seat 2 makes
+    // seat 3 the first dealer and gives seat 0 the opening bid in a new room.
+    public int DealerSeat { get; private set; } = 2;
     public int TurnSeat { get; private set; }
     public int Round { get; private set; }
     public int? HighestBid { get; private set; }

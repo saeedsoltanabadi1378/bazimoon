@@ -12,6 +12,8 @@ public sealed class ShelemGameTests
         var game = FourBots();
         game.Start(new Random(42));
 
+        Assert.Equal(0, game.TurnSeat);
+
         var cards = game.Players.SelectMany(p => p.Hand).Concat(game.Zamin).ToList();
         Assert.Equal(52, cards.Count);
         Assert.Equal(52, cards.Distinct().Count());

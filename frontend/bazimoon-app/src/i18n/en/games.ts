@@ -791,6 +791,7 @@ export const games = {
   shelemPlayerAudio: "Player audio controls",
   shelemVoiceFailed: "Voice could not start. Check microphone permission and try again.",
   shelemThinking: "Thinking…",
+  shelemWaitingBid: "Waiting for {name} to bid…",
   shelemYourBid: "Your bid",
   shelemPass: "Pass",
   shelemBidN: "Bid {n}",
