@@ -1472,6 +1472,8 @@ html[lang="fa"] .kicker {
 .shelem-voice-float { position:absolute; left:10px; bottom:10px; z-index:8; }
 .shelem-actions { flex-shrink:0; padding:10px 14px; background:#0E1121; border-top:1px solid #202441; }
 .shelem-actions:empty { display:none; }
+.shelem-network { flex-shrink:0; padding:6px 12px; font-size:12px; background:#29243A; color:#F7E3B4; }
+.shelem-network button { margin-inline-start:8px; color:inherit; background:transparent; border:1px solid currentColor; border-radius:6px; padding:5px; }
 .shelem-last-trick { flex-shrink:0; padding:6px 12px; background:#111427; font-size:12px; }
 .shelem-last-trick summary { cursor:pointer; min-height:28px; color:#F7E3B4; }
 .shelem-last-trick > div { display:flex; justify-content:space-around; padding-top:20px; }

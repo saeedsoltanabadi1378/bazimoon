@@ -94,6 +94,10 @@ export function ShelemRoomScreen({ code }: { code: string }) {
   const [localMutes, setLocalMutes] = useState<Set<number>>(() => new Set());
   const voice = useRef(new VoiceSession());
   const version = useRef(-1);
+  const polling = useRef(false);
+  const submitting = useRef(false);
+  const [reconnecting, setReconnecting] = useState(false);
+  const [moveRejected, setMoveRejected] = useState(false);
   const [dealtRound, setDealtRound] = useState(0);
   const round = room?.round ?? 0;
   const [settledHand, setSettledHand] = useState<string[]>([]);
@@ -110,10 +114,14 @@ export function ShelemRoomScreen({ code }: { code: string }) {
   }, [round]);
 
   const load = useCallback(async () => {
+    if (polling.current || submitting.current) return;
+    polling.current = true;
     try {
       const next = await api.get(code);
       if (next.version > version.current) { version.current = next.version; setRoom(next); }
-    } catch (e) { setError(message(e, t("shelemConnectionLost"))); }
+      setReconnecting(false);
+    } catch { setReconnecting(true); }
+    finally { polling.current = false; }
   }, [api, code, t]);
 
   useEffect(() => { void load(); const id = window.setInterval(() => void load(), 550); return () => window.clearInterval(id); }, [load]);
@@ -122,11 +130,13 @@ export function ShelemRoomScreen({ code }: { code: string }) {
   useEffect(() => { if (room?.highestBid != null) setBid(Math.min(165, room.highestBid + 5)); }, [room?.highestBid]);
 
   async function act(fn: () => Promise<ShelemRoom>) {
-    if (busy) return;
+    if (submitting.current) return;
+    submitting.current = true;
+    setMoveRejected(false);
     setBusy(true); setError(null);
-    try { const next = await fn(); version.current = next.version; setRoom(next); haptic.tap(); }
-    catch (e) { setError(message(e, t("shelemActionFailed"))); haptic.error(); }
-    finally { setBusy(false); }
+    try { const next = await fn(); if (next.version >= version.current) { version.current = next.version; setRoom(next); } setReconnecting(false); haptic.tap(); }
+    catch { setMoveRejected(true); haptic.error(); }
+    finally { submitting.current = false; setBusy(false); void load(); }
   }
 
   async function joinVoice() {
@@ -140,7 +150,7 @@ export function ShelemRoomScreen({ code }: { code: string }) {
   async function toggleMic() { const next = !micMuted; await voice.current.setMuted(next); setMicMuted(next); }
   function togglePlayer(uid: number) { const next = !localMutes.has(uid); voice.current.setRemoteMuted(uid, next); setLocalMutes((old) => { const copy = new Set(old); if (next) copy.add(uid); else copy.delete(uid); return copy; }); }
 
-  if (!room) return <Screen theme="night"><TopBar onBack={back} title={t("gameShelem")} /><Body><div className="skeleton" style={{ height: 420 }} /></Body></Screen>;
+  if (!room) return <Screen theme="night"><TopBar onBack={back} title={t("gameShelem")} /><Body>{reconnecting ? <div role="status"><p>{t('shelemReconnecting')}</p><button className="btn" onClick={()=>void load()}>{t('shelemRetry')}</button></div> : <div className="skeleton" style={{ height: 420 }} />}</Body></Screen>;
   const me = room.players.find((p) => p.isYou);
   const dealing = room.phase === 'bidding' && dealtRound !== room.round;
   const myTurn = room.yourSeat === room.turnSeat;
@@ -156,6 +166,7 @@ export function ShelemRoomScreen({ code }: { code: string }) {
       <div className="shelem-score"><small>{t("shelemMatchScore")}</small><span>{t("shelemUs")} <b>{n(room.teamScores[team])}</b></span><span>{t("shelemThem")} <b>{n(room.teamScores[1 - team])}</b></span>{room.phase === 'playing' && <small>{t("shelemCapturedScore", { us: room.roundPoints[team], them: room.roundPoints[1-team] })}</small>}</div>
     </header>
     <GameFeedback room={room} />
+    {(busy || reconnecting || moveRejected) && <div className="shelem-network" role="status">{busy ? t('shelemSending') : reconnecting ? t('shelemReconnecting') : t('shelemMoveRejected')}{!busy && <button type="button" onClick={()=>{setMoveRejected(false); void load();}}>{t('shelemRetry')}</button>}</div>}
     {room.lastTrick.length === 4 && <details className="shelem-last-trick" key={`${room.round}-${room.lastTrick.map(p=>p.card).join('')}`}><summary>{t('shelemLastTrick')}</summary><div>{room.lastTrick.map(play=><figure key={play.seat}><PlayingCard code={play.card} size="table" selected={play.seat===room.lastTrickWinner}/><figcaption>{room.players.find(p=>p.seat===play.seat)?.name}{play.seat===room.lastTrickWinner ? ` · ${t('shelemWinner')}` : ''}</figcaption></figure>)}</div></details>}
 
     {room.phase === "lobby" ? <Lobby room={room} busy={busy} voiceOn={voiceOn} micMuted={micMuted} localMutes={localMutes} onVoice={() => void joinVoice()} onMic={() => void toggleMic()} onPlayerMute={togglePlayer}
