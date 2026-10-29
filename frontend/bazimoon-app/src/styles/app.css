@@ -1386,6 +1386,7 @@ html[lang="fa"] .kicker {
 }
 .playing-card--table { --card-w: clamp(48px, 14vw, 62px); }
 .playing-card--mini { --card-w: 30px; border-radius: 4px; }
+.playing-card__face { display:block; position:absolute; inset:0; width:100%; height:100%; object-fit:fill; pointer-events:none; user-select:none; background:white; }
 .playing-card.is-playable:not(:disabled) { cursor: pointer; }
 .playing-card.is-playable:not(:disabled):hover { transform: translateY(-6px); box-shadow: 0 12px 24px rgba(0,0,0,.38); }
 .playing-card.is-selected { transform: translateY(-18px) rotate(-1deg); box-shadow: 0 0 0 3px #E2B86B, 0 16px 30px rgba(0,0,0,.45); }
@@ -1460,7 +1461,25 @@ html[lang="fa"] .kicker {
 .shelem-trick .playing-card { animation:shelem-card-play 300ms cubic-bezier(.16,1,.3,1) both; }
 .shelem-table-mark { grid-area:2/2; color:rgba(226,184,107,.35); font-size:42px; }
 .shelem-voice-float { position:absolute; left:10px; bottom:10px; z-index:8; }
-.shelem-actions { min-height:62px; padding:10px 14px; background:#0E1121; border-top:1px solid #202441; }
+.shelem-actions { flex-shrink:0; padding:10px 14px; background:#0E1121; border-top:1px solid #202441; }
+.shelem-actions:empty { display:none; }
+.shelem-actions[hidden] { display:none; }
+.shelem-dealing { position:absolute; inset:110px 0 0; z-index:15; background:radial-gradient(ellipse,#234C47,#0B1617); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px; pointer-events:auto; color:#F7E3B4; }
+.shelem-dealing-stage { width:100%; height:350px; position:relative; display:grid; place-items:center; }
+.shelem-dealt-card { position:absolute; left:calc(50% - 18px); top:calc(50% - 25px); animation:shelem-deal-flight 480ms cubic-bezier(.2,.7,.2,1) both; }
+@keyframes shelem-deal-flight { from { opacity:0; transform:translate(0,0) scale(.8) rotate(-15deg); } 15% { opacity:1; } to { opacity:1; transform:translate(var(--deal-x),var(--deal-y)) rotate(0deg); } }
+@media (prefers-reduced-motion:reduce) { .shelem-dealt-card { animation:none; display:none; } }
+.shelem-zamin { display:flex; justify-content:center; align-items:center; flex-wrap:wrap; gap:8px; border:1px dashed #E2B86B; border-radius:12px; padding:8px; margin-bottom:8px; }
+.shelem-zamin small { flex-basis:100%; text-align:center; }
+.shelem-zamin .playing-card,.shelem-zamin-slot { --card-w:44px; width:44px; height:62px; }
+.shelem-zamin-slot { display:grid; place-items:center; border:1px dashed #555B77; border-radius:7px; color:#B7B9CD; }
+.shelem-hand .playing-card { user-select:none; }
+@media (prefers-reduced-motion:reduce) { .shelem-hand .playing-card { animation:none!important; } }
+.screen > .shelem-table { flex:1 1 0; min-height:0; }
+.screen > .shelem-actions { max-height:42%; overflow-y:auto; }
+.screen > .shelem-hand { position:relative; z-index:16; min-height:112px; }
+.shelem-topbar,.shelem-hand { flex-shrink:0; }
+.shelem-hand .playing-card { animation:shelem-deal-in 450ms both; }
 .shelem-actions input[type=range] { width:100%; accent-color:#E2B86B; }
 .shelem-actions small { display:block; color:var(--text-2); }
 .shelem-slam { background:linear-gradient(135deg,#E2B86B,#C78A37); color:#241806; }

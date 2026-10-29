@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { useLanguage } from "../../i18n/LanguageContext";
 import { useNavigation } from "../../app/router";
 import { useSession } from "../../app/session";
@@ -93,11 +93,19 @@ export function ShelemRoomScreen({ code }: { code: string }) {
   const [localMutes, setLocalMutes] = useState<Set<number>>(() => new Set());
   const voice = useRef(new VoiceSession());
   const version = useRef(-1);
+  const [dealtRound, setDealtRound] = useState(0);
+  const round = room?.round ?? 0;
+  useEffect(() => {
+    if (!round) return;
+    const duration = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 150 : 3100;
+    const timer = window.setTimeout(() => setDealtRound(round), duration);
+    return () => window.clearTimeout(timer);
+  }, [round]);
 
   const load = useCallback(async () => {
     try {
       const next = await api.get(code);
-      if (next.version !== version.current) { version.current = next.version; setRoom(next); }
+      if (next.version > version.current) { version.current = next.version; setRoom(next); }
     } catch (e) { setError(message(e, t("shelemConnectionLost"))); }
   }, [api, code, t]);
 
@@ -127,6 +135,7 @@ export function ShelemRoomScreen({ code }: { code: string }) {
 
   if (!room) return <Screen theme="night"><TopBar onBack={back} title={t("gameShelem")} /><Body><div className="skeleton" style={{ height: 420 }} /></Body></Screen>;
   const me = room.players.find((p) => p.isYou);
+  const dealing = room.phase === 'bidding' && dealtRound !== room.round;
   const myTurn = room.yourSeat === room.turnSeat;
   const currentPlayer = room.players.find((p) => p.seat === room.turnSeat);
   const minBid = Math.max(100, (room.highestBid ?? 95) + 5);
@@ -137,7 +146,7 @@ export function ShelemRoomScreen({ code }: { code: string }) {
     <header className="shelem-topbar">
       <IconButton icon="back" label={t("back")} onClick={back} />
       <div className="grow"><div className="kicker">{phaseTitle}</div><div className="display" style={{ fontSize: 20 }}>{room.phase === "lobby" ? room.code : t("shelemRoundN", { n: room.round })}</div></div>
-      <div className="shelem-score"><span>{t("shelemUs")} <b>{n(room.teamScores[team])}</b></span><span>{t("shelemThem")} <b>{n(room.teamScores[1 - team])}</b></span></div>
+      <div className="shelem-score"><small>{t("shelemMatchScore")}</small><span>{t("shelemUs")} <b>{n(room.teamScores[team])}</b></span><span>{t("shelemThem")} <b>{n(room.teamScores[1 - team])}</b></span>{room.phase === 'playing' && <small>{t("shelemCapturedScore", { us: room.roundPoints[team], them: room.roundPoints[1-team] })}</small>}</div>
     </header>
 
     {room.phase === "lobby" ? <Lobby room={room} busy={busy} voiceOn={voiceOn} micMuted={micMuted} localMutes={localMutes} onVoice={() => void joinVoice()} onMic={() => void toggleMic()} onPlayerMute={togglePlayer}
@@ -145,11 +154,13 @@ export function ShelemRoomScreen({ code }: { code: string }) {
       <GameTable room={room} voiceOn={voiceOn} micMuted={micMuted} localMutes={localMutes} onVoice={() => void joinVoice()} onMic={() => void toggleMic()} onPlayerMute={togglePlayer} />}
 
     {error && <div className="shelem-toast" role="alert">{error}</div>}
+    {dealing && <DealSequence room={room} />}
 
-    <div className="shelem-actions">
+    <div className="shelem-actions" hidden={dealing}>
+      {room.phase === 'discard' && myTurn && <div className="shelem-zamin" dir="ltr" aria-label={t('shelemChooseFour')}><small>{t('shelemDropFour')}</small>{Array.from({length:4},(_,i)=>selected[i] ? <PlayingCard key={selected[i]} code={selected[i]} size="table" dropTarget=".shelem-hand" onClick={busy ? undefined : ()=>setSelected(old=>old.filter(c=>c!==selected[i]))} /> : <span className="shelem-zamin-slot" key={i}>{n(i+1)}</span>)}</div>}
       {room.phase === "bidding" && (myTurn ? <div className="stack" style={{ gap: 10 }}>
           <div className="row row--between"><b>{t("shelemYourBid")}</b><output className="display" style={{ fontSize: 24, color: ACCENT }}>{n(bid)}</output></div>
-          <input type="range" min={Math.min(165, minBid)} max="165" step="5" value={Math.min(165, Math.max(minBid, bid))} disabled={minBid > 165} onChange={(e) => setBid(Number(e.target.value))} aria-label={t("shelemYourBid")} />
+          <select className="text-field" value={Math.min(165, Math.max(minBid, bid))} disabled={minBid > 165 || busy} onChange={(e) => setBid(Number(e.target.value))} aria-label={t("shelemYourBid")}>{Array.from({length:14},(_,i)=>100+i*5).filter(value=>value>=minBid).map(value=><option key={value} value={value}>{n(value)}</option>)}</select>
           <div className="row" style={{ gap: 8 }}><button className="btn btn--outline" disabled={busy} onClick={() => void act(() => api.bid(code, null))}>{t("shelemPass")}</button><button className="btn" disabled={busy || minBid > 165} onClick={() => void act(() => api.bid(code, Math.max(minBid, bid)))}>{t("shelemBidN", { n: Math.max(minBid, bid) })}</button><button className="btn shelem-slam" disabled={busy} onClick={() => void act(() => api.bid(code, 165, true))}>{t("gameShelem")}</button></div>
         </div> : <div className="shelem-thinking"><span /><span /><span /> {t("shelemWaitingBid", { name: currentPlayer?.name ?? "" })}</div>)}
       {room.phase === "discard" && myTurn && <div className="row row--between"><span><b>{t("shelemChooseFour")}</b><small>{t("shelemChosen", { n: selected.length })}</small></span><button className="btn btn--auto" disabled={busy || selected.length !== 4} onClick={() => void act(() => api.discard(code, selected))}>{t("shelemDiscard")}</button></div>}
@@ -159,14 +170,31 @@ export function ShelemRoomScreen({ code }: { code: string }) {
       {room.phase === "finished" && <FinalResult room={room} />}
     </div>
 
-    {room.phase !== "lobby" && room.phase !== "roundresult" && room.phase !== "finished" && <div className="shelem-hand" dir="ltr">
-      {room.hand.map((card, i) => {
+    {room.phase !== "lobby" && room.phase !== "roundresult" && room.phase !== "finished" && <div className="shelem-hand" dir="ltr" aria-busy={dealing}>
+      {room.hand.filter(card=>room.phase !== 'discard' || !selected.includes(card)).map((card, i) => {
         const selectable = room.phase === "discard" && myTurn;
         const playable = room.phase !== "playing" || room.legalCards.includes(card);
-        return <PlayingCard key={card} code={card} selected={selected.includes(card)} playable={playable} onClick={selectable ? () => setSelected((old) => old.includes(card) ? old.filter((c) => c !== card) : old.length < 4 ? [...old, card] : old) : room.phase === "playing" && myTurn && playable ? () => void act(() => api.play(code, card)) : undefined} style={{ zIndex: i }} />;
+        return <PlayingCard key={`${room.round}-${card}`} code={card} faceDown={dealing} dropTarget={selectable ? '.shelem-zamin' : '.shelem-table'} playable={playable} onClick={busy || dealing ? undefined : selectable ? () => setSelected((old) => old.length < 4 && !old.includes(card) ? [...old, card] : old) : room.phase === "playing" && myTurn && playable ? () => void act(() => api.play(code, card)) : undefined} style={{ zIndex: i, animationDelay: `${i*35}ms` }} />;
       })}
     </div>}
   </Screen>;
+}
+
+function DealSequence({ room }: { room: ShelemRoom }) {
+  const { t } = useLanguage();
+  const destinations = [{x:0,y:150}, {x:-125,y:0}, {x:0,y:-150}, {x:125,y:0}];
+  return <div className="shelem-dealing" role="status" aria-label={t('shelemDealing')}>
+    <b>{t('shelemDealing')}</b>
+    <div className="shelem-dealing-stage" aria-hidden="true">
+      <PlayingCard faceDown size="table" />
+      {Array.from({length:52}, (_,i) => {
+        const seat = (room.dealerSeat + 1 + i) % 4;
+        const target = i < 48 ? destinations[(seat - (room.yourSeat ?? 0) + 4) % 4] : {x:(i-49.5)*23,y:65};
+        return <div className="shelem-dealt-card" key={i} style={{'--deal-x':`${target.x}px`, '--deal-y':`${target.y}px`, animationDelay:`${i*48}ms`, zIndex:i} as CSSProperties}><PlayingCard faceDown size="mini" /></div>;
+      })}
+    </div>
+    <small>{t('shelemDealDescription')}</small>
+  </div>;
 }
 
 function Lobby({ room, busy, voiceOn, micMuted, localMutes, onVoice, onMic, onPlayerMute, onReady, onStart }: {

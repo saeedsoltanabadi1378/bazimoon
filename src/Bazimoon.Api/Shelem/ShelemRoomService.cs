@@ -136,7 +136,8 @@ public sealed class ShelemRoomService
         var legal = me is not null && game.Phase == ShelemPhase.Playing && game.TurnSeat == me.Seat ? game.LegalCards(me.Seat).Select(c => c.Code).ToArray() : [];
         return new ShelemRoomView(
             room.Code, game.Id, room.Version, game.Phase.ToString().ToLowerInvariant(), game.Round, game.DealerSeat, game.TurnSeat,
-            game.HighestBid, game.DeclarerSeat, game.ShelemCalled, game.Trump?.ToString().ToLowerInvariant(), game.TeamScores, game.RoundPoints,
+            game.HighestBid, game.DeclarerSeat, game.ShelemCalled, game.Trump?.ToString().ToLowerInvariant(), game.TeamScores.ToArray(),
+            game.Phase == ShelemPhase.Playing ? Enumerable.Range(0, 2).Select(team => game.Players.Where(p => p.Seat % 2 == team).Sum(p => p.Captured.Sum(ShelemGame.CardPoints) + p.Tricks * 5)).ToArray() : game.RoundPoints.ToArray(),
             game.RoundDelta, game.WinnerTeam, me?.Seat, room.HostUserId == userId, me?.Hand.OrderBy(c => c.Suit).ThenBy(c => c.Rank).Select(c => c.Code).ToArray() ?? [], legal,
             game.Players.Select(p => new ShelemPlayerView(p.Seat, p.Name, p.IsBot, p.Ready, p.Passed, p.Hand.Count, p.UserId == userId,
                 p.UserId is { } id ? VoiceUid(id) : 0)).ToArray(),
