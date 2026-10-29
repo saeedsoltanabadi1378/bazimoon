@@ -165,7 +165,7 @@ export function ShelemRoomScreen({ code }: { code: string }) {
         </div> : <div className="shelem-thinking"><span /><span /><span /> {t("shelemWaitingBid", { name: currentPlayer?.name ?? "" })}</div>)}
       {room.phase === "discard" && myTurn && <div className="row row--between"><span><b>{t("shelemChooseFour")}</b><small>{t("shelemChosen", { n: selected.length })}</small></span><button className="btn btn--auto" disabled={busy || selected.length !== 4} onClick={() => void act(() => api.discard(code, selected))}>{t("shelemDiscard")}</button></div>}
       {room.phase === "trump" && myTurn && <div className="stack stack--sm"><b>{t("shelemChooseTrump")}</b><div className="shelem-suits">{SUITS.map((s) => <button key={s.key} className={s.red ? "is-red" : ""} onClick={() => void act(() => api.trump(code, s.key))}>{s.symbol}</button>)}</div></div>}
-      {room.phase === "playing" && myTurn && <div className="tiny" style={{ textAlign: "center", color: ACCENT }}>{t("shelemYourTurn")}</div>}
+      {room.phase === "playing" && room.turnSeat >= 0 && <div className="shelem-turn-guidance" role="status">{myTurn ? t('shelemYourTurn') : t('shelemPlayerTurn', {name: currentPlayer?.name ?? ''})}{myTurn && room.trick.length > 0 && room.legalCards.length < room.hand.length && <small>{t('shelemFollowSuit', {suit: SUITS.find(s=>s.key[0].toUpperCase()===room.trick[0].card.at(-1))?.symbol ?? ''})}</small>}</div>}
       {room.phase === "roundresult" && <RoundResult room={room} onNext={() => void act(() => api.next(code))} />}
       {room.phase === "finished" && <FinalResult room={room} />}
     </div>
@@ -173,7 +173,7 @@ export function ShelemRoomScreen({ code }: { code: string }) {
     {room.phase !== "lobby" && room.phase !== "roundresult" && room.phase !== "finished" && <div className="shelem-hand" dir="ltr" aria-busy={dealing}>
       {room.hand.filter(card=>room.phase !== 'discard' || !selected.includes(card)).map((card, i) => {
         const selectable = room.phase === "discard" && myTurn;
-        const playable = room.phase !== "playing" || room.legalCards.includes(card);
+        const playable = room.phase !== "playing" || !myTurn || room.legalCards.includes(card);
         return <PlayingCard key={`${room.round}-${card}`} code={card} faceDown={dealing} dropTarget={selectable ? '.shelem-zamin' : '.shelem-table'} playable={playable} onClick={busy || dealing ? undefined : selectable ? () => setSelected((old) => old.length < 4 && !old.includes(card) ? [...old, card] : old) : room.phase === "playing" && myTurn && playable ? () => void act(() => api.play(code, card)) : undefined} style={{ zIndex: i, animationDelay: `${i*35}ms` }} />;
       })}
     </div>}
