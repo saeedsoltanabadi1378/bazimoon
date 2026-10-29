@@ -2,6 +2,8 @@
 export const core = {
   language: "English",
   otherLanguage: "فارسی",
+  languageEnglish: "English",
+  languagePersian: "فارسی",
   loading: "Loading",
   signingIn: "Getting your games ready…",
   loadingGame: "Opening your table…",

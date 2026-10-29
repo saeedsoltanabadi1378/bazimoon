@@ -3,6 +3,8 @@ import type { core as en } from "../en/core";
 export const core: Record<keyof typeof en, string> = {
   language: "فارسی",
   otherLanguage: "English",
+  languageEnglish: "English",
+  languagePersian: "فارسی",
   loading: "در حال بارگذاری",
   signingIn: "در حال آماده‌سازی بازی‌ها…",
   loadingGame: "در حال باز کردن میز شما…",

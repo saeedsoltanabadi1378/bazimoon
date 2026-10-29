@@ -1,9 +1,9 @@
 import { useState, type ReactNode } from "react";
-import { useLanguage } from "../i18n/LanguageContext";
+import { useLanguage, type Language } from "../i18n/LanguageContext";
 import { badgeMeta } from "./badges";
 import { useNavigation } from "../app/router";
 import { useSession } from "../app/session";
-import { Body, ProgressBar, Screen, Switch } from "../ui/components";
+import { Body, ProgressBar, Screen, Segmented, Switch } from "../ui/components";
 import { Icon } from "../ui/Icon";
 import { TabBar } from "../ui/TabBar";
 import { useHub, useLoad } from "./HubData";
@@ -138,7 +138,25 @@ export function ProfileScreen() {
         </section>
 
         <section className="list">
-          <SettingRow first label={t("languageSetting")} value={t("language")} onClick={() => void saveSettings({ language: language === "en" ? "fa" : "en" })} />
+          <div className="row row--between row--wrap" style={{ minHeight: 68, padding: "8px 16px" }}>
+            <span style={{ fontSize: 15 }}>{t("languageSetting")}</span>
+            <div style={{ width: 190, maxWidth: "100%" }}>
+              <Segmented<Language>
+                label={t("languageSetting")}
+                value={language}
+                options={[
+                  { value: "en", label: t("languageEnglish") },
+                  { value: "fa", label: t("languagePersian") },
+                ]}
+                onChange={(next) => {
+                  if (next === language) return;
+                  haptic.select();
+                  void saveSettings({ language: next });
+                }}
+                soft
+              />
+            </div>
+          </div>
           <SettingRow
             label={t("dailyReminder")}
             value={s.reminderEnabled ? s.reminderTime : t("off")}
@@ -194,7 +212,7 @@ function MiniStat({ label, value, muted }: { label: string; value: ReactNode; mu
   );
 }
 
-function SettingRow({ label, value, toggle, onClick, expanded, first }: { label: string; value?: string; toggle?: boolean; onClick: () => void; expanded?: boolean; first?: boolean }) {
+function SettingRow({ label, value, toggle, onClick, expanded }: { label: string; value?: string; toggle?: boolean; onClick: () => void; expanded?: boolean }) {
   return (
     <button
       type="button"
@@ -203,7 +221,7 @@ function SettingRow({ label, value, toggle, onClick, expanded, first }: { label:
       aria-checked={toggle}
       aria-expanded={expanded}
       className="row row--between"
-      style={{ minHeight: 52, padding: "0 16px", border: 0, borderTop: first ? 0 : "1px solid #232734", background: "transparent", color: "var(--text)", fontSize: 15, textAlign: "start", cursor: "pointer", width: "100%" }}
+      style={{ minHeight: 52, padding: "0 16px", border: 0, borderTop: "1px solid #232734", background: "transparent", color: "var(--text)", fontSize: 15, textAlign: "start", cursor: "pointer", width: "100%" }}
     >
       <span>{label}</span>
       {toggle !== undefined ? <Switch on={toggle} /> : <span className="muted">{value}</span>}
