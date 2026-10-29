@@ -27,6 +27,7 @@ export function RoleRevealScreen({ onReady }: { onReady: () => void }) {
 
   return (
     <Screen theme="night">
+      <div className="phase-atmosphere phase-atmosphere--night" aria-hidden="true" />
       <header style={{ padding: "18px 16px 6px", textAlign: "center" }}>
         <div className="kicker">{t("rolesAssigned")}</div>
         <h1 className="display" style={{ marginTop: 6, fontSize: 26 }}>{t("keepScreenPrivate")}</h1>
@@ -40,6 +41,7 @@ export function RoleRevealScreen({ onReady }: { onReady: () => void }) {
             setShown((s) => !s);
           }}
           aria-label={shown ? t("hideRole") : t("revealRole")}
+          className={`role-reveal-card${shown ? " role-reveal-card--shown" : ""}`}
           style={{
             width: "100%", minHeight: 380, borderRadius: 28, border: `1.5px solid ${shown ? meta.fg : "#2E3252"}`,
             background: shown ? "#141629" : "#121428", color: "var(--text)", cursor: "pointer",
@@ -53,7 +55,7 @@ export function RoleRevealScreen({ onReady }: { onReady: () => void }) {
               <span style={{ fontSize: 14, color: "var(--muted)" }}>{t("tapAgainToHide")}</span>
             </>
           ) : (
-            <span className="stack center fade-in" style={{ gap: 14 }}>
+            <span className="stack center role-reveal-card__face" style={{ gap: 14 }}>
               <RolePortrait role={role} size={190} full />
               <span style={{ fontSize: 14, color: "var(--text-2)" }}>{t("youAreThe")}</span>
               <span className="display" style={{ fontSize: 40, lineHeight: 1, color: meta.fg }}>{roleName(role)}</span>

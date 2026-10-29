@@ -157,6 +157,7 @@ export function NightScreen() {
 
   return (
     <Screen theme="night">
+      <div className="phase-atmosphere phase-atmosphere--night" aria-hidden="true" />
       <PhaseHeader kicker={t("nightFalls")} title={t("nightN", { number: nightLabelNumber(view) })} right={<RolePeek role={role} alive={alive} />} />
 
       <Body tight>
@@ -182,6 +183,7 @@ export function NightScreen() {
                     role="radio"
                     aria-checked={on}
                     disabled={disabled || busy}
+                    className={`mafia-target${on ? " mafia-target--selected" : ""}`}
                     onClick={() => {
                       haptic.select();
                       setPicked(p.playerId);

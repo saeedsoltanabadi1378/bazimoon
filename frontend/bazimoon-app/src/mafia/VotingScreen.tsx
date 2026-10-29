@@ -56,6 +56,7 @@ export function VotingScreen() {
 
   return (
     <Screen theme="day">
+      <div className="phase-atmosphere phase-atmosphere--day" aria-hidden="true" />
       <PhaseHeader
         kicker={revote ? t("revoteKicker", { number: view.nightNumber }) : t("dayN", { number: view.nightNumber })}
         title={revote ? t("revoteTitle") : t("townVote")}
@@ -86,6 +87,7 @@ export function VotingScreen() {
                 role="radio"
                 aria-checked={chosen}
                 disabled={locked || busy}
+                className={`vote-candidate${chosen ? " vote-candidate--chosen" : ""}`}
                 onClick={() => {
                   haptic.select();
                   setPicked(p.playerId);
@@ -96,7 +98,7 @@ export function VotingScreen() {
                   textAlign: "start", cursor: locked ? "default" : "pointer", position: "relative", overflow: "hidden",
                 }}
               >
-                <span style={{ position: "absolute", insetInlineStart: 0, top: 0, bottom: 0, width: `${pct}%`, background: "#3A2A16", transition: "width 240ms ease" }} />
+                <span className="vote-candidate__tally" style={{ position: "absolute", insetInlineStart: 0, top: 0, bottom: 0, width: `${pct}%`, background: "#3A2A16" }} />
                 <span className="avatar" aria-hidden="true" style={{ position: "relative", width: 38, height: 38, fontSize: 16, background: playerColor(view, p.playerId) }}>
                   {Array.from(p.displayName)[0]?.toUpperCase()}
                 </span>
@@ -124,7 +126,7 @@ export function VotingScreen() {
           <h2 style={{ fontSize: 14, fontWeight: 600 }}>{t("liveVoting")}</h2>
           {votes.length === 0 && <div style={{ fontSize: 14, color: "var(--text-2)" }}>{t("waitingForVotes")}</div>}
           {[...votes].reverse().map((v) => (
-            <div key={v.voterPlayerId} style={{ fontSize: 14, color: "var(--text-2)" }}>
+            <div key={v.voterPlayerId} className="vote-event" style={{ fontSize: 14, color: "var(--text-2)" }}>
               <b style={{ color: "var(--text)" }}>{name(v.voterPlayerId)}</b>{" "}
               {v.targetPlayerId ? <>{t("votedFor")} <b style={{ color: "var(--text)" }}>{name(v.targetPlayerId)}</b></> : t("abstained")}
             </div>

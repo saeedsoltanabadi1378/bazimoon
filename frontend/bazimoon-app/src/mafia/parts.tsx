@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
 import type { Role } from "../api/types";
 import { useLanguage } from "../i18n/LanguageContext";
 import { Icon } from "../ui/Icon";
@@ -22,12 +22,13 @@ export function PhaseTimer({ deadline, total, label, accent = "#F0A83A", track =
 }) {
   const seconds = useSecondsLeft(deadline);
   if (seconds === null || !total) return null;
+  const urgent = seconds <= Math.min(10, Math.ceil(total * 0.2));
   return (
-    <div className="row" style={{ gap: 10, padding: "10px 14px", borderRadius: 14, background: bg, border: `1px solid ${edge}` }} role="timer" aria-live="off">
-      <Icon name="clock" size={18} color={accent} />
+    <div className={`row phase-timer${urgent ? " phase-timer--urgent" : ""}`} style={{ gap: 10, padding: "10px 14px", borderRadius: 14, background: bg, border: `1px solid ${edge}`, "--timer-accent": accent } as CSSProperties} role="timer" aria-live="off">
+      <span className="phase-timer__icon"><Icon name="clock" size={18} color={accent} /></span>
       <span className="grow" style={{ fontSize: 14, fontWeight: 600 }}>{label(seconds)}</span>
       <span style={{ width: 80, height: 6, borderRadius: 999, background: track, overflow: "hidden", flex: "none" }}>
-        <span style={{ display: "block", width: `${Math.min(100, (seconds / total) * 100)}%`, height: 6, background: accent, transition: "width 250ms linear" }} />
+        <span className="phase-timer__progress" style={{ display: "block", width: `${Math.min(100, (seconds / total) * 100)}%`, height: 6, background: accent }} />
       </span>
     </div>
   );
@@ -64,6 +65,7 @@ export function RolePeek({ role, alive }: { role: Role | null; alive: boolean })
         setPeek((p) => !p);
       }}
       aria-label={peek ? t("hideRole") : t("showRole")}
+      className={`role-peek${peek ? " role-peek--shown" : ""}`}
       style={{
         display: "flex", alignItems: "center", gap: 6, minHeight: 44, padding: "0 14px", borderRadius: 999, border: 0,
         background: peek ? meta.bg : "var(--surface-2)", color: peek ? meta.fg : "var(--text-2)",

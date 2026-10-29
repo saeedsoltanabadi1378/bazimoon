@@ -88,8 +88,8 @@ export function LobbyScreen() {
         </section>
 
         {startsIn !== null && (
-          <div role="timer" className="row" style={{ gap: 14, padding: 16, borderRadius: 18, background: "#1A1836", border: "1.5px solid #9C8CFF" }}>
-            <span className="display" style={{ width: 52, height: 52, flex: "none", borderRadius: 999, background: "#9C8CFF", color: "#120D2E", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 26 }}>{n(startsIn)}</span>
+          <div role="timer" className="row lobby-starting" style={{ gap: 14, padding: 16, borderRadius: 18, background: "#1A1836", border: "1.5px solid #9C8CFF" }}>
+            <span className="display lobby-starting__count" style={{ width: 52, height: 52, flex: "none", borderRadius: 999, background: "#9C8CFF", color: "#120D2E", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 26 }}>{n(startsIn)}</span>
             <div className="stack" style={{ gap: 2 }}>
               <span style={{ fontSize: 16, fontWeight: 600 }}>{t("startingTitle")}</span>
               <span className="small" style={{ color: "var(--text-2)" }}>{t("startingText")}</span>
@@ -143,14 +143,14 @@ export function LobbyScreen() {
         </section>
 
         <ul className="list" style={{ listStyle: "none", margin: 0, padding: 0 }} aria-label={t("playersInLobby")}>
-          {view.players.map((p) => {
+          {view.players.map((p, index) => {
             const you = p.playerId === view.yourPlayerId;
             return (
-              <li key={p.playerId} className="list__row">
+              <li key={p.playerId} className="list__row lobby-player" style={{ animationDelay: `${Math.min(index, 8) * 45}ms` }}>
                 <Avatar name={p.displayName} color={playerColor(view, p.playerId)} size={36} fontSize={15} />
                 <span className="grow" style={{ fontSize: 15 }}>{you ? t("youName", { name: p.displayName }) : p.displayName}</span>
                 {p.playerId === controllerId && <span className="tiny strong" style={{ color: "#9C8CFF" }}>{t("creator")}</span>}
-                <span className="tiny strong" style={{ padding: "3px 10px", borderRadius: 999, background: ready.has(p.playerId) ? "#13302C" : "#1E2138", color: ready.has(p.playerId) ? "#5FD0BE" : "#9A9CB8" }}>
+                <span className={`tiny strong lobby-ready${ready.has(p.playerId) ? " lobby-ready--on" : ""}`} style={{ padding: "3px 10px", borderRadius: 999, background: ready.has(p.playerId) ? "#13302C" : "#1E2138", color: ready.has(p.playerId) ? "#5FD0BE" : "#9A9CB8" }}>
                   {ready.has(p.playerId) ? t("ready") : t("notYet")}
                 </span>
               </li>

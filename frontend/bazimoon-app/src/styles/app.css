@@ -204,6 +204,7 @@ a {
 .screen {
   display: flex;
   flex-direction: column;
+  position: relative;
   height: 100%;
   box-sizing: border-box;
   /* Installed on a phone, the app runs edge to edge: keep content clear of the notch and status bar. */
@@ -419,6 +420,236 @@ html[lang="fa"] .kicker {
 .interactive-card:active {
   transform: scale(0.985);
   transition-duration: 80ms;
+}
+
+/* ---------- Mafia motion and atmosphere ---------- */
+
+.phase-atmosphere {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.phase-atmosphere ~ * {
+  position: relative;
+  z-index: 1;
+}
+
+.phase-atmosphere--night {
+  background:
+    radial-gradient(circle at 76% 7%, rgb(156 140 255 / 16%), transparent 28%),
+    radial-gradient(circle at 15% 38%, rgb(71 60 150 / 10%), transparent 35%);
+  animation: night-breathe 6s ease-in-out infinite alternate;
+}
+
+.phase-atmosphere--day {
+  background: linear-gradient(115deg, transparent 20%, rgb(240 168 58 / 9%) 48%, transparent 72%);
+  transform: translateX(-65%);
+  animation: daylight-sweep 900ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.phase-timer {
+  transition: box-shadow 180ms ease, border-color 180ms ease, transform 180ms ease;
+}
+
+.phase-timer__icon {
+  display: flex;
+  transform-origin: center;
+}
+
+.phase-timer__progress {
+  transition: width 250ms linear, filter 180ms ease;
+}
+
+.phase-timer--urgent {
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--timer-accent) 40%, transparent), 0 0 24px color-mix(in srgb, var(--timer-accent) 16%, transparent);
+}
+
+.phase-timer--urgent .phase-timer__icon {
+  animation: timer-tick 650ms ease-in-out infinite;
+}
+
+.phase-timer--urgent .phase-timer__progress {
+  filter: brightness(1.35) drop-shadow(0 0 4px var(--timer-accent));
+}
+
+.role-peek {
+  transition: background 180ms ease, color 180ms ease, transform 120ms ease, box-shadow 180ms ease;
+}
+
+.role-peek:active {
+  transform: scale(0.95);
+}
+
+.role-peek--shown {
+  box-shadow: 0 0 20px rgb(156 140 255 / 14%);
+}
+
+.role-reveal-card {
+  perspective: 900px;
+  transform-style: preserve-3d;
+  transition: border-color 220ms ease, box-shadow 220ms ease, background 220ms ease;
+}
+
+.role-reveal-card--shown {
+  animation: role-card-turn 460ms cubic-bezier(0.22, 1, 0.36, 1);
+  box-shadow: 0 18px 50px rgb(0 0 0 / 28%), 0 0 34px rgb(156 140 255 / 10%);
+}
+
+.role-reveal-card__face {
+  animation: role-face-in 420ms cubic-bezier(0.22, 1, 0.36, 1) 100ms both;
+}
+
+.lobby-player {
+  animation: lobby-player-in 300ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.lobby-starting {
+  animation: lobby-starting-in 320ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  box-shadow: 0 0 28px rgb(156 140 255 / 10%);
+}
+
+.lobby-starting__count {
+  animation: lobby-countdown 900ms ease-in-out infinite;
+}
+
+.lobby-ready {
+  transition: color 180ms ease, background 180ms ease, transform 180ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.lobby-ready--on {
+  transform: scale(1.04);
+  box-shadow: 0 0 14px rgb(95 208 190 / 10%);
+}
+
+.vote-candidate {
+  transition: transform 120ms ease, border-color 180ms ease, box-shadow 180ms ease;
+}
+
+.vote-candidate:not(:disabled):active {
+  transform: scale(0.985);
+}
+
+.vote-candidate--chosen {
+  box-shadow: 0 0 0 1px rgb(240 168 58 / 20%), 0 8px 24px rgb(0 0 0 / 18%);
+}
+
+.vote-candidate .avatar {
+  transition: transform 220ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.vote-candidate--chosen .avatar {
+  transform: scale(1.08);
+}
+
+.vote-candidate__tally {
+  transition: width 300ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.vote-event {
+  animation: vote-event-in 260ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.mafia-target {
+  transition: transform 120ms ease, border-color 180ms ease, background 180ms ease, box-shadow 180ms ease;
+}
+
+.mafia-target:not(:disabled):active {
+  transform: scale(0.98);
+}
+
+.mafia-target--selected {
+  box-shadow: 0 0 22px rgb(156 140 255 / 14%);
+}
+
+.mafia-target .avatar {
+  transition: transform 220ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.mafia-target--selected .avatar {
+  transform: scale(1.08);
+}
+
+.morning-report {
+  animation: morning-report-in 440ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.morning-report > :first-child {
+  animation: report-icon-in 420ms cubic-bezier(0.34, 1.56, 0.64, 1) 100ms both;
+}
+
+.phase-notice {
+  animation: phase-notice-in 320ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.discussion-card {
+  transition: box-shadow 180ms ease, transform 180ms ease;
+}
+
+.discussion-card--urgent {
+  box-shadow: 0 0 0 1px rgb(240 168 58 / 28%), 0 0 28px rgb(240 168 58 / 10%);
+  animation: discussion-urgent 900ms ease-in-out infinite alternate;
+}
+
+@keyframes night-breathe {
+  from { opacity: 0.58; transform: scale(1); }
+  to { opacity: 1; transform: scale(1.04); }
+}
+
+@keyframes daylight-sweep {
+  to { transform: translateX(65%); }
+}
+
+@keyframes timer-tick {
+  50% { transform: scale(1.14); }
+}
+
+@keyframes role-card-turn {
+  from { opacity: 0.7; transform: rotateY(82deg) scale(0.96); }
+  to { opacity: 1; transform: rotateY(0) scale(1); }
+}
+
+@keyframes role-face-in {
+  from { opacity: 0; transform: translateY(8px) scale(0.96); filter: blur(5px); }
+  to { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+}
+
+@keyframes lobby-player-in {
+  from { opacity: 0; transform: translateY(8px) scale(0.98); }
+}
+
+@keyframes lobby-starting-in {
+  from { opacity: 0; transform: translateY(8px) scale(0.98); }
+}
+
+@keyframes lobby-countdown {
+  50% { transform: scale(1.08); box-shadow: 0 0 22px rgb(156 140 255 / 32%); }
+}
+
+@keyframes vote-event-in {
+  from { opacity: 0; transform: translateX(var(--vote-event-x, -8px)); }
+}
+
+[dir="rtl"] .vote-event {
+  --vote-event-x: 8px;
+}
+
+@keyframes morning-report-in {
+  from { opacity: 0; transform: translateY(-8px); }
+}
+
+@keyframes report-icon-in {
+  from { opacity: 0; transform: scale(0.55) rotate(-10deg); }
+}
+
+@keyframes phase-notice-in {
+  from { opacity: 0; transform: translateY(8px); }
+}
+
+@keyframes discussion-urgent {
+  to { transform: scale(1.008); }
 }
 
 .btn:disabled {

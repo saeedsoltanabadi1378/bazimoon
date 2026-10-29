@@ -100,13 +100,14 @@ export function DayScreen() {
 
   return (
     <Screen theme="day">
+      <div className="phase-atmosphere phase-atmosphere--day" aria-hidden="true" />
       <PhaseHeader kicker={t("morning")} title={t("dayN", { number: view.nightNumber })} right={<RolePeek role={view.yourRole} alive={view.youAreAlive} />} />
 
       <Body tight>
         <ReconnectingBanner />
         <SpectatorBanner />
         <TableNotices />
-        <section className="row" style={{ gap: 12, padding: 14, borderRadius: 18, background: report.bg, border: `1px solid ${report.edge}` }}>
+        <section className="row morning-report" style={{ gap: 12, padding: 14, borderRadius: 18, background: report.bg, border: `1px solid ${report.edge}` }}>
           <span style={{ width: 44, height: 44, flex: "none", borderRadius: 999, background: report.ibg, color: report.fg, display: "flex", alignItems: "center", justifyContent: "center" }}>
             <Icon name={report.icon} />
           </span>
@@ -117,7 +118,7 @@ export function DayScreen() {
         </section>
 
         {notices.map((n) => (
-          <section key={n.key} role="status" className="row" style={{ gap: 12, padding: 14, borderRadius: 18, background: n.bg, border: `1px solid ${n.edge}` }}>
+          <section key={n.key} role="status" className="row phase-notice" style={{ gap: 12, padding: 14, borderRadius: 18, background: n.bg, border: `1px solid ${n.edge}` }}>
             <span style={{ width: 44, height: 44, flex: "none", borderRadius: 999, background: n.ibg, color: n.fg, display: "flex", alignItems: "center", justifyContent: "center" }}>
               <Icon name={n.icon} />
             </span>
@@ -148,7 +149,7 @@ export function DayScreen() {
         )}
 
         {discussion && active && (
-          <section className="stack center" style={{ gap: 12, padding: "20px 16px", borderRadius: 24, background: "var(--surface)" }} aria-live="polite">
+          <section className={`stack center discussion-card${seconds <= 5 ? " discussion-card--urgent" : ""}`} style={{ gap: 12, padding: "20px 16px", borderRadius: 24, background: "var(--surface)" }} aria-live="polite">
             <span style={{ padding: "4px 10px", borderRadius: 999, background: challenge ? "#3A2A16" : "#2B241B", color: segFg, fontSize: 12, fontWeight: 700, letterSpacing: 0.8, textTransform: "uppercase" }}>
               {challenge ? t("challenge") : t("speakerTurn")}
             </span>
