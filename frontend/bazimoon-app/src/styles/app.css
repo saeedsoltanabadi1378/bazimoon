@@ -1481,6 +1481,10 @@ html[lang="fa"] .kicker {
 .screen > .shelem-hand { display:grid; grid-template-columns:repeat(8,minmax(0,1fr)); gap:4px 0; padding-inline:10px; }
 .screen > .shelem-hand .playing-card { --card-w:clamp(38px,11vw,52px); margin:0; animation:none; }
 .playing-card:active { transition:none; }
+.screen > .shelem-hand { display:flex; flex-wrap:wrap; align-items:flex-start; gap:8px; max-height:32%; overflow-y:auto; }
+.shelem-hand-suit { display:flex; flex-wrap:wrap; gap:3px; align-items:center; max-width:100%; }
+.shelem-hand-suit > small { align-self:center; padding-inline:2px; }
+.screen > .shelem-hand .playing-card { --card-w:42px; }
 .shelem-actions[hidden] { display:none; }
 .shelem-dealing { position:absolute; inset:110px 0 0; z-index:15; background:radial-gradient(ellipse,#234C47,#0B1617); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px; pointer-events:auto; color:#F7E3B4; }
 .shelem-dealing-stage { width:100%; height:350px; position:relative; display:grid; place-items:center; }

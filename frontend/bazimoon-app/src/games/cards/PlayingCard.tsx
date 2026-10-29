@@ -20,7 +20,7 @@ export function PlayingCard({ code, faceDown = false, size = "hand", selected = 
     <button
       type="button" className={`playing-card playing-card--${size}${faceDown ? " is-back" : ""}${selected ? " is-selected" : ""}${playable ? " is-playable" : " is-blocked"}`}
       onPointerDown={(e) => { if (!onClick) return; e.currentTarget.getAnimations().forEach(animation => animation.cancel()); drag.current = { x: e.clientX, y: e.clientY, moved: false }; e.currentTarget.setPointerCapture(e.pointerId); }}
-      onPointerMove={(e) => { const d = drag.current; if (!d) return; const x = e.clientX-d.x, y = e.clientY-d.y; if (Math.hypot(x,y)>8) d.moved=true; if(d.moved) { e.currentTarget.style.transform=`translate(${x}px, ${y}px) rotate(${x/15}deg)`; e.currentTarget.style.zIndex='100'; } }}
+      onPointerMove={(e) => { const d = drag.current; if (!d) return; const x = e.clientX-d.x, y = e.clientY-d.y; if (Math.hypot(x,y)>8) d.moved=true; if(d.moved) { e.currentTarget.style.transform=`translate(${x}px, ${y}px) rotate(${x/15}deg) scale(1.15)`; e.currentTarget.style.zIndex='100'; } }}
       onPointerUp={(e) => {
         const d = drag.current;
         if (!d) return;

@@ -95,6 +95,12 @@ export function ShelemRoomScreen({ code }: { code: string }) {
   const version = useRef(-1);
   const [dealtRound, setDealtRound] = useState(0);
   const round = room?.round ?? 0;
+  const [settledHand, setSettledHand] = useState<string[]>([]);
+  const handKey = room?.hand.join(',') ?? '';
+  useEffect(() => {
+    const timer = window.setTimeout(() => setSettledHand(handKey ? handKey.split(',') : []), 300);
+    return () => window.clearTimeout(timer);
+  }, [handKey]);
   useEffect(() => {
     if (!round) return;
     const duration = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 150 : 3100;
@@ -171,11 +177,11 @@ export function ShelemRoomScreen({ code }: { code: string }) {
     </div>
 
     {room.phase !== "lobby" && room.phase !== "roundresult" && room.phase !== "finished" && <div className="shelem-hand" dir="ltr" aria-busy={dealing}>
-      {room.hand.filter(card=>room.phase !== 'discard' || !selected.includes(card)).map((card, i) => {
+      {[...SUITS].sort((a,b)=>Number(b.key===room.trump)-Number(a.key===room.trump)).map(suit=><div className="shelem-hand-suit" key={suit.key}><small style={{color:suit.red ? '#F08A7A' : '#E2B86B'}}>{suit.symbol}{suit.key===room.trump ? ' ★' : ''}</small>{(settledHand.length ? settledHand : room.hand).filter(card=>card.at(-1)===suit.key[0].toUpperCase() && (room.phase !== 'discard' || !selected.includes(card))).map((card, i) => {
         const selectable = room.phase === "discard" && myTurn;
         const playable = room.phase !== "playing" || !myTurn || room.legalCards.includes(card);
-        return <PlayingCard key={`${room.round}-${card}`} code={card} faceDown={dealing} dropTarget={selectable ? '.shelem-zamin' : '.shelem-table'} playable={playable} onClick={busy || dealing ? undefined : selectable ? () => setSelected((old) => old.length < 4 && !old.includes(card) ? [...old, card] : old) : room.phase === "playing" && myTurn && playable ? () => void act(() => api.play(code, card)) : undefined} style={{ zIndex: i, animationDelay: `${i*35}ms` }} />;
-      })}
+        return <PlayingCard key={`${room.round}-${card}`} code={card} faceDown={dealing} dropTarget={selectable ? '.shelem-zamin' : '.shelem-table'} playable={playable} onClick={busy || dealing || !room.hand.includes(card) ? undefined : selectable ? () => setSelected((old) => old.length < 4 && !old.includes(card) ? [...old, card] : old) : room.phase === "playing" && myTurn && playable ? () => void act(() => api.play(code, card)) : undefined} style={{ zIndex: i, opacity: room.hand.includes(card) ? 1 : 0 }} />;
+      })}</div>)}
     </div>}
   </Screen>;
 }
