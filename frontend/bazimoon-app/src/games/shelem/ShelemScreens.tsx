@@ -221,6 +221,10 @@ function Lobby({ room, busy, voiceOn, micMuted, localMutes, onVoice, onMic, onPl
 function GameTable({ room, voiceOn, micMuted, localMutes, onVoice, onMic, onPlayerMute }: { room: ShelemRoom; voiceOn: boolean; micMuted: boolean; localMutes: Set<number>; onVoice(): void; onMic(): void; onPlayerMute(uid: number): void }) {
   const { t, n } = useLanguage();
   const own = room.yourSeat ?? 0;
+  const collecting = room.trick.length === 4 && room.lastTrickWinner != null;
+  const winner = room.players.find(p => p.seat === room.lastTrickWinner);
+  const points = 5 + room.trick.reduce((sum, p) => sum + (['A','T'].includes(p.card[0]) ? 10 : p.card[0] === '5' ? 5 : 0), 0);
+  const direction = ['south', 'west', 'north', 'east'][((room.lastTrickWinner ?? own) - own + 4) % 4];
   const biddingWinner = room.phase !== 'bidding' && room.phase !== 'lobby'
     ? room.players.find(player => player.seat === room.declarerSeat) : undefined;
   const at = (delta: number) => room.players.find((p) => p.seat === (own + delta) % 4);
@@ -230,7 +234,8 @@ function GameTable({ room, voiceOn, micMuted, localMutes, onVoice, onMic, onPlay
     {spots.map(({ delta, pos }) => { const p = at(delta); if (!p) return null; return <div className={`shelem-player shelem-player--${pos}${p.seat === room.turnSeat ? " is-turn" : ""}`} key={p.seat}><span>{p.isBot ? "✦" : p.name[0]}</span><b>{p.name}</b><small>{n(p.cards)}</small><CardBackFan count={p.cards} vertical={pos !== "top"} /></div>; })}
     <div className="shelem-contract"><span>{room.highestBid ? n(room.highestBid) : "—"}</span>{room.trump && <b className={room.trump === "hearts" || room.trump === "diamonds" ? "is-red" : ""}>{SUITS.find((s) => s.key === room.trump)?.symbol}</b>}<small>{t("shelemContract")}</small></div>
     {biddingWinner && <div className="shelem-bidding-winner" role="status"><small>{t('shelemBiddingWinner')}</small><strong dir="auto">{biddingWinner.isYou ? t('you') : biddingWinner.name}</strong></div>}
-    <div className="shelem-trick" dir="ltr">{room.trick.map((play) => <PlayingCard key={`${play.seat}-${play.card}`} code={play.card} size="table" style={{ gridArea: play.seat === own ? "south" : play.seat === (own + 1) % 4 ? "west" : play.seat === (own + 2) % 4 ? "north" : "east" }} />)}{room.trick.length === 0 && <span className="shelem-table-mark">✦</span>}</div>
+    {collecting && <div className="shelem-trick-winner" role="status">{t('shelemTrickWon', {name: winner?.isYou ? t('you') : winner?.name ?? '', points})}</div>}
+    <div className={`shelem-trick${collecting ? ` is-collecting collect-${direction}` : ''}`} dir="ltr">{room.trick.map((play) => <PlayingCard key={`${play.seat}-${play.card}`} code={play.card} size="table" selected={collecting && play.seat === room.lastTrickWinner} style={{ gridArea: play.seat === own ? "south" : play.seat === (own + 1) % 4 ? "west" : play.seat === (own + 2) % 4 ? "north" : "east" }} />)}{room.trick.length === 0 && <span className="shelem-table-mark">✦</span>}</div>
     <div className={`shelem-player shelem-player--bottom${room.turnSeat === own ? " is-turn" : ""}`}><span>{at(0)?.name[0]}</span><b>{t("you")}</b></div>
     <div className="shelem-voice-float"><VoicePanel compact room={room} voiceOn={voiceOn} micMuted={micMuted} localMutes={localMutes} onVoice={onVoice} onMic={onMic} onPlayerMute={onPlayerMute} /></div>
   </div>;
