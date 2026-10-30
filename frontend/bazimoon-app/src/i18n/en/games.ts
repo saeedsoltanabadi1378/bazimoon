@@ -806,6 +806,8 @@ export const games = {
   shelemChooseTrump: "Choose the trump suit",
   shelemYourTurn: "Your turn — play a highlighted card",
   shelemContract: "CONTRACT",
+  shelemTapSelect: "Tap to select, tap again to play. Or drag onto the table.",
+  shelemTapAgain: "Tap the raised card again to play it.",
   shelemSending: "Sending your move…",
   shelemReconnecting: "Reconnecting… Your hand will refresh when connected.",
   shelemMoveRejected: "Your move was not confirmed. Check the refreshed hand before trying again.",

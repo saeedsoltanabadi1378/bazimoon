@@ -807,6 +807,8 @@ export const games: Record<keyof typeof en, string> = {
   shelemChooseTrump: "خال حکم را انتخاب کن",
   shelemYourTurn: "نوبت شماست — یکی از کارت‌های روشن را بازی کن",
   shelemContract: "تعهد",
+  shelemTapSelect: "برای انتخاب کارت بزن؛ برای بازی دوباره بزن. یا کارت را روی میز بکش.",
+  shelemTapAgain: "برای بازی، دوباره روی کارت بالاآمده بزن.",
   shelemSending: "در حال ارسال حرکت…",
   shelemReconnecting: "در حال اتصال دوباره… پس از اتصال، کارت‌ها به‌روز می‌شوند.",
   shelemMoveRejected: "حرکت شما تأیید نشد. پیش از تلاش دوباره، کارت‌های به‌روزشده را بررسی کن.",

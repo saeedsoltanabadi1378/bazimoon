@@ -8,8 +8,8 @@ const SUITS = {
   S: { label: "spades", symbol: "♠", red: false },
 } as const;
 
-export function PlayingCard({ code, faceDown = false, size = "hand", selected = false, playable = true, onClick, style, dropTarget = '.shelem-table' }: {
-  code?: string; faceDown?: boolean; size?: CardSize; selected?: boolean; playable?: boolean; onClick?: () => void; style?: CSSProperties; dropTarget?: string;
+export function PlayingCard({ code, faceDown = false, size = "hand", selected = false, playable = true, onClick, onDrop, style, dropTarget = '.shelem-table' }: {
+  code?: string; faceDown?: boolean; size?: CardSize; selected?: boolean; playable?: boolean; onClick?: () => void; onDrop?: () => void; style?: CSSProperties; dropTarget?: string;
 }) {
   const drag = useRef<{ x: number; y: number; moved: boolean } | null>(null);
   const suit = code ? SUITS[code.at(-1) as keyof typeof SUITS] : null;
@@ -53,7 +53,7 @@ export function PlayingCard({ code, faceDown = false, size = "hand", selected = 
             void flight.finished.catch(() => {}).finally(() => ghost.remove());
           }
           // Submit immediately: visual motion never delays the network request.
-          onClick();
+          (onDrop ?? onClick)();
         }
         card.style.transform = '';
         card.style.zIndex = String(style?.zIndex ?? '');

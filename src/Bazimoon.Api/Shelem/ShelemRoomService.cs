@@ -211,7 +211,7 @@ public sealed class ShelemRoomService
             game.Phase == ShelemPhase.Playing ? Enumerable.Range(0, 2).Select(team => game.Players.Where(p => p.Seat % 2 == team).Sum(p => p.Captured.Sum(ShelemGame.CardPoints) + p.Tricks * 5)).ToArray() : game.RoundPoints.ToArray(),
             game.RoundDelta, game.WinnerTeam, me?.Seat, room.HostUserId == userId, me?.Hand.OrderBy(c => c.Suit).ThenBy(c => c.Rank).Select(c => c.Code).ToArray() ?? [], legal,
             game.Players.Select(p => new ShelemPlayerView(p.Seat, p.Name, p.IsBot, p.Ready, p.Passed, p.Hand.Count, p.UserId == userId,
-                p.UserId is { } id ? VoiceUid(id) : 0)).ToArray(),
+                p.UserId is { } id ? VoiceUid(id) : 0, p.LastBid)).ToArray(),
             (holdingTrick ? game.LastTrick : game.Trick).Select(p => new ShelemPlayView(p.Seat, p.Card.Code)).ToArray(),
             game.LastTrick.Select(p => new ShelemPlayView(p.Seat, p.Card.Code)).ToArray(), game.LastTrickWinner,
             game.Zamin.Count, game.Discards.Count, room.BotActAt is not null,
@@ -245,7 +245,7 @@ public sealed class ShelemRoomService
     }
 }
 
-public sealed record ShelemPlayerView(int Seat, string Name, bool IsBot, bool Ready, bool Passed, int Cards, bool IsYou, uint VoiceUid);
+public sealed record ShelemPlayerView(int Seat, string Name, bool IsBot, bool Ready, bool Passed, int Cards, bool IsYou, uint VoiceUid, int? LastBid);
 public sealed record ShelemPlayView(int Seat, string Card);
 public sealed record ShelemRoomView(string Code, Guid GameId, long Version, string Phase, int Round, int DealerSeat, int TurnSeat,
     int? HighestBid, int? DeclarerSeat, bool ShelemCalled, string? Trump, int[] TeamScores, int[] RoundPoints, int[] RoundDelta,

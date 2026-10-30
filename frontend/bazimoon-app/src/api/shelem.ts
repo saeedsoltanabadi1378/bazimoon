@@ -5,6 +5,7 @@ export type ShelemPhase = "lobby" | "bidding" | "discard" | "trump" | "playing" 
 export type ShelemSuit = "clubs" | "diamonds" | "hearts" | "spades";
 
 export interface ShelemPlayer {
+  lastBid: number | null;
   seat: number; name: string; isBot: boolean; ready: boolean; passed: boolean; cards: number; isYou: boolean; voiceUid: number;
 }
 export interface ShelemPlay { seat: number; card: string }

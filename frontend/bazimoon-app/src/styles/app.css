@@ -1479,6 +1479,8 @@ html[lang="fa"] .kicker {
 @media(prefers-reduced-motion:reduce) { .shelem-trick.is-collecting { animation:none; } }
 .shelem-actions { flex-shrink:0; padding:10px 14px; background:#0E1121; border-top:1px solid #202441; }
 .shelem-actions:empty { display:none; }
+.shelem-voice-entry { flex-shrink:0; padding:4px 12px; }
+.shelem-voice-entry .btn { min-height:36px; padding:6px 12px; font-size:12px; }
 /* Floats over the table so sending a move never resizes the room. */
 .shelem-network { position:absolute; z-index:20; top:calc(var(--safe-top, 0px) + 74px); inset-inline:12px; padding:6px 12px; border:1px solid rgba(226,184,107,.3); border-radius:10px; font-size:12px; background:rgba(41,36,58,.94); color:#F7E3B4; box-shadow:0 8px 20px rgba(0,0,0,.35); pointer-events:auto; }
 .shelem-network button { margin-inline-start:8px; color:inherit; background:transparent; border:1px solid currentColor; border-radius:6px; padding:5px; }

@@ -89,6 +89,8 @@ export function ShelemRoomScreen({ code }: { code: string }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selected, setSelected] = useState<string[]>([]);
+  const [playSelection, setPlaySelection] = useState<string | null>(null);
+  useEffect(() => { setPlaySelection(null); }, [room?.turnSeat, room?.round, room?.phase]);
   const [bid, setBid] = useState(100);
   const [voiceOn, setVoiceOn] = useState(false);
   const [micMuted, setMicMuted] = useState(false);
@@ -183,6 +185,7 @@ export function ShelemRoomScreen({ code }: { code: string }) {
       <div className="shelem-score"><small>{t("shelemMatchScore")}</small><span>{t("shelemUs")} <b>{n(room.teamScores[team])}</b></span><span>{t("shelemThem")} <b>{n(room.teamScores[1 - team])}</b></span>{room.phase === 'playing' && <small>{t("shelemCapturedScore", { us: room.roundPoints[team], them: room.roundPoints[1-team] })}</small>}</div>
       <IconButton icon="sliders" label={t("shelemSettings")} onClick={() => setSettingsOpen(true)} />
     </header>
+    {room.phase !== 'lobby' && <div className="shelem-voice-entry"><button type="button" className="btn btn--outline" onClick={()=>voiceOn ? void toggleMic() : void joinVoice()}><Icon name={voiceOn && micMuted ? 'micOff' : 'mic'} size={18}/>{voiceOn ? t(micMuted ? 'shelemUnmuteMic' : 'shelemMuteMic') : t('shelemJoinVoice')}</button></div>}
     {(busy || reconnecting || moveRejected) && <div className="shelem-network" role="status">{busy ? t('shelemSending') : reconnecting ? t('shelemReconnecting') : t('shelemMoveRejected')}{!busy && <button type="button" onClick={()=>{setMoveRejected(false); void load();}}>{t('shelemRetry')}</button>}</div>}
 
     {room.phase === "lobby" ? <Lobby room={room} busy={busy} voiceOn={voiceOn} micMuted={micMuted} localMutes={localMutes} onVoice={() => void joinVoice()} onMic={() => void toggleMic()} onPlayerMute={togglePlayer}
@@ -194,6 +197,7 @@ export function ShelemRoomScreen({ code }: { code: string }) {
     {settingsOpen && <SettingsSheet room={room} feedback={feedback} voiceOn={voiceOn} micMuted={micMuted} localMutes={localMutes} onVoice={() => void joinVoice()} onMic={() => void toggleMic()} onPlayerMute={togglePlayer} onClose={() => setSettingsOpen(false)} />}
 
     <div className="shelem-actions" hidden={dealing}>
+      {room.phase === 'playing' && myTurn && <small role="status">{t(playSelection ? 'shelemTapAgain' : 'shelemTapSelect')}</small>}
       {room.declarerSeat != null && room.highestBid != null && room.phase === 'playing' && <div className="shelem-contract-progress"><small>{t('shelemProgress', {points:room.roundPoints[room.declarerSeat%2], target:room.highestBid})}</small><progress max={room.highestBid} value={room.roundPoints[room.declarerSeat%2]} aria-label={t('shelemContract')} /><small>{t('shelemZaminPending')}</small></div>}
       {(room.phase === 'roundresult' || room.phase === 'finished') && room.declarerSeat != null && <p className="small">{t(room.roundDelta[room.declarerSeat%2]>=0 ? 'shelemContractMade' : 'shelemContractMissed', {points:room.roundPoints[room.declarerSeat%2], target:room.highestBid ?? 0, delta:room.roundDelta[room.declarerSeat%2]})}</p>}
       {room.phase === 'discard' && myTurn && <div className="shelem-zamin" dir="ltr" aria-label={t('shelemChooseFour')}><small>{t('shelemDropFour')}</small>{Array.from({length:4},(_,i)=>selected[i] ? <PlayingCard key={selected[i]} code={selected[i]} size="table" dropTarget=".shelem-hand" onClick={busy ? undefined : ()=>setSelected(old=>old.filter(c=>c!==selected[i]))} /> : <span className="shelem-zamin-slot" key={i}>{n(i+1)}</span>)}</div>}
@@ -212,7 +216,9 @@ export function ShelemRoomScreen({ code }: { code: string }) {
       {orderHand(settledHand.length ? settledHand : room.hand, room.trump).filter(card => room.phase !== 'discard' || !selected.includes(card)).map((card, i, cards) => {
         const selectable = room.phase === "discard" && myTurn;
         const playable = room.phase !== "playing" || !myTurn || room.legalCards.includes(card);
-        return <PlayingCard key={`${room.round}-${card}`} code={card} faceDown={dealing} dropTarget={selectable ? '.shelem-zamin' : '.shelem-table'} playable={playable} onClick={busy || dealing || !room.hand.includes(card) ? undefined : selectable ? () => setSelected((old) => old.length < 4 && !old.includes(card) ? [...old, card] : old) : room.phase === "playing" && myTurn && playable ? () => void act(() => api.play(code, card)) : undefined} style={{ zIndex: i, opacity: room.hand.includes(card) ? 1 : 0, '--hand-n': cards.length } as CSSProperties} />;
+        const canPlay = !busy && !dealing && room.hand.includes(card) && room.phase === 'playing' && myTurn && playable;
+        const play = () => { setPlaySelection(null); void act(() => api.play(code, card)); };
+        return <PlayingCard key={`${room.round}-${card}`} code={card} selected={playSelection===card} faceDown={dealing} dropTarget={selectable ? '.shelem-zamin' : '.shelem-table'} playable={playable} onDrop={canPlay ? play : undefined} onClick={busy || dealing || !room.hand.includes(card) ? undefined : selectable ? () => setSelected((old) => old.length < 4 && !old.includes(card) ? [...old, card] : old) : canPlay ? () => playSelection===card ? play() : setPlaySelection(card) : undefined} style={{ zIndex: playSelection===card ? 30 : i, opacity: room.hand.includes(card) ? 1 : 0, '--hand-n': cards.length } as CSSProperties} />;
       })}
     </div>}
   </Screen>;
@@ -305,7 +311,8 @@ function PlayerStatus({ room, seat }: { room: ShelemRoom; seat: number }) {
   const { t } = useLanguage();
   const player = room.players.find(p => p.seat === seat);
   if (!player || !ACTIVE_PHASES.includes(room.phase)) return null;
-  if (seat !== room.turnSeat) return room.phase === 'bidding' && player.passed ? <em className="shelem-player-status is-passed">{t('shelemPassed')}</em> : null;
+  if (room.phase === 'bidding' && (player.passed || player.lastBid != null)) return <em className={`shelem-player-status${player.passed ? ' is-passed' : ''}`}>{player.lastBid != null && t('shelemBidN', {n:player.lastBid})}{player.passed && ` · ${t('shelemPassed')}`}</em>;
+  if (seat !== room.turnSeat) return null;
   if (player.isYou) {
     const mustFollow = room.phase === 'playing' && room.trick.length > 0 && room.legalCards.length < room.hand.length;
     const suit = mustFollow ? SUITS.find(s => s.key[0].toUpperCase() === room.trick[0].card.at(-1))?.symbol ?? '' : '';

@@ -12,6 +12,7 @@ public sealed class ShelemPlayer
     public bool IsBot { get; init; }
     public bool Ready { get; set; }
     public bool Passed { get; set; }
+    public int? LastBid { get; set; }
     public List<PlayingCard> Hand { get; } = [];
     public List<PlayingCard> Captured { get; } = [];
     public int Tricks { get; set; }
@@ -84,6 +85,7 @@ public sealed class ShelemGame
         if (player.Passed) throw new GameException("You already passed.", "already_passed");
         if (shelem)
         {
+            player.LastBid = 165;
             HighestBid = 165;
             DeclarerSeat = seat;
             ShelemCalled = true;
@@ -107,6 +109,7 @@ public sealed class ShelemGame
             if (bid < 100 || bid > 165 || bid % 5 != 0 || bid <= (HighestBid ?? 95))
                 throw new GameException("Bid from 100 to 165 in steps of five, above the current bid.", "invalid_bid");
             HighestBid = bid;
+            player.LastBid = bid;
             DeclarerSeat = seat;
         }
         TurnSeat = NextActive(seat);
@@ -186,7 +189,7 @@ public sealed class ShelemGame
         HighestBid = null; DeclarerSeat = null; ShelemCalled = false; Trump = null; WinnerTeam = null; LastTrickWinner = null;
         Zamin.Clear(); Discards.Clear(); Trick.Clear(); LastTrick.Clear();
         Array.Clear(RoundPoints); Array.Clear(RoundDelta);
-        foreach (var p in Players) { p.Hand.Clear(); p.Captured.Clear(); p.Tricks = 0; p.Passed = false; }
+        foreach (var p in Players) { p.Hand.Clear(); p.Captured.Clear(); p.Tricks = 0; p.Passed = false; p.LastBid = null; }
         var deck = PlayingCard.StandardDeck().ToList();
         for (int i = deck.Count - 1; i > 0; i--) { int j = random.Next(i + 1); (deck[i], deck[j]) = (deck[j], deck[i]); }
         for (int i = 0; i < 48; i++) Players[i % 4].Hand.Add(deck[i]);
