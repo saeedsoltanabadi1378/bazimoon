@@ -90,6 +90,6 @@ function animateTapPlay(card: HTMLButtonElement) {
 
 export function CardBackFan({ count, vertical = false }: { count: number; vertical?: boolean }) {
   return <div className={`card-back-fan${vertical ? " card-back-fan--vertical" : ""}`} aria-label={`${count} cards`}>
-    {Array.from({ length: Math.min(count, 8) }, (_, i) => <PlayingCard key={i} faceDown size="mini" style={{ zIndex: i }} />)}
+    {Array.from({ length: Math.min(count, 12) }, (_, i) => <PlayingCard key={i} faceDown size="mini" style={{ zIndex: i, '--back-i': i, '--back-count': Math.min(count, 12) } as CSSProperties} />)}
   </div>;
 }

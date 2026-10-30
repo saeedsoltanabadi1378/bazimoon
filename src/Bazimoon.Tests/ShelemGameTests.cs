@@ -75,6 +75,15 @@ public sealed class ShelemGameTests
             }
             Assert.True(actions < 12_000, $"Seed {seed} did not finish");
             Assert.Contains(game.WinnerTeam, new int?[] { 0, 1 });
+            Assert.Equal(game.Round, game.ScoreHistory.Count);
+            Assert.Equal(game.TeamScores, game.ScoreHistory.Last().Totals);
+            for (int index = 0; index < game.ScoreHistory.Count; index++)
+            {
+                var score = game.ScoreHistory[index];
+                Assert.Equal(index + 1, score.Round);
+                for (int team = 0; team < 2; team++)
+                    Assert.Equal(game.ScoreHistory.Take(index + 1).Sum(row => row.Delta[team]), score.Totals[team]);
+            }
         }
     }
 

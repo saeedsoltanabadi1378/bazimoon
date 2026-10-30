@@ -10,6 +10,7 @@ export interface ShelemPlayer {
 }
 export interface ShelemPlay { seat: number; card: string }
 export interface ShelemRoom {
+  winningScore: number; scoreHistory: { round: number; bid: number; delta: number[]; totals: number[] }[];
   code: string; gameId: string; version: number; phase: ShelemPhase; round: number; dealerSeat: number; turnSeat: number;
   highestBid: number | null; declarerSeat: number | null; shelemCalled: boolean; trump: ShelemSuit | null;
   teamScores: number[]; roundPoints: number[]; roundDelta: number[]; winnerTeam: number | null;

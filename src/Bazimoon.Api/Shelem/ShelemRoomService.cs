@@ -216,7 +216,7 @@ public sealed class ShelemRoomService
             game.LastTrick.Select(p => new ShelemPlayView(p.Seat, p.Card.Code)).ToArray(), game.LastTrickWinner,
             game.Zamin.Count, game.Discards.Count, room.BotActAt is not null,
             !holdingTrick && room.TurnDeadline is { } deadline ? (int)Math.Clamp((deadline - Now).TotalMilliseconds, 0, TurnLimit.TotalMilliseconds) : null,
-            (int)TurnLimit.TotalMilliseconds);
+            (int)TurnLimit.TotalMilliseconds, ShelemGame.WinningScore, game.ScoreHistory.ToArray());
     }
 
     private Room Find(string code) => _rooms.TryGetValue(NormalizeCode(code), out var room) ? room : throw new GameException("No room has that code.", "room_not_found");
@@ -251,4 +251,4 @@ public sealed record ShelemRoomView(string Code, Guid GameId, long Version, stri
     int? HighestBid, int? DeclarerSeat, bool ShelemCalled, string? Trump, int[] TeamScores, int[] RoundPoints, int[] RoundDelta,
     int? WinnerTeam, int? YourSeat, bool YouAreHost, string[] Hand, string[] LegalCards, ShelemPlayerView[] Players,
     ShelemPlayView[] Trick, ShelemPlayView[] LastTrick, int? LastTrickWinner, int ZaminCount, int DiscardCount, bool BotThinking,
-    int? TurnRemainingMs, int TurnLimitMs);
+    int? TurnRemainingMs, int TurnLimitMs, int WinningScore, ShelemRoundScore[] ScoreHistory);

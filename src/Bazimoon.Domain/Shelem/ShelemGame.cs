@@ -24,6 +24,7 @@ public readonly record struct ShelemPlay(int Seat, PlayingCard Card);
 public sealed class ShelemGame
 {
     public const int WinningScore = 660;
+    public List<ShelemRoundScore> ScoreHistory { get; } = [];
     public Guid Id { get; } = Guid.NewGuid();
     public ShelemPhase Phase { get; private set; } = ShelemPhase.Lobby;
     public List<ShelemPlayer> Players { get; } = [];
@@ -237,6 +238,7 @@ public sealed class ShelemGame
             RoundDelta[defending] = RoundPoints[defending];
         }
         TeamScores[0] += RoundDelta[0]; TeamScores[1] += RoundDelta[1];
+        ScoreHistory.Add(new(Round, bid, RoundDelta.ToArray(), TeamScores.ToArray()));
         if (TeamScores[0] >= WinningScore || TeamScores[1] >= WinningScore)
         {
             WinnerTeam = TeamScores[0] == TeamScores[1] ? null : TeamScores[0] > TeamScores[1] ? 0 : 1;
@@ -252,3 +254,5 @@ public sealed class ShelemGame
     private int NextActive(int seat) { int next = Next(seat); while (Player(next).Passed) next = Next(next); return next; }
     private static string CleanName(string name) { var value = string.IsNullOrWhiteSpace(name) ? "Player" : name.Trim(); return value.Length > 24 ? value[..24] : value; }
 }
+
+public sealed record ShelemRoundScore(int Round, int Bid, int[] Delta, int[] Totals);

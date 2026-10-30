@@ -14,6 +14,8 @@ import { haptic } from "../../lib/haptics";
 import { CardBackFan, PlayingCard } from "../cards/PlayingCard";
 import { useGameFeedback } from './GameFeedback';
 
+import "./table.css";
+
 const ACCENT = "#E2B86B";
 const SUITS: { key: ShelemSuit; symbol: string; red: boolean }[] = [
   { key: "clubs", symbol: "♣", red: false }, { key: "diamonds", symbol: "♦", red: true },
@@ -108,6 +110,7 @@ export function ShelemRoomScreen({ code }: { code: string }) {
   const round = room?.round ?? 0;
   const [settledHand, setSettledHand] = useState<string[]>([]);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [scoresOpen, setScoresOpen] = useState(false);
   const feedback = useGameFeedback(room);
   const handKey = room?.hand.join(',') ?? '';
   useEffect(() => {
@@ -180,10 +183,10 @@ export function ShelemRoomScreen({ code }: { code: string }) {
   const phaseTitle = t(`shelemPhase_${room.phase}` as "shelemPhase_lobby");
 
   return <Screen theme="night" label={t("gameShelem")}>
-    <header className="shelem-topbar">
+    <header className={`shelem-topbar${room.phase !== "lobby" ? " shelem-game-toolbar" : ""}`}>
       <IconButton icon="back" label={t("back")} onClick={back} />
       <div className="grow"><div className="kicker">{phaseTitle}</div><div className="display" style={{ fontSize: 20 }}>{room.phase === "lobby" ? room.code : t("shelemRoundN", { n: room.round })}</div></div>
-      <div className="shelem-score"><small>{t("shelemMatchScore")}</small><span>{t("shelemUs")} <b>{n(room.teamScores[team])}</b></span><span>{t("shelemThem")} <b>{n(room.teamScores[1 - team])}</b></span>{room.phase === 'playing' && <small>{t("shelemCapturedScore", { us: room.roundPoints[team], them: room.roundPoints[1-team] })}</small>}</div>
+      <button type="button" className="shelem-score" aria-label={t("shelemScoreboard")} onClick={() => setScoresOpen(true)}><small>{t("shelemMatchScore")}</small><span>{t("shelemUs")} <b>{n(room.teamScores[team])}</b></span><span>{t("shelemThem")} <b>{n(room.teamScores[1 - team])}</b></span>{room.phase === 'playing' && <small>{t("shelemCapturedScore", { us: room.roundPoints[team], them: room.roundPoints[1-team] })}</small>}</button>
       <IconButton icon="sliders" label={t("shelemSettings")} onClick={() => setSettingsOpen(true)} />
     </header>
     {room.phase !== 'lobby' && <div className="shelem-voice-entry"><button type="button" className="btn btn--outline" onClick={()=>voiceOn ? void toggleMic() : void joinVoice()}><Icon name={voiceOn && micMuted ? 'micOff' : 'mic'} size={18}/>{voiceOn ? t(micMuted ? 'shelemUnmuteMic' : 'shelemMuteMic') : t('shelemJoinVoice')}</button></div>}
@@ -195,16 +198,17 @@ export function ShelemRoomScreen({ code }: { code: string }) {
 
     {error && <div className="shelem-toast" role="alert">{error}</div>}
     {dealing && <DealSequence room={room} />}
+    {scoresOpen && <Scoreboard room={room} onClose={() => setScoresOpen(false)} />}
     {settingsOpen && <SettingsSheet room={room} feedback={feedback} voiceOn={voiceOn} micMuted={micMuted} localMutes={localMutes} onVoice={() => void joinVoice()} onMic={() => void toggleMic()} onPlayerMute={togglePlayer} onClose={() => setSettingsOpen(false)} />}
 
-    <div className="shelem-actions" hidden={dealing}>
+    <div className={`shelem-actions shelem-actions--${room.phase}${myTurn ? " is-my-turn" : ""}`} hidden={dealing}>
       {room.phase === 'playing' && myTurn && <small role="status">{t(playSelection ? 'shelemTapAgain' : 'shelemTapSelect')}</small>}
       {room.declarerSeat != null && room.highestBid != null && room.phase === 'playing' && <div className="shelem-contract-progress"><small>{t('shelemProgress', {points:room.roundPoints[room.declarerSeat%2], target:room.highestBid})}</small><progress max={room.highestBid} value={room.roundPoints[room.declarerSeat%2]} aria-label={t('shelemContract')} /><small>{t('shelemZaminPending')}</small></div>}
       {(room.phase === 'roundresult' || room.phase === 'finished') && room.declarerSeat != null && <p className="small">{t(room.roundDelta[room.declarerSeat%2]>=0 ? 'shelemContractMade' : 'shelemContractMissed', {points:room.roundPoints[room.declarerSeat%2], target:room.highestBid ?? 0, delta:room.roundDelta[room.declarerSeat%2]})}</p>}
       {room.phase === 'discard' && myTurn && <div className="shelem-zamin" dir="ltr" aria-label={t('shelemChooseFour')}><small>{t('shelemDropFour')}</small>{Array.from({length:4},(_,i)=>selected[i] ? <PlayingCard key={selected[i]} code={selected[i]} size="table" dropTarget=".shelem-hand" onClick={busy ? undefined : ()=>setSelected(old=>old.filter(c=>c!==selected[i]))} /> : <span className="shelem-zamin-slot" key={i}>{n(i+1)}</span>)}</div>}
       {room.phase === "bidding" && (myTurn ? <div className="stack" style={{ gap: 10 }}>
           <div className="row row--between"><b>{t("shelemYourBid")}</b><output className="display" style={{ fontSize: 24, color: ACCENT }}>{n(bid)}</output></div>
-          <div className="shelem-bid-values" role="group" aria-label={t("shelemYourBid")}>{Array.from({length:14},(_,i)=>100+i*5).map(value=><button type="button" key={value} disabled={value<minBid || busy} aria-pressed={value===Math.max(minBid,bid)} onClick={()=>setBid(value)}>{n(value)}</button>)}</div>
+          <div className="shelem-bid-values" dir="ltr" role="group" aria-label={t("shelemYourBid")}>{Array.from({length:14},(_,i)=>100+i*5).map(value=><button type="button" key={value} disabled={value<minBid || busy} aria-pressed={value===Math.max(minBid,bid)} onClick={()=>setBid(value)}>{n(value)}</button>)}</div>
           <div className="row" style={{ gap: 8 }}><button className="btn btn--outline" disabled={busy} onClick={() => void act(() => api.bid(code, null))}>{t("shelemPass")}</button><button className="btn" disabled={busy || minBid > 165} onClick={() => void act(() => api.bid(code, Math.max(minBid, bid)))}>{t("shelemBidN", { n: Math.max(minBid, bid) })}</button><button className="btn shelem-slam" disabled={busy} onClick={() => void act(() => api.bid(code, 165, true))}>{t("gameShelem")}</button></div>
         </div> : null)}
       {room.phase === "discard" && myTurn && <div className="row row--between"><span><b>{t("shelemChooseFour")}</b><small>{t("shelemChosen", { n: selected.length })}</small></span><button className="btn btn--auto" disabled={busy || selected.length !== 4} onClick={() => void act(() => api.discard(code, selected))}>{t("shelemDiscard")}</button></div>}
@@ -219,7 +223,7 @@ export function ShelemRoomScreen({ code }: { code: string }) {
         const playable = room.phase !== "playing" || !myTurn || room.legalCards.includes(card);
         const canPlay = !busy && !dealing && room.hand.includes(card) && room.phase === 'playing' && myTurn && playable;
         const play = () => { setPlaySelection(null); setPendingCard(card); void act(() => api.play(code, card)).finally(()=>setPendingCard(null)); };
-        return <PlayingCard key={`${room.round}-${card}`} code={card} selected={playSelection===card} faceDown={dealing} dropTarget={selectable ? '.shelem-zamin' : '.shelem-table'} playable={playable} onDrop={canPlay ? play : undefined} onClick={busy || dealing || !room.hand.includes(card) ? undefined : selectable ? () => setSelected((old) => old.length < 4 && !old.includes(card) ? [...old, card] : old) : canPlay ? () => playSelection===card ? play() : setPlaySelection(card) : undefined} style={{ zIndex: playSelection===card ? 30 : i, opacity: room.hand.includes(card) && pendingCard!==card ? 1 : 0, '--hand-n': cards.length } as CSSProperties} />;
+        return <PlayingCard key={`${room.round}-${card}`} code={card} selected={playSelection===card} faceDown={dealing} dropTarget={selectable ? '.shelem-zamin' : '.shelem-table'} playable={playable} onDrop={canPlay ? play : undefined} onClick={busy || dealing || !room.hand.includes(card) ? undefined : selectable ? () => setSelected((old) => old.length < 4 && !old.includes(card) ? [...old, card] : old) : canPlay ? () => playSelection===card ? play() : setPlaySelection(card) : undefined} style={{ zIndex: playSelection===card ? 30 : i, opacity: room.hand.includes(card) && pendingCard!==card ? 1 : 0, '--hand-n': cards.length, '--fan-angle': `${(i-(cards.length-1)/2)*3.2}deg`, '--fan-y': `${Math.pow(i-(cards.length-1)/2,2)*.65}px` } as CSSProperties} />;
       })}
     </div>}
   </Screen>;
@@ -275,13 +279,15 @@ function GameTable({ room }: { room: ShelemRoom }) {
   const at = (delta: number) => room.players.find((p) => p.seat === (own + delta) % 4);
   const spots = [{ delta: 2, pos: "top" }, { delta: 1, pos: "left" }, { delta: 3, pos: "right" }];
   return <div className="shelem-table">
-    <div className="shelem-felt-glow" />
-    {spots.map(({ delta, pos }) => { const p = at(delta); if (!p) return null; return <div className={`shelem-player shelem-player--${pos}${p.seat === room.turnSeat ? " is-turn" : ""}`} key={p.seat}><span>{p.isBot ? "✦" : p.name[0]}<TurnRing room={room} seat={p.seat} /></span><b>{p.name}</b><small>{n(p.cards)}</small><CardBackFan count={p.cards} vertical={pos !== "top"} /><PlayerStatus room={room} seat={p.seat} /></div>; })}
+    <div className="shelem-felt-glow" /><div className="shelem-table-brand" aria-hidden="true">{t("gameShelem")}</div>
+    {room.phase === "bidding" && <div className="shelem-kitty" dir="ltr">{Array.from({length:room.zaminCount}, (_,i)=><PlayingCard key={i} faceDown size="table" />)}</div>}
+    {spots.map(({ delta, pos }) => { const p = at(delta); if (!p) return null; return <div className={`shelem-player shelem-player--${pos} ${delta === 2 ? "team-blue" : "team-red"}${p.seat === room.turnSeat ? " is-turn" : ""}`} key={p.seat}><span>{p.isBot ? "✦" : p.name[0]}<TurnRing room={room} seat={p.seat} /></span><b dir="auto">{p.name}</b>{room.declarerSeat === p.seat && <i className="shelem-crown" aria-label={t("shelemBiddingWinner")}>♛</i>}<small>{n(p.cards)}</small><PlayerStatus room={room} seat={p.seat} /></div>; })}
+    {spots.map(({ delta, pos }) => { const p = at(delta); return p && <div key={p.seat} className={`shelem-opponent-hand shelem-opponent-hand--${pos}`} aria-hidden="true"><CardBackFan count={p.cards} vertical={pos !== 'top'} /></div>; })}
     <div className="shelem-contract"><span>{room.highestBid ? n(room.highestBid) : "—"}</span>{room.trump && <b className={room.trump === "hearts" || room.trump === "diamonds" ? "is-red" : ""}>{SUITS.find((s) => s.key === room.trump)?.symbol}</b>}<small>{t("shelemContract")}</small></div>
     {biddingWinner && <div className="shelem-bidding-winner" role="status"><small>{t('shelemBiddingWinner')}</small><strong dir="auto">{biddingWinner.isYou ? t('you') : biddingWinner.name}</strong></div>}
     {collecting && <div className="shelem-trick-winner" role="status">{t('shelemTrickWon', {name: winner?.isYou ? t('you') : winner?.name ?? '', points})}</div>}
     <div className={`shelem-trick${collecting ? ` is-collecting collect-${direction}` : ''}`} dir="ltr">{room.trick.map((play) => <PlayingCard key={`${play.seat}-${play.card}`} code={play.card} size="table" selected={collecting && play.seat === room.lastTrickWinner} style={trickStyle((play.seat - own + 4) % 4)} />)}{room.trick.length === 0 && <span className="shelem-table-mark">✦</span>}</div>
-    <div className={`shelem-player shelem-player--bottom${room.turnSeat === own ? " is-turn" : ""}`}><span>{at(0)?.name[0]}<TurnRing room={room} seat={own} /></span><b>{t("you")}</b><PlayerStatus room={room} seat={own} /></div>
+    <div className={`shelem-player shelem-player--bottom team-blue${room.turnSeat === own ? " is-turn" : ""}`}><span>{at(0)?.name[0]}<TurnRing room={room} seat={own} /></span><b>{t("you")}</b><PlayerStatus room={room} seat={own} /></div>
     {room.lastTrick.length === 4 && <details className="shelem-last-trick" key={`${room.round}-${room.lastTrick.map(p=>p.card).join('')}`}><summary>{t('shelemLastTrick')}</summary><div>{room.lastTrick.map(play=><figure key={play.seat}><PlayingCard code={play.card} size="table" selected={play.seat===room.lastTrickWinner}/><figcaption>{room.players.find(p=>p.seat===play.seat)?.name}{play.seat===room.lastTrickWinner ? ` · ${t('shelemWinner')}` : ''}</figcaption></figure>)}</div></details>}
   </div>;
 }
@@ -361,6 +367,23 @@ function VoicePanel({ room, voiceOn, micMuted, localMutes, onVoice, onMic, onPla
     <button className={micMuted ? "is-muted" : ""} onClick={onMic}><Icon name={micMuted ? "micOff" : "mic"} size={18} />{micMuted ? t("shelemUnmuteMic") : t("shelemMuteMic")}</button>
     <div className="shelem-voice-peers">{people.map((p) => <button key={p.seat} onClick={() => onPlayerMute(p.voiceUid)} className={localMutes.has(p.voiceUid) ? "is-muted" : ""}><Icon name={localMutes.has(p.voiceUid) ? "mute" : "mic"} size={16} />{localMutes.has(p.voiceUid) ? t("shelemUnmutePlayer", { name: p.name }) : t("shelemMutePlayer", { name: p.name })}</button>)}</div>
   </div>;
+}
+
+function Scoreboard({ room, onClose }: { room: ShelemRoom; onClose(): void }) {
+  const { t, n } = useLanguage();
+  const dialog = useRef<HTMLDialogElement>(null);
+  useEffect(() => { const element = dialog.current; element?.showModal(); return () => element?.close(); }, []);
+  const team = (room.yourSeat ?? 0) % 2;
+  return <dialog ref={dialog} className="shelem-scoreboard" onCancel={onClose} onClick={event => { if (event.target === event.currentTarget) onClose(); }}>
+    <header><h2>{t('shelemScoreboard')}</h2><IconButton icon="close" label={t('close')} onClick={onClose} /></header>
+    <p>{t('shelemScoreTarget', { n: room.winningScore })}</p>
+    <div className="shelem-score-teams">{[team, 1-team].map(side => <div className={side === team ? 'team-blue' : 'team-red'} key={side}>{room.players.filter(p => p.seat%2 === side).map(p => <b key={p.seat} dir="auto">{p.isYou ? t('you') : p.name}</b>)}</div>)}</div>
+    <div className="shelem-score-scroll"><table><thead><tr>{['shelemRoundLabel','shelemContract','shelemUs','shelemThem','shelemTotalUs','shelemTotalThem'].map(key => <th key={key}>{t(key as 'shelemContract')}</th>)}</tr></thead><tbody>
+      {room.scoreHistory.map(row => <tr key={row.round}><td>{n(row.round)}</td><td>{n(row.bid)}</td><td>{n(row.delta[team])}</td><td>{n(row.delta[1-team])}</td><td>{n(row.totals[team])}</td><td>{n(row.totals[1-team])}</td></tr>)}
+      {!room.scoreHistory.length && <tr><td colSpan={6}>{t('shelemNoRounds')}</td></tr>}
+    </tbody></table></div>
+    <footer><div><b className="team-blue">{n(room.teamScores[team])}</b><b className="team-red">{n(room.teamScores[1-team])}</b></div><strong>{t('shelemScoreDifference', { n: Math.abs(room.teamScores[0]-room.teamScores[1]) })}</strong></footer>
+  </dialog>;
 }
 
 function RoundResult({ room, onNext }: { room: ShelemRoom; onNext(): void }) { const { t, n } = useLanguage(); return <div className="shelem-result"><div><small>{t("shelemTeamA")}</small><b>{n(room.roundPoints[0])}</b><span className={room.roundDelta[0] >= 0 ? "is-positive" : "is-negative"}>{room.roundDelta[0] >= 0 ? "+" : ""}{n(room.roundDelta[0])}</span></div><div><small>{t("shelemTeamB")}</small><b>{n(room.roundPoints[1])}</b><span className={room.roundDelta[1] >= 0 ? "is-positive" : "is-negative"}>{room.roundDelta[1] >= 0 ? "+" : ""}{n(room.roundDelta[1])}</span></div>{room.youAreHost && <button className="btn" onClick={onNext}>{t("shelemNextRound")}</button>} {!room.youAreHost && <small>{t("shelemWaitingHost")}</small>}</div>; }
