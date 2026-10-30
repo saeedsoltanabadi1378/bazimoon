@@ -15,7 +15,7 @@ export interface GuidePage {
   readTime: string
   sections: GuideSection[]
   faq: [string, string][]
-  gameSlug: 'mafia' | 'spy'
+  gameSlug: 'mafia' | 'spy' | 'shelem'
   playLabel: string
 }
 
@@ -54,6 +54,159 @@ export const guideHub: Record<Lang, {
 }
 
 export const guides: Guide[] = [
+{
+  "slug": "how-to-play-shelem",
+  "bg": "#173A46",
+  "fg": "#E2B86B",
+  "en": {
+    "label": "Shelem rules",
+    "title": "How to Play Shelem: Bidding, Trump & Scoring | Bazimoon",
+    "description": "Learn Bazimoon’s Shelem rules: four players, Zamin, bidding, following suit, 165 round points and the 660-point match target.",
+    "h1": "How to play Shelem on Bazimoon",
+    "intro": "This guide describes the rules implemented in Bazimoon. If you play Shelem with different house rules, check the bidding and scoring below before your first match.",
+    "readTime": "5 min read",
+    "sections": [
+      {
+        "heading": "Set up your table",
+        "paragraphs": [
+          "Create a room and share its invitation. The host can move players between seats or swap teammates before play starts. Guests confirm readiness after team changes."
+        ]
+      },
+      {
+        "heading": "Bid on your hand",
+        "paragraphs": [
+          "Each player receives 12 cards, with four cards reserved as Zamin. Bid from 100 to 165 in steps of five, raise the current bid or pass. Calling Shelem is a separate commitment to win every trick."
+        ]
+      },
+      {
+        "heading": "Choose Zamin and trump",
+        "paragraphs": [
+          "The winning bidder takes the four Zamin cards, discards four cards and chooses the trump suit."
+        ]
+      },
+      {
+        "heading": "Play with your partner",
+        "paragraphs": [
+          "Follow the led suit when you can. If you cannot, play another suit or a trump. The highest trump wins the trick; without trump, the highest card of the led suit wins."
+        ]
+      },
+      {
+        "heading": "Check the score",
+        "paragraphs": [
+          "Review completed rounds in the scoreboard. Bazimoon’s match target is 660 points."
+        ]
+      },
+      {
+        "heading": "How scoring works in Bazimoon",
+        "paragraphs": [
+          "Each ace and ten is worth 10 points; each five is worth 5. Every won trick adds 5 points. The declaring team also receives the points in its discards plus 5 for Zamin, making 165 points in a round.",
+          "For an ordinary successful contract, the declaring team earns its bid, while defenders earn their captured points. A failed contract loses the bid; if defenders captured more points than the declaring team, the loss is twice the bid.",
+          "For example, a team bidding 110 that captures 120 earns 110, not 120. If it captures 80 while defenders capture 85, it loses 220 and the defenders earn 85. A declared Shelem scores +330 for all 12 tricks, otherwise −330."
+        ]
+      },
+      {
+        "heading": "A few tips for your first games",
+        "paragraphs": [
+          "Practise with bots to learn the controls. Before bidding, consider high cards and how many cards you hold in a possible trump suit. During play, track which suits opponents can no longer follow and avoid spending a high trump when your partner is already winning the trick."
+        ]
+      }
+    ],
+    "faq": [
+      [
+        "How many people play Shelem?",
+        "A table has four seats in two teams of two. Partners sit opposite each other. You can play with friends or fill seats with bots."
+      ],
+      [
+        "Can I play Shelem without downloading an app?",
+        "Yes. Open Bazimoon in your mobile or desktop browser. An internet connection is required for Shelem, including bot games."
+      ],
+      [
+        "Can the host change teams?",
+        "Yes, before the match starts. Moving a player onto an occupied seat swaps the two players. Guests need to confirm readiness after a change."
+      ],
+      [
+        "What is the difference between bidding 165 and calling Shelem?",
+        "A 165 bid is a points contract. Calling Shelem requires winning all 12 tricks and scores +330 if successful or −330 if unsuccessful in Bazimoon."
+      ]
+    ],
+    "gameSlug": "shelem",
+    "playLabel": "Play Shelem online"
+  },
+  "fa": {
+    "label": "آموزش شلم",
+    "title": "آموزش شلم؛ خواندن، حکم و امتیازشماری | بازیمون",
+    "description": "شلم بازیمون را یاد بگیرید: تیم‌های دونفره، زمین، خواندن امتیاز، انتخاب حکم، قوانین دست و رسیدن به امتیاز ۶۶۰.",
+    "h1": "آموزش بازی شلم در بازیمون",
+    "intro": "این راهنما قوانین شلم در بازیمون را توضیح می‌دهد. اگر در جمع دوستانتان با قوانین متفاوتی بازی می‌کنید، پیش از اولین مسابقه بخش خواندن و امتیازشماری را بخوانید.",
+    "readTime": "۵ دقیقه مطالعه",
+    "sections": [
+      {
+        "heading": "میز و تیم‌ها را آماده کنید",
+        "paragraphs": [
+          "یک اتاق بسازید و دعوت‌نامه را بفرستید. میزبان می‌تواند پیش از شروع بازی، صندلی یا هم‌تیمی بازیکنان را تغییر دهد. مهمان‌ها بعد از تغییر تیم‌ها دوباره آمادگی خود را تأیید می‌کنند."
+        ]
+      },
+      {
+        "heading": "امتیاز بخوانید",
+        "paragraphs": [
+          "هر بازیکن ۱۲ کارت می‌گیرد و چهار کارت روی زمین می‌ماند. می‌توانید از ۱۰۰ تا ۱۶۵، با فاصله‌های پنج‌امتیازی و بالاتر از پیشنهاد قبلی بخوانید یا پاس بدهید. اعلام شلم گزینه‌ای جداگانه برای تعهد به بردن تمام دست‌هاست."
+        ]
+      },
+      {
+        "heading": "زمین و حکم را انتخاب کنید",
+        "paragraphs": [
+          "برندهٔ مزایده چهار کارت زمین را برمی‌دارد، چهار کارت کنار می‌گذارد و خال حکم را مشخص می‌کند."
+        ]
+      },
+      {
+        "heading": "با یارتان دست ببرید",
+        "paragraphs": [
+          "اگر از خال شروع‌شده کارت دارید، باید همان خال را بازی کنید. در غیر این صورت می‌توانید کارت دیگری یا حکم بیندازید. بالاترین حکم برنده است؛ اگر حکم بازی نشده باشد، بالاترین کارت از خال شروع‌شده دست را می‌برد."
+        ]
+      },
+      {
+        "heading": "امتیازها را دنبال کنید",
+        "paragraphs": [
+          "نتیجهٔ دورهای تمام‌شده را در جدول امتیازات ببینید. امتیاز هدف مسابقه در بازیمون ۶۶۰ است."
+        ]
+      },
+      {
+        "heading": "امتیازشماری در شلم بازیمون",
+        "paragraphs": [
+          "هر آس و ۱۰، ده امتیاز دارد و هر ۵، پنج امتیاز. بردن هر دست هم پنج امتیاز اضافه می‌کند. امتیاز کارت‌های کنارگذاشته‌شده به‌علاوهٔ پنج امتیاز زمین به تیم خواننده می‌رسد؛ مجموع امتیاز هر دور ۱۶۵ است.",
+          "اگر تعهد معمولی انجام شود، تیم خواننده به‌اندازهٔ عددی که خوانده امتیاز می‌گیرد و حریف امتیاز گرفته‌شدهٔ خودش را ثبت می‌کند. در صورت شکست، عدد تعهد از امتیاز تیم خواننده کم می‌شود؛ اگر حریف امتیاز بیشتری از تیم خواننده گرفته باشد، جریمه دو برابر تعهد است.",
+          "مثلاً تیمی که ۱۱۰ خوانده و ۱۲۰ گرفته، ۱۱۰ امتیاز ثبت می‌کند. اگر همین تیم ۸۰ و حریف ۸۵ گرفته باشد، تیم خواننده ۲۲۰ امتیاز منفی و حریف ۸۵ امتیاز مثبت می‌گیرد. اعلام شلم با بردن هر ۱۲ دست، ۳۳۰ امتیاز مثبت و در غیر این صورت ۳۳۰ امتیاز منفی دارد."
+        ]
+      },
+      {
+        "heading": "چند نکته برای بازی‌های اول",
+        "paragraphs": [
+          "برای آشنایی با کنترل‌ها، چند دور با ربات‌ها تمرین کنید. پیش از خواندن، کارت‌های بالا و تعداد کارت‌های خالی را که ممکن است حکم کنید بررسی کنید. هنگام بازی حواستان باشد حریف در کدام خال کارت ندارد؛ وقتی یارتان دست را می‌برد، بی‌دلیل حکم بالای خود را خرج نکنید."
+        ]
+      }
+    ],
+    "faq": [
+      [
+        "شلم چندنفره است؟",
+        "شلم چهار صندلی دارد و در دو تیم دونفره بازی می‌شود. هم‌تیمی‌ها روبه‌روی هم می‌نشینند. می‌توانید با دوستان بازی کنید یا صندلی‌ها را با ربات پر کنید."
+      ],
+      [
+        "برای شلم آنلاین باید برنامه نصب کنم؟",
+        "نه. بازیمون را در مرورگر گوشی یا کامپیوتر باز کنید. بازی شلم، حتی با ربات‌ها، به اینترنت نیاز دارد."
+      ],
+      [
+        "میزبان می‌تواند تیم‌ها را عوض کند؟",
+        "بله، پیش از شروع مسابقه. اگر صندلی مقصد پر باشد، جای دو بازیکن عوض می‌شود. مهمان‌ها پس از تغییر باید دوباره آماده شوند."
+      ],
+      [
+        "خواندن ۱۶۵ چه فرقی با اعلام شلم دارد؟",
+        "خواندن ۱۶۵ تعهد به گرفتن امتیاز است. با اعلام شلم باید هر ۱۲ دست را ببرید؛ در بازیمون موفقیت آن ۳۳۰ امتیاز مثبت و شکست آن ۳۳۰ امتیاز منفی دارد."
+      ]
+    ],
+    "gameSlug": "shelem",
+    "playLabel": "شروع شلم آنلاین"
+  }
+},
   {
     slug: 'how-to-play-mafia', bg: '#1E2138', fg: '#C3B9FF',
     en: {

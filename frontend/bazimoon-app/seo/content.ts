@@ -26,6 +26,132 @@ export interface Game {
 }
 
 export const games: Game[] = [
+{
+  "slug": "shelem",
+  "bg": "#173A46",
+  "fg": "#E2B86B",
+  "group": "party",
+  "en": {
+    "name": "Shelem",
+    "line": "A four-player card game: bid, choose trump and win with your partner.",
+    "h1": "Play Shelem online with friends or bots",
+    "title": "Shelem Online – Play with Friends or Bots | Bazimoon",
+    "description": "Play Shelem online in English or Persian. Invite friends, arrange two teams, practise with bots and follow every round’s score in your browser.",
+    "intro": "Bring your Shelem table online. Four players form two teams, bid for the right to choose trump and compete to fulfil their contract. Create a room and invite friends with a link or room code, or start a game with bots. Bazimoon runs in your browser on a phone or computer, with English and Persian interfaces.",
+    "steps": [
+      [
+        "Set up your table",
+        "Create a room and share its invitation. The host can move players between seats or swap teammates before play starts. Guests confirm readiness after team changes."
+      ],
+      [
+        "Bid on your hand",
+        "Each player receives 12 cards, with four cards reserved as Zamin. Bid from 100 to 165 in steps of five, raise the current bid or pass. Calling Shelem is a separate commitment to win every trick."
+      ],
+      [
+        "Choose Zamin and trump",
+        "The winning bidder takes the four Zamin cards, discards four cards and chooses the trump suit."
+      ],
+      [
+        "Play with your partner",
+        "Follow the led suit when you can. If you cannot, play another suit or a trump. The highest trump wins the trick; without trump, the highest card of the led suit wins."
+      ],
+      [
+        "Check the score",
+        "Review completed rounds in the scoreboard. Bazimoon’s match target is 660 points."
+      ]
+    ],
+    "features": [
+      "Private rooms with invitation links and room codes",
+      "Host controls for seats and teams before the match",
+      "Bots for practice or filling empty seats",
+      "In-room voice chat with microphone and mute controls",
+      "Round-by-round scoreboard and match totals",
+      "English and Persian, including right-to-left layouts"
+    ],
+    "faq": [
+      [
+        "How many people play Shelem?",
+        "A table has four seats in two teams of two. Partners sit opposite each other. You can play with friends or fill seats with bots."
+      ],
+      [
+        "Can I play Shelem without downloading an app?",
+        "Yes. Open Bazimoon in your mobile or desktop browser. An internet connection is required for Shelem, including bot games."
+      ],
+      [
+        "Can the host change teams?",
+        "Yes, before the match starts. Moving a player onto an occupied seat swaps the two players. Guests need to confirm readiness after a change."
+      ],
+      [
+        "What is the difference between bidding 165 and calling Shelem?",
+        "A 165 bid is a points contract. Calling Shelem requires winning all 12 tricks and scores +330 if successful or −330 if unsuccessful in Bazimoon."
+      ],
+      [
+        "Why can’t I join an invitation?",
+        "The room may be full, the game may already have started, or the room may no longer exist. Ask the host for an invitation to an available room."
+      ]
+    ]
+  },
+  "fa": {
+    "name": "شلم",
+    "line": "شلم چهارنفره؛ بخوانید، حکم انتخاب کنید و با یارتان ببرید.",
+    "h1": "شلم آنلاین با دوستان یا ربات‌ها",
+    "title": "شلم آنلاین؛ بازی با دوستان یا ربات‌ها | بازیمون",
+    "description": "شلم آنلاین را در بازیمون بازی کنید؛ دعوت دوستان، انتخاب هم‌تیمی، تمرین با ربات و جدول امتیازات هر دست. فارسی و انگلیسی، مستقیم در مرورگر.",
+    "intro": "میز شلم را به جمع آنلاین دوستانتان بیاورید. چهار بازیکن در دو تیم دونفره بازی می‌کنند؛ امتیاز می‌خوانند، حکم انتخاب می‌کنند و برای رسیدن به تعهدشان دست می‌برند. در بازیمون می‌توانید میز بسازید و دوستانتان را با لینک یا کد اتاق دعوت کنید، یا با ربات‌ها بازی کنید. بازی روی مرورگر گوشی و کامپیوتر اجرا می‌شود و محیط فارسی و انگلیسی دارد.",
+    "steps": [
+      [
+        "میز و تیم‌ها را آماده کنید",
+        "یک اتاق بسازید و دعوت‌نامه را بفرستید. میزبان می‌تواند پیش از شروع بازی، صندلی یا هم‌تیمی بازیکنان را تغییر دهد. مهمان‌ها بعد از تغییر تیم‌ها دوباره آمادگی خود را تأیید می‌کنند."
+      ],
+      [
+        "امتیاز بخوانید",
+        "هر بازیکن ۱۲ کارت می‌گیرد و چهار کارت روی زمین می‌ماند. می‌توانید از ۱۰۰ تا ۱۶۵، با فاصله‌های پنج‌امتیازی و بالاتر از پیشنهاد قبلی بخوانید یا پاس بدهید. اعلام شلم گزینه‌ای جداگانه برای تعهد به بردن تمام دست‌هاست."
+      ],
+      [
+        "زمین و حکم را انتخاب کنید",
+        "برندهٔ مزایده چهار کارت زمین را برمی‌دارد، چهار کارت کنار می‌گذارد و خال حکم را مشخص می‌کند."
+      ],
+      [
+        "با یارتان دست ببرید",
+        "اگر از خال شروع‌شده کارت دارید، باید همان خال را بازی کنید. در غیر این صورت می‌توانید کارت دیگری یا حکم بیندازید. بالاترین حکم برنده است؛ اگر حکم بازی نشده باشد، بالاترین کارت از خال شروع‌شده دست را می‌برد."
+      ],
+      [
+        "امتیازها را دنبال کنید",
+        "نتیجهٔ دورهای تمام‌شده را در جدول امتیازات ببینید. امتیاز هدف مسابقه در بازیمون ۶۶۰ است."
+      ]
+    ],
+    "features": [
+      "اتاق خصوصی با لینک دعوت و کد ورود",
+      "تغییر صندلی و تیم بازیکنان توسط میزبان پیش از شروع",
+      "بازی تمرینی با ربات و پر کردن صندلی‌های خالی",
+      "گفت‌وگوی صوتی با کنترل میکروفن و قطع صدای بازیکنان",
+      "جدول امتیازات هر دور و مجموع امتیاز تیم‌ها",
+      "محیط فارسی راست‌به‌چپ و نسخهٔ انگلیسی"
+    ],
+    "faq": [
+      [
+        "شلم چندنفره است؟",
+        "شلم چهار صندلی دارد و در دو تیم دونفره بازی می‌شود. هم‌تیمی‌ها روبه‌روی هم می‌نشینند. می‌توانید با دوستان بازی کنید یا صندلی‌ها را با ربات پر کنید."
+      ],
+      [
+        "برای شلم آنلاین باید برنامه نصب کنم؟",
+        "نه. بازیمون را در مرورگر گوشی یا کامپیوتر باز کنید. بازی شلم، حتی با ربات‌ها، به اینترنت نیاز دارد."
+      ],
+      [
+        "میزبان می‌تواند تیم‌ها را عوض کند؟",
+        "بله، پیش از شروع مسابقه. اگر صندلی مقصد پر باشد، جای دو بازیکن عوض می‌شود. مهمان‌ها پس از تغییر باید دوباره آماده شوند."
+      ],
+      [
+        "خواندن ۱۶۵ چه فرقی با اعلام شلم دارد؟",
+        "خواندن ۱۶۵ تعهد به گرفتن امتیاز است. با اعلام شلم باید هر ۱۲ دست را ببرید؛ در بازیمون موفقیت آن ۳۳۰ امتیاز مثبت و شکست آن ۳۳۰ امتیاز منفی دارد."
+      ],
+      [
+        "چرا لینک دعوت وارد بازی نمی‌شود؟",
+        "ممکن است میز پر باشد، بازی شروع شده باشد یا اتاق دیگر وجود نداشته باشد. از میزبان دعوت‌نامهٔ یک میز در دسترس را بگیرید."
+      ]
+    ]
+  }
+},
   {
     slug: 'zip', bg: '#173A36', fg: '#5FD0BE', group: 'puzzles',
     en: {
@@ -366,6 +492,7 @@ export const games: Game[] = [
 
 /** The app route each game page opens (see readDeepLink's "play" link). */
 export const appGame: Record<string, string> = {
+  shelem: 'shelem',
   zip: 'zip', queens: 'queens', sudoku: 'sudoku', '2048': 'merge', minesweeper: 'mines', 'daily-word': 'word', 'word-ladder': 'ladder',
   'esm-famil': 'esmfamil', mafia: 'mafia', spy: 'spy', 'couple-quiz': 'couple', 'tic-tac-toe': 'dooz', memory: 'memory',
   'stack-tower': 'stack', snake: 'snake', blocks: 'blocks',
