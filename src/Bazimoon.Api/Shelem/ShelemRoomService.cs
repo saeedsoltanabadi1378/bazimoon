@@ -84,6 +84,15 @@ public sealed class ShelemRoomService
         room.Game.AddPlayer(userId, name);
     }, requireMember: false);
 
+    public Task<ShelemRoomView> MovePlayerAsync(string code, Guid userId, int fromSeat, int toSeat) => Act(code, userId, (room, _) =>
+    {
+        RequireHost(room, userId);
+        room.Game.MovePlayer(fromSeat, toSeat);
+        if (fromSeat != toSeat)
+            foreach (var player in room.Game.Players)
+                player.Ready = player.IsBot || player.UserId == room.HostUserId;
+    });
+
     public Task<ShelemRoomView> ReadyAsync(string code, Guid userId, bool ready) => Act(code, userId, (room, me) => room.Game.SetReady(me!.Seat, ready));
 
     public Task<ShelemRoomView> StartAsync(string code, Guid userId, bool fillBots) => Act(code, userId, (room, _) =>

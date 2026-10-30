@@ -25,6 +25,7 @@ export const shelemApi = (api: BazimoonApiClient) => ({
   create: (withBots: boolean) => api.request<ShelemRoom>("POST", "/api/shelem/rooms", { withBots }),
   get: (code: string) => api.request<ShelemRoom>("GET", base(code)),
   join: (code: string) => api.request<ShelemRoom>("POST", `${base(code)}/join`),
+  movePlayer: (code: string, fromSeat: number, toSeat: number) => api.request<ShelemRoom>("POST", `${base(code)}/seats`, { fromSeat, toSeat }),
   ready: (code: string, ready: boolean) => api.request<ShelemRoom>("POST", `${base(code)}/ready`, { ready }),
   start: (code: string, fillBots: boolean) => api.request<ShelemRoom>("POST", `${base(code)}/start`, { fillBots }),
   bid: (code: string, bid: number | null, shelem = false) => api.request<ShelemRoom>("POST", `${base(code)}/bid`, { bid, shelem }),

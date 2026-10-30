@@ -6,7 +6,7 @@ public enum ShelemPhase { Lobby, Bidding, Discard, Trump, Playing, RoundResult, 
 
 public sealed class ShelemPlayer
 {
-    public int Seat { get; init; }
+    public int Seat { get; internal set; }
     public Guid? UserId { get; init; }
     public string Name { get; init; } = string.Empty;
     public bool IsBot { get; init; }
@@ -53,7 +53,7 @@ public sealed class ShelemGame
         var existing = Players.FirstOrDefault(p => p.UserId == userId);
         if (existing is not null) return existing;
         if (Players.Count >= 4) throw new GameException("This room is full.", "room_full");
-        var player = new ShelemPlayer { Seat = Players.Count, UserId = userId, Name = CleanName(name), IsBot = isBot, Ready = isBot };
+        var player = new ShelemPlayer { Seat = Enumerable.Range(0, 4).First(seat => Players.All(p => p.Seat != seat)), UserId = userId, Name = CleanName(name), IsBot = isBot, Ready = isBot };
         Players.Add(player);
         return player;
     }
@@ -61,9 +61,21 @@ public sealed class ShelemGame
     public ShelemPlayer AddBot(string name)
     {
         if (Players.Count >= 4) throw new GameException("This room is full.", "room_full");
-        var player = new ShelemPlayer { Seat = Players.Count, Name = name, IsBot = true, Ready = true };
+        var player = new ShelemPlayer { Seat = Enumerable.Range(0, 4).First(seat => Players.All(p => p.Seat != seat)), Name = name, IsBot = true, Ready = true };
         Players.Add(player);
         return player;
+    }
+
+    public void MovePlayer(int fromSeat, int toSeat)
+    {
+        RequirePhase(ShelemPhase.Lobby);
+        if (toSeat is < 0 or > 3) throw new GameException("Invalid destination seat.", "invalid_seat");
+        var player = Player(fromSeat);
+        if (fromSeat == toSeat) return;
+        var other = Players.FirstOrDefault(p => p.Seat == toSeat);
+        player.Seat = toSeat;
+        if (other is not null) other.Seat = fromSeat;
+        Players.Sort((a, b) => a.Seat.CompareTo(b.Seat));
     }
 
     public void SetReady(int seat, bool ready)

@@ -12,6 +12,7 @@ public static class ShelemEndpoints
         rooms.MapPost("", (CreateShelemRequest request, ShelemRoomService service, HttpContext http) => service.CreateAsync(http.User.GetUserId(), http.User.GetDisplayName(), request.WithBots));
         rooms.MapGet("/{code}", (string code, ShelemRoomService service, HttpContext http) => service.GetAsync(code, http.User.GetUserId()));
         rooms.MapPost("/{code}/join", (string code, ShelemRoomService service, HttpContext http) => service.JoinAsync(code, http.User.GetUserId(), http.User.GetDisplayName()));
+        rooms.MapPost("/{code}/seats", (string code, MoveShelemPlayerRequest request, ShelemRoomService service, HttpContext http) => service.MovePlayerAsync(code, http.User.GetUserId(), request.FromSeat, request.ToSeat));
         rooms.MapPost("/{code}/ready", (string code, ReadyShelemRequest request, ShelemRoomService service, HttpContext http) => service.ReadyAsync(code, http.User.GetUserId(), request.Ready));
         rooms.MapPost("/{code}/start", (string code, StartShelemRequest request, ShelemRoomService service, HttpContext http) => service.StartAsync(code, http.User.GetUserId(), request.FillBots));
         rooms.MapPost("/{code}/bid", (string code, BidShelemRequest request, ShelemRoomService service, HttpContext http) => service.BidAsync(code, http.User.GetUserId(), request.Bid, request.Shelem));
@@ -38,3 +39,5 @@ public sealed record BidShelemRequest(int? Bid, bool Shelem);
 public sealed record CardsShelemRequest(List<string> Cards);
 public sealed record TrumpShelemRequest(string Suit);
 public sealed record PlayShelemRequest(string Card);
+
+public sealed record MoveShelemPlayerRequest(int FromSeat, int ToSeat);

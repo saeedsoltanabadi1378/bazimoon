@@ -100,6 +100,9 @@ export function ShelemRoomScreen({ code }: { code: string }) {
   const [localMutes, setLocalMutes] = useState<Set<number>>(() => new Set());
   const voice = useRef(new VoiceSession());
   const version = useRef(-1);
+  const loadBlocked = useRef(false);
+  const [entryError, setEntryError] = useState<string | null>(null);
+  const hasRoom = room !== null;
   const polling = useRef(false);
   const queued = useRef(false);
   const [live, setLive] = useState(false);
@@ -125,14 +128,21 @@ export function ShelemRoomScreen({ code }: { code: string }) {
   }, [round]);
 
   const load = useCallback(async function refresh(): Promise<void> {
+    if (loadBlocked.current) return;
     // A push that lands mid-request must not be lost: fetch once more when the current request ends.
     if (polling.current || submitting.current) { queued.current = true; return; }
     polling.current = true;
     try {
-      const next = await api.get(code);
+      const next = version.current < 0 ? await api.join(code) : await api.get(code);
       if (next.version > version.current) { version.current = next.version; setRoom(next); }
       setReconnecting(false);
-    } catch { setReconnecting(true); }
+    } catch (error) {
+      if (error instanceof ApiError && (['room_not_found', 'room_full', 'already_started'].includes(error.code ?? '') || [400, 403, 404, 409].includes(error.status))) {
+        loadBlocked.current = true;
+        setEntryError(error.code === 'room_full' ? 'shelemInviteFull' : error.code === 'already_started' ? 'shelemInviteStarted' : error.code === 'room_not_found' ? 'shelemRoomNotFound' : 'shelemCouldNotOpen');
+        setReconnecting(false);
+      } else setReconnecting(true);
+    }
     finally {
       polling.current = false;
       if (queued.current) { queued.current = false; void refresh(); }
@@ -140,13 +150,14 @@ export function ShelemRoomScreen({ code }: { code: string }) {
   }, [api, code]);
 
   useEffect(() => {
+    if (!hasRoom) return;
     let cancelled = false;
     let hub: Awaited<ReturnType<typeof connectToShelemRoom>> | null = null;
     connectToShelemRoom(import.meta.env.VITE_API_BASE_URL, () => session.api.getToken() ?? "", code, () => void load(), (state) => { if (!cancelled) setLive(state === "connected"); })
       .then((connection) => { if (cancelled) void connection.stop(); else hub = connection; })
       .catch(() => { if (!cancelled) setLive(false); });
     return () => { cancelled = true; void hub?.stop(); };
-  }, [code, load, session.api]);
+  }, [code, load, session.api, hasRoom]);
   // Pushes drive the room; polling stays as a slow safety net, and takes over while the live link is down.
   useEffect(() => { void load(); const id = window.setInterval(() => void load(), live ? 5000 : 550); return () => window.clearInterval(id); }, [load, live]);
   useEffect(() => () => { void voice.current.leave(); }, []);
@@ -174,7 +185,7 @@ export function ShelemRoomScreen({ code }: { code: string }) {
   async function toggleMic() { const next = !micMuted; await voice.current.setMuted(next); setMicMuted(next); }
   function togglePlayer(uid: number) { const next = !localMutes.has(uid); voice.current.setRemoteMuted(uid, next); setLocalMutes((old) => { const copy = new Set(old); if (next) copy.add(uid); else copy.delete(uid); return copy; }); }
 
-  if (!room) return <Screen theme="night"><TopBar onBack={back} title={t("gameShelem")} /><Body>{reconnecting ? <div role="status"><p>{t('shelemReconnecting')}</p><button className="btn" onClick={()=>void load()}>{t('shelemRetry')}</button></div> : <div className="skeleton" style={{ height: 420 }} />}</Body></Screen>;
+  if (!room) return <Screen theme="night"><TopBar onBack={back} title={t("gameShelem")} /><Body>{entryError ? <div role="alert"><p>{t(entryError as "shelemCouldNotOpen")}</p><button className="btn" onClick={back}>{t("back")}</button></div> : reconnecting ? <div role="status"><p>{t('shelemReconnecting')}</p><button className="btn" onClick={()=>void load()}>{t('shelemRetry')}</button></div> : <div className="skeleton" style={{ height: 420 }} />}</Body></Screen>;
   const me = room.players.find((p) => p.isYou);
   const dealing = room.phase === 'bidding' && dealtRound !== room.round;
   const myTurn = room.yourSeat === room.turnSeat;
@@ -193,7 +204,7 @@ export function ShelemRoomScreen({ code }: { code: string }) {
     {(busy || reconnecting || moveRejected) && <div className="shelem-network" role="status">{busy ? t('shelemSending') : reconnecting ? t('shelemReconnecting') : t('shelemMoveRejected')}{!busy && <button type="button" onClick={()=>{setMoveRejected(false); void load();}}>{t('shelemRetry')}</button>}</div>}
 
     {room.phase === "lobby" ? <Lobby room={room} busy={busy} voiceOn={voiceOn} micMuted={micMuted} localMutes={localMutes} onVoice={() => void joinVoice()} onMic={() => void toggleMic()} onPlayerMute={togglePlayer}
-      onReady={() => void act(() => api.ready(code, !me?.ready))} onStart={(fill) => void act(() => api.start(code, fill))} /> :
+      onMove={(from, to) => void act(() => api.movePlayer(code, from, to))} onReady={() => void act(() => api.ready(code, !me?.ready))} onStart={(fill) => void act(() => api.start(code, fill))} /> :
       <GameTable room={room} />}
 
     {error && <div className="shelem-toast" role="alert">{error}</div>}
@@ -246,17 +257,18 @@ function DealSequence({ room }: { room: ShelemRoom }) {
   </div>;
 }
 
-function Lobby({ room, busy, voiceOn, micMuted, localMutes, onVoice, onMic, onPlayerMute, onReady, onStart }: {
-  room: ShelemRoom; busy: boolean; voiceOn: boolean; micMuted: boolean; localMutes: Set<number>; onVoice(): void; onMic(): void; onPlayerMute(uid: number): void; onReady(): void; onStart(fill: boolean): void;
+function Lobby({ room, busy, voiceOn, micMuted, localMutes, onVoice, onMic, onPlayerMute, onReady, onStart, onMove }: {
+  room: ShelemRoom; busy: boolean; voiceOn: boolean; micMuted: boolean; localMutes: Set<number>; onVoice(): void; onMic(): void; onPlayerMute(uid: number): void; onReady(): void; onStart(fill: boolean): void; onMove(from: number, to: number): void;
 }) {
   const { t } = useLanguage();
   const me = room.players.find((p) => p.isYou);
   const invite = async () => void await shareLink(appLink(`sh_${room.code.replace("SH-", "")}`), t("shelemInviteText", { code: room.code }));
   return <Body style={{ gap: 16, paddingBottom: 180 }}>
     <section className="shelem-room-code"><span><small>{t("shelemRoomCode")}</small><b dir="ltr">{room.code}</b></span><button className="btn btn--outline btn--auto" onClick={() => void invite()}><Icon name="share" size={17} /> {t("share")}</button></section>
-    <div className="shelem-lobby-seats">{[0, 1, 2, 3].map((seat) => {
+    <section className="stack stack--sm"><h2 className="h2">{t("shelemTeamSetup")}</h2><p className="small muted">{t(room.youAreHost ? "shelemTeamSetupHost" : "shelemTeamSetupGuest")}</p></section>
+    <div className="shelem-lobby-seats">{[0, 2, 1, 3].map((seat) => {
       const p = room.players.find((x) => x.seat === seat);
-      return <div className={`shelem-lobby-seat${p?.ready ? " is-ready" : ""}`} key={seat}><span className="shelem-seat-avatar">{p?.isBot ? "✦" : p?.name?.[0]?.toUpperCase() ?? "+"}</span><b>{p?.name ?? t("shelemOpenSeat")}</b><small>{seat % 2 === 0 ? t("shelemTeamA") : t("shelemTeamB")}{p?.isBot ? ` · ${t("shelemBot")}` : ""}</small>{p?.ready && <Icon name="check" size={16} />}</div>;
+      return <div className={`shelem-lobby-seat${p?.ready ? " is-ready" : ""}`} key={seat}><span className="shelem-seat-avatar">{p?.isBot ? "✦" : p?.name?.[0]?.toUpperCase() ?? "+"}</span><b>{p?.name ?? t("shelemOpenSeat")}</b><small>{seat % 2 === 0 ? t("shelemTeamA") : t("shelemTeamB")}{p?.isBot ? ` · ${t("shelemBot")}` : ""}</small>{p?.ready && <Icon name="check" size={16} />}{room.youAreHost && p && <label className="shelem-seat-control"><span>{t('shelemMovePlayer', { name: p.name })}</span><select value={seat} disabled={busy} onChange={event => onMove(seat, Number(event.target.value))}>{[0,2,1,3].map(target => <option key={target} value={target}>{t(target % 2 === 0 ? 'shelemTeamA' : 'shelemTeamB')} · {t('shelemSeatNumber', { n: Math.floor(target / 2) + 1 })}{room.players.find(player => player.seat === target) ? ` · ${room.players.find(player => player.seat === target)?.name}` : ` · ${t('shelemOpenSeat')}`}</option>)}</select></label>}</div>;
     })}</div>
     <VoicePanel room={room} voiceOn={voiceOn} micMuted={micMuted} localMutes={localMutes} onVoice={onVoice} onMic={onMic} onPlayerMute={onPlayerMute} />
     <div className="card small muted"><Icon name="shield" size={18} /> {t("shelemFairBots")}</div>
