@@ -1509,7 +1509,7 @@ html[lang="fa"] .kicker {
 .screen > .shelem-actions { max-height:42%; overflow-y:auto; }
 .screen > .shelem-hand { position:relative; z-index:16; min-height:112px; }
 .shelem-topbar,.shelem-hand { flex-shrink:0; }
-.shelem-hand .playing-card { animation:shelem-deal-in 450ms both; }
+.shelem-hand .playing-card { animation:none; transition:transform 180ms cubic-bezier(.2,.75,.25,1), margin-left 220ms ease, opacity 100ms ease, box-shadow 180ms ease; }
 .shelem-actions input[type=range] { width:100%; accent-color:#E2B86B; }
 .shelem-actions small { display:block; color:var(--text-2); }
 .shelem-slam { background:linear-gradient(135deg,#E2B86B,#C78A37); color:#241806; }

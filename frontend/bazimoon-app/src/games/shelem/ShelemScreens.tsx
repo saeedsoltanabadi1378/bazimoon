@@ -90,6 +90,7 @@ export function ShelemRoomScreen({ code }: { code: string }) {
   const [error, setError] = useState<string | null>(null);
   const [selected, setSelected] = useState<string[]>([]);
   const [playSelection, setPlaySelection] = useState<string | null>(null);
+  const [pendingCard, setPendingCard] = useState<string | null>(null);
   useEffect(() => { setPlaySelection(null); }, [room?.turnSeat, room?.round, room?.phase]);
   const [bid, setBid] = useState(100);
   const [voiceOn, setVoiceOn] = useState(false);
@@ -217,8 +218,8 @@ export function ShelemRoomScreen({ code }: { code: string }) {
         const selectable = room.phase === "discard" && myTurn;
         const playable = room.phase !== "playing" || !myTurn || room.legalCards.includes(card);
         const canPlay = !busy && !dealing && room.hand.includes(card) && room.phase === 'playing' && myTurn && playable;
-        const play = () => { setPlaySelection(null); void act(() => api.play(code, card)); };
-        return <PlayingCard key={`${room.round}-${card}`} code={card} selected={playSelection===card} faceDown={dealing} dropTarget={selectable ? '.shelem-zamin' : '.shelem-table'} playable={playable} onDrop={canPlay ? play : undefined} onClick={busy || dealing || !room.hand.includes(card) ? undefined : selectable ? () => setSelected((old) => old.length < 4 && !old.includes(card) ? [...old, card] : old) : canPlay ? () => playSelection===card ? play() : setPlaySelection(card) : undefined} style={{ zIndex: playSelection===card ? 30 : i, opacity: room.hand.includes(card) ? 1 : 0, '--hand-n': cards.length } as CSSProperties} />;
+        const play = () => { setPlaySelection(null); setPendingCard(card); void act(() => api.play(code, card)).finally(()=>setPendingCard(null)); };
+        return <PlayingCard key={`${room.round}-${card}`} code={card} selected={playSelection===card} faceDown={dealing} dropTarget={selectable ? '.shelem-zamin' : '.shelem-table'} playable={playable} onDrop={canPlay ? play : undefined} onClick={busy || dealing || !room.hand.includes(card) ? undefined : selectable ? () => setSelected((old) => old.length < 4 && !old.includes(card) ? [...old, card] : old) : canPlay ? () => playSelection===card ? play() : setPlaySelection(card) : undefined} style={{ zIndex: playSelection===card ? 30 : i, opacity: room.hand.includes(card) && pendingCard!==card ? 1 : 0, '--hand-n': cards.length } as CSSProperties} />;
       })}
     </div>}
   </Screen>;

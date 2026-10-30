@@ -11,7 +11,7 @@ const SUITS = {
 export function PlayingCard({ code, faceDown = false, size = "hand", selected = false, playable = true, onClick, onDrop, style, dropTarget = '.shelem-table' }: {
   code?: string; faceDown?: boolean; size?: CardSize; selected?: boolean; playable?: boolean; onClick?: () => void; onDrop?: () => void; style?: CSSProperties; dropTarget?: string;
 }) {
-  const drag = useRef<{ x: number; y: number; moved: boolean } | null>(null);
+  const drag = useRef<{ x: number; y: number; moved: boolean; lift: number } | null>(null);
   const suit = code ? SUITS[code.at(-1) as keyof typeof SUITS] : null;
   const rank = code?.slice(0, -1).replace("T", "10") ?? "";
   const assetRank = ({ A: 'ace', K: 'king', Q: 'queen', J: 'jack' } as Record<string, string>)[rank] ?? rank;
@@ -19,8 +19,8 @@ export function PlayingCard({ code, faceDown = false, size = "hand", selected = 
   return (
     <button
       type="button" className={`playing-card playing-card--${size}${faceDown ? " is-back" : ""}${selected ? " is-selected" : ""}${playable ? " is-playable" : " is-blocked"}`}
-      onPointerDown={(e) => { if (!onClick) return; e.currentTarget.getAnimations().forEach(animation => animation.cancel()); drag.current = { x: e.clientX, y: e.clientY, moved: false }; e.currentTarget.setPointerCapture(e.pointerId); }}
-      onPointerMove={(e) => { const d = drag.current; if (!d) return; const x = e.clientX-d.x, y = e.clientY-d.y; if (Math.hypot(x,y)>8) d.moved=true; if(d.moved) { e.currentTarget.style.transform=`translate(${x}px, ${y}px) rotate(${x/15}deg) scale(1.15)`; e.currentTarget.style.zIndex='100'; } }}
+      onPointerDown={(e) => { if (!onClick) return; e.currentTarget.getAnimations().forEach(animation => animation.cancel()); drag.current = { x: e.clientX, y: e.clientY, moved: false, lift:selected ? -18 : 0 }; e.currentTarget.setPointerCapture(e.pointerId); }}
+      onPointerMove={(e) => { const d = drag.current; if (!d) return; const x = e.clientX-d.x, y = e.clientY-d.y; if (Math.hypot(x,y)>8) d.moved=true; if(d.moved) { e.currentTarget.style.transition='none'; e.currentTarget.style.transform=`translate3d(${x}px, ${y+d.lift}px,0) rotate(${Math.max(-12,Math.min(12,x/25))}deg) scale(1.08)`; e.currentTarget.style.zIndex='100'; } }}
       onPointerUp={(e) => {
         const d = drag.current;
         if (!d) return;
@@ -56,11 +56,12 @@ export function PlayingCard({ code, faceDown = false, size = "hand", selected = 
           (onDrop ?? onClick)();
         }
         card.style.transform = '';
+        card.style.transition = '';
         card.style.zIndex = String(style?.zIndex ?? '');
-        if (d.moved && !target && !reduced) card.animate([{transform}, {transform:'translate(0,0) rotate(0deg)'}], {duration:220, easing:'cubic-bezier(.2,.8,.2,1)'});
+        if (d.moved && !target && !reduced) card.animate([{transform}, {transform:selected ? 'translateY(-18px) rotate(-1deg)' : 'translate(0,0) rotate(0deg)'}], {duration:220, easing:'cubic-bezier(.2,.8,.2,1)'});
       }}
-      onPointerCancel={(e) => { drag.current=null; e.currentTarget.style.transform=''; e.currentTarget.style.zIndex=String(style?.zIndex ?? ''); }}
-      onClick={() => { if(!drag.current?.moved) onClick?.(); drag.current=null; }} disabled={!onClick} aria-label={label} aria-pressed={onClick ? selected : undefined} style={{...style, touchAction: onClick ? 'none' : undefined}}
+      onPointerCancel={(e) => { drag.current=null; e.currentTarget.style.transform=''; e.currentTarget.style.transition=''; e.currentTarget.style.zIndex=String(style?.zIndex ?? ''); }}
+      onClick={(e) => { if(!drag.current?.moved) { if (selected && onDrop && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) animateTapPlay(e.currentTarget); onClick?.(); } drag.current=null; }} disabled={!onClick} aria-label={label} aria-pressed={onClick ? selected : undefined} style={{...style, touchAction: onClick ? 'none' : undefined}}
     >
       {faceDown || !suit ? (
         <span className="playing-card__back"><span className="playing-card__moon">✦</span></span>
@@ -69,6 +70,22 @@ export function PlayingCard({ code, faceDown = false, size = "hand", selected = 
       )}
     </button>
   );
+}
+
+function animateTapPlay(card: HTMLButtonElement) {
+  const target = card.closest('.screen')?.querySelector('.shelem-trick');
+  if (!target) return;
+  const start = card.getBoundingClientRect();
+  const end = target.getBoundingClientRect();
+  const ghost = card.cloneNode(true) as HTMLButtonElement;
+  ghost.setAttribute('aria-hidden', 'true');
+  ghost.disabled = true;
+  Object.assign(ghost.style, {position:'fixed', left:`${start.left}px`, top:`${start.top}px`, width:`${start.width}px`, height:`${start.height}px`, margin:'0', transform:'none', animation:'none', transition:'none', zIndex:'1000', pointerEvents:'none'});
+  document.body.appendChild(ghost);
+  const x = end.left + end.width / 2 - start.left - start.width / 2;
+  const y = end.top + end.height * 5 / 6 - start.top - start.height / 2;
+  const animation = ghost.animate([{transform:'translate(0,0)',opacity:1},{transform:`translate(${x}px,${y}px) scale(.9)`,opacity:1,offset:.85},{transform:`translate(${x}px,${y}px) scale(.9)`,opacity:0}], {duration:320,easing:'cubic-bezier(.2,.75,.25,1)'});
+  void animation.finished.catch(()=>{}).finally(()=>ghost.remove());
 }
 
 export function CardBackFan({ count, vertical = false }: { count: number; vertical?: boolean }) {
