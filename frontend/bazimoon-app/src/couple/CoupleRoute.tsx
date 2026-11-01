@@ -4,7 +4,7 @@ import { useNavigation } from "../app/router";
 import { useLanguage } from "../i18n/LanguageContext";
 import { useHub, useLoad } from "../hub/HubData";
 import { useCoupleApi } from "./useCoupleApi";
-import { type CoupleDay, type CoupleState } from "../api/couple";
+import { type CoupleDay, type CoupleLevel, type CoupleState, type CoupleStats } from "../api/couple";
 import { ApiError } from "../api/client";
 import { Body, IconButton, Screen, Toast } from "../ui/components";
 import { LoadingScreen, StateScreen } from "../app/StateScreen";
@@ -15,6 +15,7 @@ import { readLocal, removeLocal, writeLocal } from "../lib/storage";
 import { haptic } from "../lib/haptics";
 import { useCountdown } from "../games/zip/ZipScreens";
 import { fillName, questionSet } from "./questions";
+import { BADGES, tierFor, type CoupleBadge } from "./levels";
 
 const PINK = "#F2A7C3";
 const PINK_INK = "#2A0F1C";
@@ -258,6 +259,96 @@ function CoupleJoin({ token }: { token: string }) {
   );
 }
 
+// ---------------------------------------------------------------- level and badges
+
+/** Level ring with the tier name and the points still needed for the next level. */
+function LevelCard({ progress }: { progress: CoupleLevel }) {
+  const { t, n } = useLanguage();
+  const tier = tierFor(progress.level);
+  const maxed = progress.cost === 0;
+  const share = maxed ? 1 : progress.points / progress.cost;
+  const r = 32;
+  const c = 2 * Math.PI * r;
+  const gradient = `linear-gradient(90deg, ${tier.from}, ${tier.to})`;
+  return (
+    <section className="stack" style={{ gap: 12, padding: 16, borderRadius: 22, background: `radial-gradient(120% 140% at 0% 0%, ${tier.to}33, transparent 60%), ${ROSE_BG}`, border: `1px solid ${tier.to}55` }}>
+      <div className="row" style={{ gap: 14 }}>
+        <div style={{ position: "relative", width: 80, height: 80, flex: "none" }}>
+          <svg width="80" height="80" viewBox="0 0 80 80" aria-hidden="true" style={{ transform: "rotate(-90deg)" }}>
+            <defs>
+              <linearGradient id="couple-level-ring" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0" stopColor={tier.from} />
+                <stop offset="1" stopColor={tier.to} />
+              </linearGradient>
+            </defs>
+            <circle cx="40" cy="40" r={r} fill="none" stroke="#3A2030" strokeWidth="7" />
+            <circle cx="40" cy="40" r={r} fill="none" stroke="url(#couple-level-ring)" strokeWidth="7" strokeLinecap="round" strokeDasharray={c} strokeDashoffset={c * (1 - share)} style={{ transition: "stroke-dashoffset 700ms ease" }} />
+          </svg>
+          <div className="stack center" style={{ position: "absolute", inset: 0, justifyContent: "center", gap: 0 }}>
+            <span style={{ fontSize: 15, lineHeight: 1 }} aria-hidden="true">{tier.emoji}</span>
+            <span className="display num" style={{ fontSize: 24, fontWeight: 800, lineHeight: 1.1 }}>{n(progress.level)}</span>
+          </div>
+        </div>
+        <div className="grow stack" style={{ gap: 4, minWidth: 0 }}>
+          <span className="kicker" style={{ color: tier.from }}>{t("coupleLevelOf", { level: progress.level, max: progress.maxLevel })}</span>
+          <span className="display" style={{ fontSize: 21, fontWeight: 800, lineHeight: 1.15 }}>{t(tier.name)}</span>
+          <span className="tiny" style={{ color: "#D9C9D1" }}>{maxed ? t("coupleLevelMax") : t("coupleLevelProgress", { points: progress.points, target: progress.cost, next: progress.level + 1 })}</span>
+        </div>
+      </div>
+      <div style={{ height: 8, borderRadius: 999, background: "#3A2030", overflow: "hidden" }} role="progressbar" aria-valuemin={0} aria-valuemax={progress.cost || 1} aria-valuenow={maxed ? 1 : progress.points}>
+        <div style={{ width: `${Math.round(share * 100)}%`, height: "100%", borderRadius: 999, background: gradient, boxShadow: `0 0 12px ${tier.to}`, transition: "width 700ms ease" }} />
+      </div>
+      <span className="tiny muted">{t("coupleLevelHow")}</span>
+    </section>
+  );
+}
+
+function BadgeShelf({ stats, level, onPick }: { stats: CoupleStats; level: number; onPick: (badge: CoupleBadge, earned: boolean) => void }) {
+  const { t, n } = useLanguage();
+  const earned = BADGES.filter((b) => b.earned(stats, level)).length;
+  return (
+    <section className="stack" style={{ gap: 10 }}>
+      <div className="row row--between" style={{ alignItems: "baseline" }}>
+        <h2 className="h2">{t("coupleBadges")}</h2>
+        <span className="tiny muted">{t("coupleBadgesCount", { count: n(earned), total: n(BADGES.length) })}</span>
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(72px, 1fr))", gap: 8, padding: 12, borderRadius: 18, background: "var(--surface)" }}>
+        {BADGES.map((b) => {
+          const on = b.earned(stats, level);
+          return (
+            <button
+              key={b.id}
+              type="button"
+              onClick={() => onPick(b, on)}
+              aria-label={on ? t("coupleBadgeEarned", { badge: t(b.name) }) : t("coupleBadgeLocked", { badge: t(b.name), goal: t(b.goal) })}
+              className="stack center"
+              style={{ gap: 6, padding: "8px 2px", border: 0, borderRadius: 14, background: "transparent", color: "var(--text)", font: "inherit", cursor: "pointer" }}
+            >
+              <span
+                aria-hidden="true"
+                style={{
+                  width: 52, height: 52, borderRadius: 999, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24,
+                  background: on ? `radial-gradient(circle at 30% 25%, #FFF4F8, ${PINK} 55%, #C9578A)` : "#1E2138",
+                  border: on ? "2px solid #FFD6E5" : "2px dashed #3A3F5E",
+                  boxShadow: on ? `0 0 16px ${PINK}88` : "none",
+                  filter: on ? "none" : "grayscale(1)",
+                  opacity: on ? 1 : 0.45,
+                }}
+              >
+                {b.emoji}
+              </span>
+              <span style={{ fontSize: 11, lineHeight: 1.25, textAlign: "center", color: on ? "var(--text)" : "var(--muted)" }}>{t(b.name)}</span>
+            </button>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+/** What the home screen last showed, so a new level or badge gets a one-time celebration. */
+const seenKey = (partnerId: number) => `bazimoon-couple-seen-${partnerId}`;
+
 // ---------------------------------------------------------------- home
 
 function CoupleHome({ state, onChange }: { state: CoupleState; onChange: () => void }) {
@@ -268,12 +359,38 @@ function CoupleHome({ state, onChange }: { state: CoupleState; onChange: () => v
   const countdown = useCountdown();
   const couple = state.couple!;
   const today = couple.today;
-  const set = questionSet(today.setId, couple.language);
+  // Answers are stored as option indexes, so each partner reads the questions in their own app language.
+  const set = questionSet(today.setId, language);
   const [menu, setMenu] = useState(false);
   const [confirmLeave, setConfirmLeave] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const partner = couple.partnerName;
   const myName = profile?.name ?? "";
+  const level = couple.progress.level;
+  const earnedIds = BADGES.filter((b) => b.earned(couple.stats, level)).map((b) => b.id);
+  const earnedKey = earnedIds.join(",");
+
+  useEffect(() => {
+    if (!toast) return;
+    const id = window.setTimeout(() => setToast(null), 3200);
+    return () => window.clearTimeout(id);
+  }, [toast]);
+
+  // Celebrate a level or badge reached since this screen was last opened (but not on the very first visit).
+  useEffect(() => {
+    const ids = earnedKey ? earnedKey.split(",") : [];
+    const seen = readLocal<{ level: number; badges: string[] } | null>(seenKey(couple.partnerId), null);
+    writeLocal(seenKey(couple.partnerId), { level, badges: ids });
+    if (!seen) return;
+    const fresh = BADGES.find((b) => ids.includes(b.id) && !seen.badges.includes(b.id));
+    if (fresh) {
+      haptic.success();
+      setToast(`${fresh.emoji} ${t("coupleBadgeNew", { badge: t(fresh.name) })}`);
+    } else if (level > seen.level) {
+      haptic.success();
+      setToast(`${tierFor(level).emoji} ${t("coupleLevelUp", { level })}`);
+    }
+  }, [couple.partnerId, level, earnedKey, t]);
 
   const cta = today.youDone && today.partnerDone
     ? { label: t("coupleSeeReveal"), primary: true, go: () => push({ name: "couple", screen: "reveal", number: today.number }) }
@@ -328,7 +445,7 @@ function CoupleHome({ state, onChange }: { state: CoupleState; onChange: () => v
           {[
             [n(couple.streak), t("coupleDayStreak"), true],
             [`${n(couple.matchRate)}%`, t("coupleMatchRate"), false],
-            [t("coupleLevelShort", { level: n(couple.level) }), t("coupleLevel"), false],
+            [`${n(earnedIds.length)}/${n(BADGES.length)}`, t("coupleBadges"), false],
           ].map(([v, l, rose]) => (
             <div key={String(l)} style={{ padding: "12px 8px", borderRadius: 16, background: rose ? ROSE_BG : "var(--surface)", textAlign: "center" }}>
               <div style={{ fontSize: 22, fontWeight: 800, color: rose ? PINK : undefined }}>{v}</div>
@@ -360,6 +477,13 @@ function CoupleHome({ state, onChange }: { state: CoupleState; onChange: () => v
           </button>
         </section>
 
+        <LevelCard progress={couple.progress} />
+        <BadgeShelf
+          stats={couple.stats}
+          level={level}
+          onPick={(b, on) => setToast(`${b.emoji} ${on ? t("coupleBadgeEarned", { badge: t(b.name) }) : t("coupleBadgeLocked", { badge: t(b.name), goal: t(b.goal) })}`)}
+        />
+
         <section className="stack" style={{ gap: 10 }}>
           <div className="row row--between" style={{ alignItems: "baseline" }}>
             <h2 className="h2">{t("couplePastDays")}</h2>
@@ -378,7 +502,7 @@ function CoupleHome({ state, onChange }: { state: CoupleState; onChange: () => v
                   style={{ gap: 12, minHeight: 56, padding: "0 14px", border: 0, borderTop: i ? "1px solid #1E2138" : 0, background: "transparent", color: "var(--text)", textAlign: "start", cursor: "pointer", font: "inherit" }}
                 >
                   <span style={{ width: 70, fontSize: 13, color: "var(--muted)" }}>{formatShortDate(h.date, language)}</span>
-                  <span className="grow" style={{ fontSize: 14 }}>{questionSet(h.setId, couple.language).theme}</span>
+                  <span className="grow" style={{ fontSize: 14 }}>{questionSet(h.setId, language).theme}</span>
                   <span className="row" style={{ gap: 3 }} role="img" aria-label={t("coupleMatchedOf", { count: n(score) })}>
                     {h.matches.map((m, k) => <span key={k} style={{ width: 8, height: 8, borderRadius: 999, background: m ? PINK : "#3A3F5E" }} />)}
                   </span>
@@ -400,9 +524,6 @@ function CoupleHome({ state, onChange }: { state: CoupleState; onChange: () => v
                 style={{ minHeight: 36, borderRadius: 8, border: "1px solid #3A3F52", background: "#101218", color: "var(--text)", padding: "0 6px", font: "inherit" }}
               />
             </label>
-            <button type="button" role="menuitem" onClick={() => void save({ language: couple.language === "en" ? "fa" : "en" })} style={menuItem}>
-              {t("coupleQuestionLanguage", { language: couple.language === "fa" ? "فارسی" : "English" })}
-            </button>
             <button type="button" role="menuitem" onClick={() => { setMenu(false); setConfirmLeave(true); }} style={{ ...menuItem, color: "#F08A7A" }}>
               {t("coupleLeave")}
             </button>
@@ -437,7 +558,7 @@ interface QuizDraft {
 }
 
 function CoupleQuiz() {
-  const { t, n } = useLanguage();
+  const { t, n, language } = useLanguage();
   const { back, replace } = useNavigation();
   const { profile } = useHub();
   const capi = useCoupleApi();
@@ -449,7 +570,7 @@ function CoupleQuiz() {
   if (couple.today.youDone) {
     return <CoupleRevealView number={couple.today.number} />;
   }
-  return <QuizBoard key={couple.today.number} number={couple.today.number} setId={couple.today.setId} language={couple.language} partner={couple.partnerName} me={profile?.name ?? ""} onBack={back} onDone={(n) => replace({ name: "couple", screen: "reveal", number: n })} submit={capi.answer} t={t} fmt={n} />;
+  return <QuizBoard key={couple.today.number} number={couple.today.number} setId={couple.today.setId} language={language} partner={couple.partnerName} me={profile?.name ?? ""} onBack={back} onDone={(n) => replace({ name: "couple", screen: "reveal", number: n })} submit={capi.answer} t={t} fmt={n} />;
 }
 
 function QuizBoard({ number, setId, language, partner, me, onBack, onDone, submit, t, fmt }: {
@@ -604,7 +725,7 @@ function CoupleReveal({ number }: { number?: number }) {
 }
 
 function CoupleRevealView({ number }: { number: number }) {
-  const { t, n, language: uiLanguage } = useLanguage();
+  const { t, n, language } = useLanguage();
   const { back } = useNavigation();
   const { profile } = useHub();
   const capi = useCoupleApi();
@@ -614,7 +735,6 @@ function CoupleRevealView({ number }: { number: number }) {
   const { data: state } = useLoad(() => capi.state(), [capi]);
   const [nudged, setNudged] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
-  const language = state?.couple?.language ?? "en";
 
   // While waiting for the partner, check back every half minute so the reveal opens on its own.
   useEffect(() => {
@@ -637,7 +757,7 @@ function CoupleRevealView({ number }: { number: number }) {
       haptic.success();
       setNudged(true);
     } catch (err) {
-      setToast(err instanceof ApiError && uiLanguage === "en" ? err.message : t("coupleSomethingWrong"));
+      setToast(err instanceof ApiError && language === "en" ? err.message : t("coupleSomethingWrong"));
     }
   }
 
@@ -740,12 +860,21 @@ function CoupleRevealView({ number }: { number: number }) {
           </section>
         ))}
 
-        <section className="row row--between" style={{ padding: 14, borderRadius: 18, background: "var(--surface)" }}>
-          <div>
-            <div style={{ fontSize: 14, fontWeight: 600 }}>{t("coupleStreakDays", { count: n(day.streak) })}</div>
-            <div className="tiny muted">{t("coupleXpEach", { xp: n(day.xpEach), level: n(day.level) })}</div>
+        <section className="stack" style={{ gap: 10, padding: 14, borderRadius: 18, background: "var(--surface)" }}>
+          <div className="row row--between">
+            <div>
+              <div style={{ fontSize: 14, fontWeight: 600 }}>{t("coupleStreakDays", { count: n(day.streak) })}</div>
+              <div className="tiny muted">{t("coupleXpEach", { xp: n(day.xpEach), level: n(day.level) })}</div>
+            </div>
+            {isToday && <span style={{ fontSize: 13, color: PINK, fontWeight: 600 }}>{t("coupleNextIn", { time: countdown })}</span>}
           </div>
-          {isToday && <span style={{ fontSize: 13, color: PINK, fontWeight: 600 }}>{t("coupleNextIn", { time: countdown })}</span>}
+          <div className="row" style={{ gap: 8 }}>
+            <span aria-hidden="true">{tierFor(day.progress.level).emoji}</span>
+            <div className="grow" style={{ height: 6, borderRadius: 999, background: "#262A44", overflow: "hidden" }}>
+              <div style={{ width: `${day.progress.cost ? Math.round((100 * day.progress.points) / day.progress.cost) : 100}%`, height: "100%", borderRadius: 999, background: `linear-gradient(90deg, ${tierFor(day.progress.level).from}, ${tierFor(day.progress.level).to})` }} />
+            </div>
+            <span className="tiny muted">{day.progress.cost ? t("coupleLevelProgress", { points: day.progress.points, target: day.progress.cost, next: day.progress.level + 1 }) : t(tierFor(day.progress.level).name)}</span>
+          </div>
         </section>
       </Body>
       <div className="screen__bar screen__bar--row" style={{ gap: 8 }}>

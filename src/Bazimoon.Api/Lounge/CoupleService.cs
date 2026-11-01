@@ -80,17 +80,33 @@ public sealed class CoupleService
             })
             .ToList();
 
+        // Perfect days count over the couple's whole history, not just the recent days above.
+        var all = await _db.CoupleAnswers.Where(a => a.CoupleId == couple.Id).Select(a => new { a.Day, a.UserId, a.Answers }).ToListAsync();
+        int perfectDays = all
+            .GroupBy(a => a.Day)
+            .Count(g => g.Count() == 2 && CoupleRules.IsPerfect(CoupleRules.Matches(
+                CoupleRules.Parse(g.First(a => a.UserId == userId).Answers),
+                CoupleRules.Parse(g.First(a => a.UserId == partnerId).Answers))));
+
         return new CoupleDto(
             partnerId,
             await NameOfAsync(partnerId),
             today - start + 1,
             CoupleRules.CurrentStreak(couple.Streak, couple.LastBothDay, today),
             couple.TotalQuestions == 0 ? 0 : (int)Math.Round(100.0 * couple.TotalMatches / couple.TotalQuestions),
-            CoupleRules.Level(couple.TotalMatches),
+            CoupleRules.Level(CoupleRules.Points(couple)),
             couple.ReminderTime,
             couple.Language,
             new CoupleTodayDto(number, CoupleRules.SetForDay(number), youDone, partnerDone, nudgedDay == today),
-            history);
+            history,
+            ProgressOf(couple),
+            new CoupleStatsDto(couple.BestStreak, couple.TotalQuestions / (CoupleRules.QuestionsPerDay * 2), couple.TotalMatches, perfectDays));
+    }
+
+    private static CoupleLevelDto ProgressOf(CoupleRecord couple)
+    {
+        var (level, into, cost) = CoupleRules.LevelProgress(CoupleRules.Points(couple));
+        return new CoupleLevelDto(level, CoupleRules.MaxLevel, into, cost);
     }
 
     private async Task EnsureOnAsync()
@@ -226,12 +242,12 @@ public sealed class CoupleService
         {
             // Nobody peeks: the partner's answers stay hidden until both have finished.
             return new CoupleDayDto(number, CoupleRules.SetForDay(number), partnerName, false, mine is not null, theirs is not null,
-                mine is null ? null : CoupleRules.Parse(mine.Answers), null, null, streak, CoupleRules.Level(couple.TotalMatches), CoupleRules.XpEach, nudgedDay == Today);
+                mine is null ? null : CoupleRules.Parse(mine.Answers), null, null, streak, CoupleRules.Level(CoupleRules.Points(couple)), CoupleRules.XpEach, nudgedDay == Today, ProgressOf(couple));
         }
         var a = CoupleRules.Parse(mine.Answers);
         var b = CoupleRules.Parse(theirs.Answers);
         return new CoupleDayDto(number, CoupleRules.SetForDay(number), partnerName, true, true, true, a, b, CoupleRules.Matches(a, b),
-            streak, CoupleRules.Level(couple.TotalMatches), CoupleRules.XpEach, nudgedDay == Today);
+            streak, CoupleRules.Level(CoupleRules.Points(couple)), CoupleRules.XpEach, nudgedDay == Today, ProgressOf(couple));
     }
 
     public async Task NudgeAsync(Guid userId)

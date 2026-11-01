@@ -60,8 +60,31 @@ public static class CoupleRules
     /// <summary>Which themed set of questions a couple plays on their day #<paramref name="number"/>.</summary>
     public static int SetForDay(int number) => ((number - 1) % QuestionSetCount + QuestionSetCount) % QuestionSetCount;
 
-    /// <summary>Couple level grows with every matched guess.</summary>
-    public static int Level(int totalMatches) => 1 + totalMatches / 50;
+    public const int MaxLevel = 100;
+
+    /// <summary>Couple points: one per matched guess plus two for every day both partners finished.</summary>
+    public static int Points(CoupleRecord couple) => couple.TotalMatches + 2 * (couple.TotalQuestions / (QuestionsPerDay * 2));
+
+    /// <summary>Points it takes to go from <paramref name="level"/> to the next: 5 at level 1, one more every two levels.</summary>
+    public static int LevelCost(int level) => 5 + level / 2;
+
+    /// <summary>Couple level from 1 to <see cref="MaxLevel"/>, with the points earned towards the next level
+    /// and what that level costs (both 0 once the top level is reached).</summary>
+    public static (int Level, int Into, int Cost) LevelProgress(int points)
+    {
+        int level = 1;
+        while (level < MaxLevel && points >= LevelCost(level))
+        {
+            points -= LevelCost(level);
+            level++;
+        }
+        return level == MaxLevel ? (level, 0, 0) : (level, points, LevelCost(level));
+    }
+
+    public static int Level(int points) => LevelProgress(points).Level;
+
+    /// <summary>Whether one day's six guesses were all right.</summary>
+    public static bool IsPerfect(bool[] matches) => matches.All(m => m);
 
     public static int[] Parse(string answers) => answers.Split(',').Select(int.Parse).ToArray();
 

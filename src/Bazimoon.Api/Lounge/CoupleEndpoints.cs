@@ -56,7 +56,12 @@ public sealed record CoupleInviteDto(string Token, DateTime ExpiresAt);
 public sealed record CoupleInvitePreviewDto(string Status, string? InviterName);
 public sealed record CoupleDto(
     Guid PartnerId, string PartnerName, int TogetherDays, int Streak, int MatchRate, int Level,
-    string ReminderTime, string Language, CoupleTodayDto Today, IReadOnlyList<CoupleHistoryDto> History);
+    string ReminderTime, string Language, CoupleTodayDto Today, IReadOnlyList<CoupleHistoryDto> History,
+    CoupleLevelDto Progress, CoupleStatsDto Stats);
+/// <summary>Points earned towards the next couple level and what it costs (both 0 at the top level).</summary>
+public sealed record CoupleLevelDto(int Level, int MaxLevel, int Points, int Cost);
+/// <summary>Lifetime totals the app turns into couple badges.</summary>
+public sealed record CoupleStatsDto(int BestStreak, int DaysPlayed, int TotalMatches, int PerfectDays);
 public sealed record CoupleTodayDto(int Number, int SetId, bool YouDone, bool PartnerDone, bool YouNudged);
 public sealed record CoupleHistoryDto(int Number, int SetId, DateOnly Date, int Score, IReadOnlyList<bool> Matches);
 /// <summary>One day's quiz. Partner answers and matches are only filled in once both have finished.
@@ -64,6 +69,6 @@ public sealed record CoupleHistoryDto(int Number, int SetId, DateOnly Date, int 
 public sealed record CoupleDayDto(
     int Number, int SetId, string PartnerName, bool Revealed, bool YouDone, bool PartnerDone,
     IReadOnlyList<int>? YourAnswers, IReadOnlyList<int>? PartnerAnswers, IReadOnlyList<bool>? Matches,
-    int Streak, int Level, int XpEach, bool YouNudged);
+    int Streak, int Level, int XpEach, bool YouNudged, CoupleLevelDto Progress);
 public sealed record CoupleAnswersRequest(int Number, IReadOnlyList<int>? Answers);
 public sealed record CoupleSettingsRequest(string? ReminderTime, string? Language);

@@ -38,7 +38,7 @@ const EN: CoupleSet[] = [
     theme: "Travel dreams",
     questions: [
       { you: "Your dream kind of trip?", them: "{name}'s dream kind of trip?", short: "Dream trip?", options: ["Beach and sun", "Mountains and hiking", "A big new city", "A road trip, no plan"] },
-      { you: "Your travel style?", them: "{name}'s travel style?", short: "Travel style?", options: ["Every hour planned", "A rough plan", "Totally spontaneous", "Whatever you decide"] },
+      { you: "Your travel style?", them: "{name}'s travel style?", short: "Travel style?", options: ["Every hour planned", "A rough plan", "Totally spontaneous", "Follow the other one's plan"] },
       { you: "What do you always pack too much of?", them: "What does {name} always pack too much of?", short: "Always overpacks?", options: ["Clothes", "Snacks", "Chargers and gadgets", "Books"] },
     ],
   },
@@ -46,8 +46,8 @@ const EN: CoupleSet[] = [
     theme: "Music and movies",
     questions: [
       { you: "Your movie-night pick?", them: "{name}'s movie-night pick?", short: "Movie-night pick?", options: ["Comedy", "Thriller or horror", "Romance", "Documentary"] },
-      { you: "What do you sing along to in the car?", them: "What does {name} sing along to in the car?", short: "Car sing-along?", options: ["Persian pop", "Old classics", "Whatever is on the radio", "I never sing"] },
-      { you: "How do you watch a series?", them: "How does {name} watch a series?", short: "Watching a series?", options: ["Binge it in a weekend", "One episode a night", "Start many, finish few", "Only together with you"] },
+      { you: "What do you sing along to in the car?", them: "What does {name} sing along to in the car?", short: "Car sing-along?", options: ["Persian pop", "Old classics", "Whatever is on the radio", "No singing, ever"] },
+      { you: "How do you watch a series?", them: "How does {name} watch a series?", short: "Watching a series?", options: ["Binge it in a weekend", "One episode a night", "Start many, finish few", "Only together"] },
     ],
   },
   {
@@ -61,7 +61,7 @@ const EN: CoupleSet[] = [
   {
     theme: "Food and cooking",
     questions: [
-      { you: "Who should really do the cooking?", them: "Who does {name} think should do the cooking?", short: "Who should cook?", options: ["Me", "You", "Both together", "The delivery app"] },
+      { you: "How do you feel about cooking?", them: "How does {name} feel about cooking?", short: "Cooking?", options: ["Love it", "Only on weekends", "Rather do the dishes", "That's what delivery apps are for"] },
       { you: "Your favourite dessert?", them: "{name}'s favourite dessert?", short: "Favourite dessert?", options: ["Bastani sonnati", "Chocolate cake", "Fresh fruit", "Shole zard"] },
       { you: "Breakfast of choice?", them: "{name}'s breakfast of choice?", short: "Breakfast?", options: ["Bread, cheese and walnuts", "Eggs", "Just tea", "Skip it"] },
     ],
@@ -71,13 +71,13 @@ const EN: CoupleSet[] = [
     questions: [
       { you: "What makes you feel most loved?", them: "What makes {name} feel most loved?", short: "Feels most loved by?", options: ["Kind words", "Time together", "Little gifts", "Help with chores"] },
       { you: "Your ideal date night?", them: "{name}'s ideal date night?", short: "Ideal date night?", options: ["Dinner out", "A movie at home", "A walk somewhere new", "Trying a new activity"] },
-      { you: "How do you say sorry?", them: "How does {name} say sorry?", short: "Saying sorry?", options: ["Say it straight away", "Need a little time first", "Show it, not say it", "Make a joke to break the ice"] },
+      { you: "How do you say sorry?", them: "How does {name} say sorry?", short: "Saying sorry?", options: ["Straight away", "After a little time to cool off", "Show it, not say it", "Make a joke to break the ice"] },
     ],
   },
   {
     theme: "Money and plans",
     questions: [
-      { you: "You get an unexpected bonus. What happens?", them: "{name} gets an unexpected bonus. What happens?", short: "Unexpected bonus?", options: ["Save it", "Treat us both", "Travel", "Buy that thing I wanted"] },
+      { you: "You get an unexpected bonus. What happens?", them: "{name} gets an unexpected bonus. What happens?", short: "Unexpected bonus?", options: ["Save it", "Treat us both", "Travel", "A long-wanted treat"] },
       { you: "Where would you love to live one day?", them: "Where would {name} love to live one day?", short: "Live one day?", options: ["Right here", "By the sea", "A big city abroad", "A quiet village"] },
       { you: "Your shopping style?", them: "{name}'s shopping style?", short: "Shopping style?", options: ["Plan and compare", "Buy on impulse", "Avoid it if I can", "Hunt for bargains"] },
     ],
@@ -85,8 +85,8 @@ const EN: CoupleSet[] = [
   {
     theme: "Friends and family",
     questions: [
-      { you: "At a party, you are…", them: "At a party, {name} is…", short: "At a party?", options: ["Dancing", "In the kitchen talking", "Looking after everyone", "Ready to go home"] },
-      { you: "How often do you call your family?", them: "How often does {name} call their family?", short: "Calls family?", options: ["Every day", "A few times a week", "Once a week", "When they call me"] },
+      { you: "At a party, where do people find you?", them: "At a party, where do people find {name}?", short: "At a party?", options: ["On the dance floor", "In the kitchen, chatting", "Looking after everyone", "By the door, ready to leave"] },
+      { you: "How often do you call your family?", them: "How often does {name} call their family?", short: "Calls family?", options: ["Every day", "A few times a week", "Once a week", "Only when they call"] },
       { you: "Your role in your friend group?", them: "{name}'s role in their friend group?", short: "Role in friend group?", options: ["The planner", "The funny one", "The listener", "The one who's always late"] },
     ],
   },
@@ -119,13 +119,13 @@ const EN: CoupleSet[] = [
     questions: [
       { you: "Favourite spot at home?", them: "{name}'s favourite spot at home?", short: "Favourite spot at home?", options: ["The couch", "The bed", "The kitchen", "The balcony"] },
       { you: "Chore you secretly don't mind?", them: "Chore {name} secretly doesn't mind?", short: "Chore they don't mind?", options: ["Dishes", "Laundry", "Grocery shopping", "Vacuuming"] },
-      { you: "Thermostat setting?", them: "{name}'s thermostat setting?", short: "Thermostat?", options: ["Warm and cosy", "Cool", "Window open always", "Whatever you like"] },
+      { you: "Thermostat setting?", them: "{name}'s thermostat setting?", short: "Thermostat?", options: ["Warm and cosy", "Cool", "Window always open", "Doesn't mind"] },
     ],
   },
   {
     theme: "Firsts",
     questions: [
-      { you: "What did you notice first about me?", them: "What did {name} notice first about you?", short: "Noticed first?", options: ["Your smile", "Your eyes", "Your sense of humour", "Your voice"] },
+      { you: "What did you notice first about me?", them: "What did {name} notice first about you?", short: "Noticed first?", options: ["The smile", "The eyes", "The sense of humour", "The voice"] },
       { you: "Best part of our first date?", them: "{name}'s favourite part of your first date?", short: "First date highlight?", options: ["The conversation", "The place", "The nerves", "Saying goodbye"] },
       { you: "When did you know it was serious?", them: "When did {name} know it was serious?", short: "Knew it was serious?", options: ["Right away", "After a few weeks", "After a few months", "Still deciding"] },
     ],
@@ -133,132 +133,134 @@ const EN: CoupleSet[] = [
   {
     theme: "Games and fun",
     questions: [
-      { you: "How competitive are you in games?", them: "How competitive is {name} in games?", short: "Competitive?", options: ["I play to win", "Just for fun", "Sore loser", "I let you win"] },
-      { you: "In Mafia, you are usually…", them: "In Mafia, {name} is usually…", short: "In Mafia?", options: ["The first suspect", "The detective", "A quiet villager", "The best liar"] },
+      { you: "How competitive are you in games?", them: "How competitive is {name} in games?", short: "Competitive?", options: ["In it to win it", "Just for fun", "Sore loser", "Happy to let the other win"] },
+      { you: "In Mafia, who are you usually?", them: "In Mafia, who is {name} usually?", short: "In Mafia?", options: ["The first suspect", "The detective", "A quiet villager", "The best liar"] },
       { you: "Your favourite way to spend a free hour?", them: "{name}'s favourite way to spend a free hour?", short: "Free hour?", options: ["Puzzles and games", "Social media", "A walk", "A nap"] },
     ],
   },
 ];
 
+// Persian uses the informal "تو", like the rest of the app. Options are short phrases that read
+// right both when answering about yourself and when guessing for your partner.
 const FA: CoupleSet[] = [
   {
-    theme: "برنامه آخر هفته، غذا و عادت‌های کوچک",
+    theme: "آخر هفته، غذا و عادت‌های کوچک",
     questions: [
-      { you: "جمعه ایده‌آل شما چیست؟", them: "جمعه ایده‌آل {name} چیست؟", short: "جمعه ایده‌آل؟", options: ["صبح آرام در خانه", "بیرون با دوستان", "سفر به بیرون شهر", "پختن یک غذای تازه"] },
-      { you: "غذای دلخواه روزهای سخت شما؟", them: "غذای دلخواه روزهای سخت {name}؟", short: "غذای دلخواه؟", options: ["قورمه‌سبزی", "پیتزا", "یک چیز شیرین", "هرچه آن یکی بپزد"] },
-      { you: "یک روز پراسترس را چطور می‌گذرانید؟", them: "{name} یک روز پراسترس را چطور می‌گذراند؟", short: "روز پراسترس؟", options: ["درباره‌اش حرف می‌زنم", "کمی تنهایی و سکوت", "یک پیاده‌روی طولانی", "خودم را سرگرم می‌کنم"] },
+      { you: "جمعه ایده‌آلت چه شکلی است؟", them: "جمعه ایده‌آل {name} چه شکلی است؟", short: "جمعه ایده‌آل", options: ["صبحی آرام در خانه", "بیرون با دوستان", "سفر به بیرون شهر", "پختن یک غذای تازه"] },
+      { you: "غذای حال‌خوب‌کنت چیست؟", them: "غذای حال‌خوب‌کن {name} چیست؟", short: "غذای حال‌خوب‌کن", options: ["قورمه‌سبزی", "پیتزا", "یک چیز شیرین", "هرچه آن یکی بپزد"] },
+      { you: "یک روز پراسترس را چطور می‌گذرانی؟", them: "{name} یک روز پراسترس را چطور می‌گذراند؟", short: "روز پراسترس", options: ["درد دل کردن", "کمی تنهایی و سکوت", "یک پیاده‌روی طولانی", "سرگرم شدن با کار"] },
     ],
   },
   {
     theme: "خاطرات کودکی",
     questions: [
-      { you: "در کودکی چطور بچه‌ای بودید؟", them: "{name} در کودکی چطور بچه‌ای بود؟", short: "در کودکی؟", options: ["آرام و خجالتی", "همیشه دردسرساز", "دلقک کلاس", "غرق کتاب"] },
-      { you: "بازی محبوب کودکی شما؟", them: "بازی محبوب کودکی {name}؟", short: "بازی کودکی؟", options: ["فوتبال در کوچه", "قایم‌باشک", "بازی ویدیویی", "بازی رومیزی با خانواده"] },
-      { you: "بچه که بودید می‌خواستید چه‌کاره شوید؟", them: "{name} بچه که بود می‌خواست چه‌کاره شود؟", short: "شغل رؤیایی کودکی؟", options: ["دکتر", "فضانورد یا خلبان", "هنرمند یا نوازنده", "معلم"] },
+      { you: "بچه که بودی چطور بچه‌ای بودی؟", them: "{name} بچه که بود چطور بچه‌ای بود؟", short: "در کودکی", options: ["آرام و خجالتی", "شیطان و دردسرساز", "دلقک کلاس", "غرق در کتاب‌ها"] },
+      { you: "بازی محبوب بچگی‌ات چه بود؟", them: "بازی محبوب بچگی {name} چه بود؟", short: "بازی بچگی", options: ["فوتبال در کوچه", "قایم‌موشک", "بازی کامپیوتری", "بازی‌های فکری با خانواده"] },
+      { you: "بچه که بودی می‌خواستی چه‌کاره شوی؟", them: "{name} بچه که بود می‌خواست چه‌کاره شود؟", short: "آرزوی شغلی بچگی", options: ["دکتر", "فضانورد یا خلبان", "هنرمند یا نوازنده", "معلم"] },
     ],
   },
   {
     theme: "رؤیای سفر",
     questions: [
-      { you: "سفر رؤیایی شما چه شکلی است؟", them: "سفر رؤیایی {name} چه شکلی است؟", short: "سفر رؤیایی؟", options: ["ساحل و آفتاب", "کوه و طبیعت‌گردی", "یک شهر بزرگ تازه", "جاده‌گردی بی‌برنامه"] },
-      { you: "سبک سفر شما؟", them: "سبک سفر {name}؟", short: "سبک سفر؟", options: ["همه ساعت‌ها برنامه‌ریزی‌شده", "یک برنامه کلی", "کاملاً خودجوش", "هرچه تو بگویی"] },
-      { you: "همیشه از چه چیزی زیادی برمی‌دارید؟", them: "{name} همیشه از چه چیزی زیادی برمی‌دارد؟", short: "زیادی برمی‌دارد؟", options: ["لباس", "خوراکی", "شارژر و وسایل برقی", "کتاب"] },
+      { you: "سفر رؤیایی‌ات چه شکلی است؟", them: "سفر رؤیایی {name} چه شکلی است؟", short: "سفر رؤیایی", options: ["ساحل و آفتاب", "کوه و کوهنوردی", "یک شهر بزرگ و تازه", "جاده‌گردی بی‌برنامه"] },
+      { you: "در سفر چه سبکی داری؟", them: "{name} در سفر چه سبکی دارد؟", short: "سبک سفر", options: ["برنامه ساعت‌به‌ساعت", "یک برنامه کلی", "کاملاً بی‌برنامه", "هرچه آن یکی برنامه بریزد"] },
+      { you: "همیشه از چه چیزی بیش از اندازه با خودت می‌بری؟", them: "{name} همیشه از چه چیزی بیش از اندازه با خودش می‌برد؟", short: "همیشه زیادی برمی‌دارد", options: ["لباس", "خوراکی", "شارژر و وسایل برقی", "کتاب"] },
     ],
   },
   {
     theme: "موسیقی و فیلم",
     questions: [
-      { you: "انتخاب شما برای شب فیلم؟", them: "انتخاب {name} برای شب فیلم؟", short: "شب فیلم؟", options: ["کمدی", "هیجانی یا ترسناک", "عاشقانه", "مستند"] },
-      { you: "در ماشین با چه آهنگی همخوانی می‌کنید؟", them: "{name} در ماشین با چه آهنگی همخوانی می‌کند؟", short: "همخوانی در ماشین؟", options: ["پاپ فارسی", "آهنگ‌های قدیمی", "هرچه رادیو پخش کند", "هیچ‌وقت نمی‌خوانم"] },
-      { you: "سریال را چطور می‌بینید؟", them: "{name} سریال را چطور می‌بیند؟", short: "سریال دیدن؟", options: ["یک‌نفس در آخر هفته", "هر شب یک قسمت", "زیاد شروع می‌کنم، کم تمام", "فقط با تو"] },
+      { you: "برای شب فیلم چه ژانری انتخاب می‌کنی؟", them: "{name} برای شب فیلم چه ژانری انتخاب می‌کند؟", short: "ژانر شب فیلم", options: ["کمدی", "هیجانی یا ترسناک", "عاشقانه", "مستند"] },
+      { you: "در ماشین با چه آهنگ‌هایی هم‌خوانی می‌کنی؟", them: "{name} در ماشین با چه آهنگ‌هایی هم‌خوانی می‌کند؟", short: "هم‌خوانی در ماشین", options: ["پاپ فارسی", "آهنگ‌های قدیمی", "هرچه رادیو پخش کند", "هیچ‌کدام؛ آواز ممنوع!"] },
+      { you: "سریال را چطور می‌بینی؟", them: "{name} سریال را چطور می‌بیند؟", short: "سریال دیدن", options: ["یک‌نفس در یک آخر هفته", "هر شب یک قسمت", "شروع زیاد، تمام کردن کم", "فقط با هم"] },
     ],
   },
   {
     theme: "عادت‌های کوچک",
     questions: [
-      { you: "اولین کار صبحتان؟", them: "اولین کار صبح {name}؟", short: "اول صبح؟", options: ["سر زدن به گوشی", "چای یا قهوه", "یک بار دیگر چرت", "دوش"] },
-      { you: "راستش را بگویید، چقدر مرتب هستید؟", them: "راستش، {name} چقدر مرتب است؟", short: "چقدر مرتب؟", options: ["برق می‌زند", "به اندازه کافی", "شلوغی منظم", "لطفاً نگاه نکن"] },
-      { you: "چه زمانی بیشترین کار را می‌کنید؟", them: "{name} چه زمانی بیشترین کار را می‌کند؟", short: "پربازده‌ترین زمان؟", options: ["صبح زود", "اواخر صبح", "بعدازظهر", "نیمه‌شب"] },
+      { you: "اولین کارت صبح‌ها چیست؟", them: "اولین کار {name} صبح‌ها چیست؟", short: "اول صبح", options: ["سر زدن به گوشی", "چای یا قهوه", "یک چرت دیگر", "دوش گرفتن"] },
+      { you: "راستش را بگو، چقدر مرتبی؟", them: "راستش را بگو، {name} چقدر مرتب است؟", short: "چقدر مرتب", options: ["مثل دسته گل", "به اندازه کافی", "شلوغیِ حساب‌شده", "لطفاً نگاه نکن!"] },
+      { you: "کِی بیشترین بازدهی را داری؟", them: "{name} کِی بیشترین بازدهی را دارد؟", short: "پربازده‌ترین ساعت", options: ["صبح زود", "اواخر صبح", "بعدازظهر", "نیمه‌شب"] },
     ],
   },
   {
     theme: "غذا و آشپزی",
     questions: [
-      { you: "واقعاً چه کسی باید آشپزی کند؟", them: "به نظر {name} چه کسی باید آشپزی کند؟", short: "چه کسی بپزد؟", options: ["من", "تو", "هر دو با هم", "اپ سفارش غذا"] },
-      { you: "دسر محبوب شما؟", them: "دسر محبوب {name}؟", short: "دسر محبوب؟", options: ["بستنی سنتی", "کیک شکلاتی", "میوه تازه", "شله‌زرد"] },
-      { you: "صبحانه دلخواه شما؟", them: "صبحانه دلخواه {name}؟", short: "صبحانه؟", options: ["نان و پنیر و گردو", "تخم‌مرغ", "فقط چای", "نمی‌خورم"] },
+      { you: "نظرت درباره آشپزی چیست؟", them: "نظر {name} درباره آشپزی چیست؟", short: "آشپزی", options: ["عاشق آشپزی", "فقط آخر هفته‌ها", "ظرف شستن به‌جای آشپزی", "اپ سفارش غذا برای همین است"] },
+      { you: "دسر محبوبت چیست؟", them: "دسر محبوب {name} چیست؟", short: "دسر محبوب", options: ["بستنی سنتی", "کیک شکلاتی", "میوه تازه", "شله‌زرد"] },
+      { you: "صبحانه دلخواهت چیست؟", them: "صبحانه دلخواه {name} چیست؟", short: "صبحانه", options: ["نان و پنیر و گردو", "تخم‌مرغ", "فقط یک چای", "بی‌صبحانه"] },
     ],
   },
   {
     theme: "زبان عشق",
     questions: [
-      { you: "چه چیزی بیشتر حس دوست‌داشته‌شدن به شما می‌دهد؟", them: "چه چیزی بیشتر به {name} حس دوست‌داشته‌شدن می‌دهد؟", short: "حس دوست‌داشته‌شدن؟", options: ["حرف‌های مهربان", "وقت گذراندن با هم", "هدیه‌های کوچک", "کمک در کارها"] },
-      { you: "قرار عاشقانه ایده‌آل شما؟", them: "قرار عاشقانه ایده‌آل {name}؟", short: "قرار ایده‌آل؟", options: ["شام بیرون", "فیلم در خانه", "قدم زدن در جای تازه", "امتحان یک کار جدید"] },
-      { you: "چطور عذرخواهی می‌کنید؟", them: "{name} چطور عذرخواهی می‌کند؟", short: "عذرخواهی؟", options: ["فوراً می‌گویم", "اول کمی زمان لازم دارم", "با رفتار نشان می‌دهم", "با یک شوخی یخ را می‌شکنم"] },
+      { you: "چه چیزی بیشتر از همه به تو حس دوست‌داشته‌شدن می‌دهد؟", them: "چه چیزی بیشتر از همه به {name} حس دوست‌داشته‌شدن می‌دهد؟", short: "حس دوست‌داشته‌شدن", options: ["حرف‌های محبت‌آمیز", "وقت گذراندن با هم", "هدیه‌های کوچک", "کمک در کارها"] },
+      { you: "قرار عاشقانه ایده‌آلت چیست؟", them: "قرار عاشقانه ایده‌آل {name} چیست؟", short: "قرار ایده‌آل", options: ["شام بیرون", "فیلم دیدن در خانه", "قدم زدن در یک جای تازه", "امتحان یک تجربه جدید"] },
+      { you: "چطور عذرخواهی می‌کنی؟", them: "{name} چطور عذرخواهی می‌کند؟", short: "عذرخواهی", options: ["همان لحظه", "بعد از کمی آرام شدن", "با رفتار، نه با حرف", "با یک شوخی برای شکستن یخ"] },
     ],
   },
   {
     theme: "پول و برنامه‌ها",
     questions: [
-      { you: "یک پاداش غیرمنتظره می‌گیرید. چه می‌شود؟", them: "{name} یک پاداش غیرمنتظره می‌گیرد. چه می‌شود؟", short: "پاداش غیرمنتظره؟", options: ["پس‌انداز", "مهمان کردن هر دومان", "سفر", "خرید همان چیزی که می‌خواستم"] },
-      { you: "دوست دارید روزی کجا زندگی کنید؟", them: "{name} دوست دارد روزی کجا زندگی کند؟", short: "روزی کجا زندگی کند؟", options: ["همین‌جا", "کنار دریا", "یک شهر بزرگ خارجی", "یک روستای آرام"] },
-      { you: "سبک خرید شما؟", them: "سبک خرید {name}؟", short: "سبک خرید؟", options: ["برنامه و مقایسه", "خرید هیجانی", "تا جایی که بشود نمی‌روم", "دنبال تخفیف"] },
+      { you: "یک پاداش غیرمنتظره می‌گیری. با آن چه می‌کنی؟", them: "{name} یک پاداش غیرمنتظره می‌گیرد. با آن چه می‌کند؟", short: "پاداش غیرمنتظره", options: ["پس‌انداز", "مهمان کردن هر دو نفر", "سفر", "خرید یک آرزوی قدیمی"] },
+      { you: "دوست داری روزی کجا زندگی کنی؟", them: "{name} دوست دارد روزی کجا زندگی کند؟", short: "خانه رؤیایی", options: ["همین‌جا", "کنار دریا", "یک شهر بزرگ در خارج", "یک روستای آرام"] },
+      { you: "سبک خریدت چطور است؟", them: "سبک خرید {name} چطور است؟", short: "سبک خرید", options: ["با برنامه و مقایسه", "هیجانی و یهویی", "تا جای ممکن فرار از خرید", "شکار تخفیف"] },
     ],
   },
   {
     theme: "دوستان و خانواده",
     questions: [
-      { you: "در مهمانی شما…", them: "در مهمانی {name}…", short: "در مهمانی؟", options: ["می‌رقصد", "در آشپزخانه گرم صحبت است", "حواسش به همه هست", "آماده رفتن به خانه است"] },
-      { you: "چقدر به خانواده‌تان زنگ می‌زنید؟", them: "{name} چقدر به خانواده‌اش زنگ می‌زند؟", short: "تماس با خانواده؟", options: ["هر روز", "چند بار در هفته", "هفته‌ای یک بار", "وقتی آن‌ها زنگ بزنند"] },
-      { you: "نقش شما در جمع دوستان؟", them: "نقش {name} در جمع دوستان؟", short: "نقش در جمع دوستان؟", options: ["برنامه‌ریز", "شوخ جمع", "شنونده", "همیشه دیر می‌رسد"] },
+      { you: "در مهمانی معمولاً کجا پیدایت می‌کنند؟", them: "در مهمانی معمولاً {name} را کجا پیدا می‌کنند؟", short: "در مهمانی", options: ["وسط پیست رقص", "در آشپزخانه، گرم گفت‌وگو", "در حال پذیرایی از همه", "دم در، آماده رفتن"] },
+      { you: "چقدر به خانواده‌ات زنگ می‌زنی؟", them: "{name} چقدر به خانواده‌اش زنگ می‌زند؟", short: "تماس با خانواده", options: ["هر روز", "چند بار در هفته", "هفته‌ای یک بار", "فقط وقتی آن‌ها زنگ بزنند"] },
+      { you: "در جمع دوستانت چه نقشی داری؟", them: "{name} در جمع دوستانش چه نقشی دارد؟", short: "نقش در جمع دوستان", options: ["برنامه‌ریز", "شوخ‌طبع جمع", "سنگ صبور", "همیشه دیر می‌رسد"] },
     ],
   },
   {
     theme: "چیزهایی که کلافه‌مان می‌کند",
     questions: [
-      { you: "چه چیزی بیشتر از همه کلافه‌تان می‌کند؟", them: "چه چیزی {name} را بیشتر از همه کلافه می‌کند؟", short: "بیشتر کلافه می‌شود از؟", options: ["صدای جویدن", "دیر کردن", "اتاق شلوغ", "آدم‌هایی که آهسته راه می‌روند"] },
-      { you: "وقتی گرسنه‌اید چطورید؟", them: "{name} وقتی گرسنه است چطور است؟", short: "وقت گرسنگی؟", options: ["بداخلاق", "ساکت", "دنبال خوراکی", "کاملاً عادی"] },
-      { you: "چند اعلان خوانده‌نشده دارید؟", them: "{name} چند اعلان خوانده‌نشده دارد؟", short: "اعلان‌های خوانده‌نشده؟", options: ["همیشه صفر", "چندتا", "ده‌ها", "صدها، نپرس"] },
+      { you: "چه چیزی بیشتر از همه کلافه‌ات می‌کند؟", them: "چه چیزی بیشتر از همه {name} را کلافه می‌کند؟", short: "کلافه‌کننده‌ترین چیز", options: ["صدای ملچ‌ملوچ", "دیر کردن", "اتاق به‌هم‌ریخته", "آهسته راه رفتن بقیه"] },
+      { you: "وقتی گرسنه‌ای چه شکلی می‌شوی؟", them: "{name} وقتی گرسنه است چه شکلی می‌شود؟", short: "وقت گرسنگی", options: ["بداخلاق", "ساکت", "در به‌در دنبال خوراکی", "کاملاً عادی"] },
+      { you: "معمولاً چند اعلان خوانده‌نشده داری؟", them: "{name} معمولاً چند اعلان خوانده‌نشده دارد؟", short: "اعلان‌های خوانده‌نشده", options: ["همیشه صفر", "چندتایی", "چند ده تا", "صدها؛ نپرس!"] },
     ],
   },
   {
     theme: "رؤیاها و هدف‌ها",
     questions: [
-      { you: "مهارتی که دوست دارید یاد بگیرید؟", them: "مهارتی که {name} دوست دارد یاد بگیرد؟", short: "مهارت تازه؟", options: ["یک زبان جدید", "یک ساز", "آشپزی درست‌وحسابی", "یک ورزش"] },
-      { you: "پنج سال دیگر ما را کجا می‌بینید؟", them: "{name} پنج سال دیگر شما را کجا می‌بیند؟", short: "پنج سال دیگر؟", options: ["همین‌جا، شادتر", "در یک شهر تازه", "با خانواده‌ای بزرگ‌تر", "در سفر دور دنیا"] },
-      { you: "بزرگ‌ترین انگیزه شما؟", them: "بزرگ‌ترین انگیزه {name}؟", short: "بزرگ‌ترین انگیزه؟", options: ["خانواده", "موفقیت کاری", "آزادی", "شاد کردن دیگران"] },
+      { you: "دوست داری چه مهارتی یاد بگیری؟", them: "{name} دوست دارد چه مهارتی یاد بگیرد؟", short: "مهارت تازه", options: ["یک زبان جدید", "نواختن یک ساز", "آشپزی حرفه‌ای", "یک ورزش"] },
+      { you: "پنج سال دیگر ما را کجا می‌بینی؟", them: "{name} پنج سال دیگر شما دو نفر را کجا می‌بیند؟", short: "پنج سال دیگر", options: ["همین‌جا، شادتر", "در یک شهر تازه", "با خانواده‌ای بزرگ‌تر", "در حال سفر دور دنیا"] },
+      { you: "بزرگ‌ترین انگیزه‌ات چیست؟", them: "بزرگ‌ترین انگیزه {name} چیست؟", short: "بزرگ‌ترین انگیزه", options: ["خانواده", "موفقیت کاری", "آزادی", "شاد کردن دیگران"] },
     ],
   },
   {
     theme: "فصل‌ها و هوا",
     questions: [
-      { you: "فصل محبوب شما؟", them: "فصل محبوب {name}؟", short: "فصل محبوب؟", options: ["بهار", "تابستان", "پاییز", "زمستان"] },
-      { you: "برنامه ایده‌آل روز بارانی؟", them: "برنامه ایده‌آل {name} برای روز بارانی؟", short: "روز بارانی؟", options: ["چای و کتاب", "قدم زدن زیر باران", "فیلم زیر پتو", "چرت"] },
-      { you: "بهترین بخش نوروز برای شما؟", them: "بهترین بخش نوروز برای {name}؟", short: "بهترین بخش نوروز؟", options: ["دید و بازدید", "پیک‌نیک سیزده‌به‌در", "سفره هفت‌سین", "تعطیلی کار"] },
+      { you: "فصل محبوبت کدام است؟", them: "فصل محبوب {name} کدام است؟", short: "فصل محبوب", options: ["بهار", "تابستان", "پاییز", "زمستان"] },
+      { you: "برنامه ایده‌آلت برای یک روز بارانی چیست؟", them: "برنامه ایده‌آل {name} برای یک روز بارانی چیست؟", short: "روز بارانی", options: ["چای و کتاب", "قدم زدن زیر باران", "فیلم زیر پتو", "یک چرت حسابی"] },
+      { you: "بهترین بخش نوروز برایت چیست؟", them: "بهترین بخش نوروز برای {name} چیست؟", short: "بهترین بخش نوروز", options: ["دید و بازدید", "سیزده‌به‌در", "چیدن سفره هفت‌سین", "تعطیلات"] },
     ],
   },
   {
     theme: "زندگی در خانه",
     questions: [
-      { you: "جای محبوب شما در خانه؟", them: "جای محبوب {name} در خانه؟", short: "جای محبوب خانه؟", options: ["مبل", "تخت", "آشپزخانه", "بالکن"] },
-      { you: "کار خانه‌ای که پنهانی بدتان نمی‌آید؟", them: "کار خانه‌ای که {name} پنهانی بدش نمی‌آید؟", short: "کار خانه دلخواه؟", options: ["ظرف شستن", "لباس شستن", "خرید خانه", "جارو کشیدن"] },
-      { you: "دمای دلخواه خانه؟", them: "دمای دلخواه {name} در خانه؟", short: "دمای خانه؟", options: ["گرم و دنج", "خنک", "همیشه پنجره باز", "هرچه تو بخواهی"] },
+      { you: "جای محبوبت در خانه کجاست؟", them: "جای محبوب {name} در خانه کجاست؟", short: "جای محبوب خانه", options: ["مبل", "تخت", "آشپزخانه", "بالکن"] },
+      { you: "کدام کار خانه را در خفا دوست داری؟", them: "{name} کدام کار خانه را در خفا دوست دارد؟", short: "کار خانه محبوب", options: ["ظرف شستن", "لباس شستن", "خرید خانه", "جارو کشیدن"] },
+      { you: "دمای خانه را چطور دوست داری؟", them: "{name} دمای خانه را چطور دوست دارد؟", short: "دمای خانه", options: ["گرم و دنج", "خنک", "پنجره همیشه باز", "فرقی نمی‌کند"] },
     ],
   },
   {
     theme: "اولین‌ها",
     questions: [
-      { you: "اولین چیزی که در من دیدید؟", them: "اولین چیزی که {name} در شما دید؟", short: "اولین چیزی که دید؟", options: ["لبخندت", "چشم‌هایت", "شوخ‌طبعی‌ات", "صدایت"] },
-      { you: "بهترین بخش اولین قرارمان؟", them: "بهترین بخش اولین قرار از نظر {name}؟", short: "اولین قرار؟", options: ["گفت‌وگو", "مکان", "استرسش", "خداحافظی"] },
-      { you: "کی فهمیدید جدی است؟", them: "{name} کی فهمید جدی است؟", short: "کی فهمید جدی است؟", options: ["همان اول", "بعد از چند هفته", "بعد از چند ماه", "هنوز دارم فکر می‌کنم"] },
+      { you: "اولین چیزی که در من به چشمت آمد چه بود؟", them: "اولین چیزی که در تو به چشم {name} آمد چه بود؟", short: "اولین چیزی که به چشم آمد", options: ["لبخند", "چشم‌ها", "شوخ‌طبعی", "صدا"] },
+      { you: "بهترین بخش اولین قرارمان چه بود؟", them: "بهترین بخش اولین قرارتان از نظر {name} چه بود؟", short: "اولین قرار", options: ["حرف‌هایمان", "جایش", "دلشوره‌اش", "لحظه خداحافظی"] },
+      { you: "کِی فهمیدی این رابطه جدی است؟", them: "{name} کِی فهمید این رابطه جدی است؟", short: "کِی جدی شد", options: ["همان اول", "بعد از چند هفته", "بعد از چند ماه", "هنوز در حال فکر کردن!"] },
     ],
   },
   {
     theme: "بازی و سرگرمی",
     questions: [
-      { you: "در بازی چقدر رقابتی هستید؟", them: "{name} در بازی چقدر رقابتی است؟", short: "رقابتی؟", options: ["بازی می‌کنم که ببرم", "فقط برای سرگرمی", "بد بازنده", "می‌گذارم تو ببری"] },
-      { you: "در مافیا معمولاً…", them: "{name} در مافیا معمولاً…", short: "در مافیا؟", options: ["اولین مظنون است", "کارآگاه است", "شهروند ساکت است", "بهترین دروغگوست"] },
-      { you: "یک ساعت وقت آزاد را چطور می‌گذرانید؟", them: "{name} یک ساعت وقت آزاد را چطور می‌گذراند؟", short: "یک ساعت آزاد؟", options: ["پازل و بازی", "شبکه‌های اجتماعی", "پیاده‌روی", "چرت"] },
+      { you: "در بازی چقدر اهل رقابتی؟", them: "{name} در بازی چقدر اهل رقابت است؟", short: "روحیه رقابت", options: ["فقط برای بردن", "فقط برای سرگرمی", "بازنده بدقلق", "باختن عمدی به‌خاطر آن یکی"] },
+      { you: "در مافیا معمولاً چه نقشی داری؟", them: "{name} در مافیا معمولاً چه نقشی دارد؟", short: "در مافیا", options: ["اولین مظنون", "کارآگاه", "شهروند ساکت", "بهترین دروغگو"] },
+      { you: "یک ساعت وقت آزاد را چطور می‌گذرانی؟", them: "{name} یک ساعت وقت آزاد را چطور می‌گذراند؟", short: "یک ساعت آزاد", options: ["پازل و بازی", "شبکه‌های اجتماعی", "پیاده‌روی", "چرت زدن"] },
     ],
   },
 ];

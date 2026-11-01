@@ -116,4 +116,18 @@ public class CoupleEndpointsTests : IClassFixture<BazimoonApiFactory>, IAsyncLif
         Assert.Equal(0, CoupleRules.CurrentStreak(5, 10, 12));
         Assert.Equal(5, CoupleRules.CurrentStreak(5, 10, 11));
     }
+
+    [Fact]
+    public void Levels_RunFromOneToOneHundred()
+    {
+        Assert.Equal((1, 0, 5), CoupleRules.LevelProgress(0));
+        Assert.Equal((1, 4, 5), CoupleRules.LevelProgress(4));
+        Assert.Equal((2, 0, 6), CoupleRules.LevelProgress(5));
+        int toTop = Enumerable.Range(1, CoupleRules.MaxLevel - 1).Sum(CoupleRules.LevelCost);
+        Assert.Equal(CoupleRules.MaxLevel - 1, CoupleRules.Level(toTop - 1));
+        Assert.Equal((CoupleRules.MaxLevel, 0, 0), CoupleRules.LevelProgress(toTop));
+        Assert.Equal(CoupleRules.MaxLevel, CoupleRules.Level(int.MaxValue / 2));
+        // A day with 4 right guesses earns 4 + 2 points.
+        Assert.Equal(6, CoupleRules.Points(new CoupleRecord { TotalMatches = 4, TotalQuestions = 6 }));
+    }
 }

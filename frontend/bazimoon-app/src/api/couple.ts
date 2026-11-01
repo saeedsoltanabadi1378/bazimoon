@@ -21,6 +21,22 @@ export interface CoupleHistoryDay {
   matches: boolean[];
 }
 
+/** Points earned towards the next couple level and what it costs (both 0 at the top level). */
+export interface CoupleLevel {
+  level: number;
+  maxLevel: number;
+  points: number;
+  cost: number;
+}
+
+/** Lifetime totals the app turns into couple badges. */
+export interface CoupleStats {
+  bestStreak: number;
+  daysPlayed: number;
+  totalMatches: number;
+  perfectDays: number;
+}
+
 export interface Couple {
   partnerId: number;
   partnerName: string;
@@ -32,6 +48,8 @@ export interface Couple {
   language: "en" | "fa";
   today: CoupleToday;
   history: CoupleHistoryDay[];
+  progress: CoupleLevel;
+  stats: CoupleStats;
 }
 
 export interface CoupleState {
@@ -60,6 +78,7 @@ export interface CoupleDay {
   level: number;
   xpEach: number;
   youNudged: boolean;
+  progress: CoupleLevel;
 }
 
 export const coupleApi = (api: BazimoonApiClient) => ({
