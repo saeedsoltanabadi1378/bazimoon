@@ -16,7 +16,6 @@ import { useGameFeedback } from './GameFeedback';
 
 import "./table.css";
 
-const ACCENT = "#E2B86B";
 const SUITS: { key: ShelemSuit; symbol: string; red: boolean }[] = [
   { key: "clubs", symbol: "♣", red: false }, { key: "diamonds", symbol: "♦", red: true },
   { key: "hearts", symbol: "♥", red: true }, { key: "spades", symbol: "♠", red: false },
@@ -94,7 +93,6 @@ export function ShelemRoomScreen({ code }: { code: string }) {
   const [playSelection, setPlaySelection] = useState<string | null>(null);
   const [pendingCard, setPendingCard] = useState<string | null>(null);
   useEffect(() => { setPlaySelection(null); }, [room?.turnSeat, room?.round, room?.phase]);
-  const [bid, setBid] = useState(100);
   const [voiceOn, setVoiceOn] = useState(false);
   const [micMuted, setMicMuted] = useState(false);
   const [localMutes, setLocalMutes] = useState<Set<number>>(() => new Set());
@@ -162,7 +160,6 @@ export function ShelemRoomScreen({ code }: { code: string }) {
   useEffect(() => { void load(); const id = window.setInterval(() => void load(), live ? 5000 : 550); return () => window.clearInterval(id); }, [load, live]);
   useEffect(() => () => { void voice.current.leave(); }, []);
   useEffect(() => { setSelected([]); }, [room?.phase, room?.round]);
-  useEffect(() => { if (room?.highestBid != null) setBid(Math.min(165, room.highestBid + 5)); }, [room?.highestBid]);
 
   async function act(fn: () => Promise<ShelemRoom>) {
     if (submitting.current) return;
@@ -218,9 +215,9 @@ export function ShelemRoomScreen({ code }: { code: string }) {
       {(room.phase === 'roundresult' || room.phase === 'finished') && room.declarerSeat != null && <p className="small">{t(room.roundDelta[room.declarerSeat%2]>=0 ? 'shelemContractMade' : 'shelemContractMissed', {points:room.roundPoints[room.declarerSeat%2], target:room.highestBid ?? 0, delta:room.roundDelta[room.declarerSeat%2]})}</p>}
       {room.phase === 'discard' && myTurn && <div className="shelem-zamin" dir="ltr" aria-label={t('shelemChooseFour')}><small>{t('shelemDropFour')}</small>{Array.from({length:4},(_,i)=>selected[i] ? <PlayingCard key={selected[i]} code={selected[i]} size="table" dropTarget=".shelem-hand" onClick={busy ? undefined : ()=>setSelected(old=>old.filter(c=>c!==selected[i]))} /> : <span className="shelem-zamin-slot" key={i}>{n(i+1)}</span>)}</div>}
       {room.phase === "bidding" && (myTurn ? <div className="stack" style={{ gap: 10 }}>
-          <div className="row row--between"><b>{t("shelemYourBid")}</b><output className="display" style={{ fontSize: 24, color: ACCENT }}>{n(bid)}</output></div>
-          <div className="shelem-bid-values" dir="ltr" role="group" aria-label={t("shelemYourBid")}>{Array.from({length:14},(_,i)=>100+i*5).map(value=><button type="button" key={value} disabled={value<minBid || busy} aria-pressed={value===Math.max(minBid,bid)} onClick={()=>setBid(value)}>{n(value)}</button>)}</div>
-          <div className="row" style={{ gap: 8 }}><button className="btn btn--outline" disabled={busy} onClick={() => void act(() => api.bid(code, null))}>{t("shelemPass")}</button><button className="btn" disabled={busy || minBid > 165} onClick={() => void act(() => api.bid(code, Math.max(minBid, bid)))}>{t("shelemBidN", { n: Math.max(minBid, bid) })}</button><button className="btn shelem-slam" disabled={busy} onClick={() => void act(() => api.bid(code, 165, true))}>{t("gameShelem")}</button></div>
+          <div className="shelem-bid-heading"><b>{t("shelemYourBid")}</b><small>{t("shelemTapToBid")}</small></div>
+          <div className="shelem-bid-values" dir="ltr" role="group" aria-label={t("shelemYourBid")}>{Array.from({length:14},(_,i)=>100+i*5).map(value=><button type="button" key={value} disabled={value<minBid || busy} aria-label={t("shelemBidN", { n: value })} onClick={() => void act(() => api.bid(code, value))}>{n(value)}</button>)}</div>
+          <div className="row" style={{ gap: 8 }}><button className="btn btn--outline" disabled={busy} onClick={() => void act(() => api.bid(code, null))}>{t("shelemPass")}</button><button className="btn shelem-slam" disabled={busy} onClick={() => void act(() => api.bid(code, 165, true))}>{t("gameShelem")}</button></div>
         </div> : null)}
       {room.phase === "discard" && myTurn && <div className="row row--between"><span><b>{t("shelemChooseFour")}</b><small>{t("shelemChosen", { n: selected.length })}</small></span><button className="btn btn--auto" disabled={busy || selected.length !== 4} onClick={() => void act(() => api.discard(code, selected))}>{t("shelemDiscard")}</button></div>}
       {room.phase === "trump" && myTurn && <div className="stack stack--sm"><b>{t("shelemChooseTrump")}</b><div className="shelem-suits">{SUITS.map((s) => <button key={s.key} className={s.red ? "is-red" : ""} onClick={() => void act(() => api.trump(code, s.key))}>{s.symbol}</button>)}</div></div>}
@@ -300,7 +297,6 @@ function GameTable({ room }: { room: ShelemRoom }) {
     {collecting && <div className="shelem-trick-winner" role="status">{t('shelemTrickWon', {name: winner?.isYou ? t('you') : winner?.name ?? '', points})}</div>}
     <div className={`shelem-trick${collecting ? ` is-collecting collect-${direction}` : ''}`} dir="ltr">{room.trick.map((play) => <PlayingCard key={`${play.seat}-${play.card}`} code={play.card} size="table" selected={collecting && play.seat === room.lastTrickWinner} style={trickStyle((play.seat - own + 4) % 4)} />)}{room.trick.length === 0 && <span className="shelem-table-mark">✦</span>}</div>
     <div className={`shelem-player shelem-player--bottom team-blue${room.turnSeat === own ? " is-turn" : ""}`}><span>{at(0)?.name[0]}<TurnRing room={room} seat={own} /></span><b>{t("you")}</b><PlayerStatus room={room} seat={own} /></div>
-    {room.lastTrick.length === 4 && <details className="shelem-last-trick" key={`${room.round}-${room.lastTrick.map(p=>p.card).join('')}`}><summary>{t('shelemLastTrick')}</summary><div>{room.lastTrick.map(play=><figure key={play.seat}><PlayingCard code={play.card} size="table" selected={play.seat===room.lastTrickWinner}/><figcaption>{room.players.find(p=>p.seat===play.seat)?.name}{play.seat===room.lastTrickWinner ? ` · ${t('shelemWinner')}` : ''}</figcaption></figure>)}</div></details>}
   </div>;
 }
 

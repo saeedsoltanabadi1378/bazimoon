@@ -1,5 +1,5 @@
 /* Portrait card table inspired by the supplied gameplay reference. */
-.screen:has(.shelem-game-toolbar) { background:radial-gradient(ellipse at 50% 48%,#451128,transparent 72%),radial-gradient(circle,#17324b 2px,transparent 4px) 0 0/15px 15px,#07101b; isolation:isolate; }
+.screen:has(.shelem-game-toolbar) { background:radial-gradient(ellipse at 50% 45%,#193a40,#09151e 78%); isolation:isolate; }
 .shelem-game-toolbar { position:absolute; inset:0 0 auto; z-index:22; background:transparent; border:0; padding:8px; pointer-events:none; }
 .shelem-game-toolbar > * { pointer-events:auto; }
 .shelem-game-toolbar > .grow { display:none; }
@@ -11,7 +11,7 @@
 .screen:has(.shelem-game-toolbar) > .shelem-voice-entry { position:absolute; z-index:21; inset-block-start:53px; inset-inline-end:4px; padding:0; }
 .screen:has(.shelem-game-toolbar) > .shelem-voice-entry .btn { width:42px; height:42px; padding:10px; overflow:hidden; font-size:0; gap:0; background:linear-gradient(#285b80,#0b2035); border:2px solid #577f9f; }
 .screen:has(.shelem-game-toolbar) > .shelem-table { position:absolute; inset:0; overflow:hidden; background:none; border:0; box-shadow:none; }
-.screen:has(.shelem-game-toolbar) .shelem-table::before { inset:17% 14% 18%; border:5px solid #d9b650; outline:4px solid #53585b; border-radius:30% / 16%; background:repeating-radial-gradient(ellipse at 28% 40%,#ffffff05 0 1px,#00000006 2px 3px),radial-gradient(ellipse,#7893a2,#476575); box-shadow:inset 0 0 0 3px #344b5b,inset 0 0 0 6px #bd9c44,inset 0 0 45px #152f45,0 0 0 8px #25313c,0 0 35px #000; }
+.screen:has(.shelem-game-toolbar) .shelem-table::before { inset:17% 14% 18%; border:1px solid #bba36a70; outline:6px solid #091c25; border-radius:30% / 16%; background:radial-gradient(ellipse,#28504e,#163735); box-shadow:inset 0 0 45px #091e2866,0 12px 32px #0004; }
 .shelem-table-brand { position:absolute; inset-block-start:28%; inset-inline:20%; text-align:center; font-size:clamp(24px,7vw,40px); font-weight:900; color:#c8dde34a; text-shadow:0 2px 1px #153a4e55; }
 .screen:has(.shelem-game-toolbar) .shelem-player { border:2px solid #80bedc; border-radius:7px; min-width:108px; min-height:46px; padding:6px; box-shadow:inset 0 0 0 2px #ffffff15,0 0 10px #159ee76b; backdrop-filter:none; }
 .team-blue { background:linear-gradient(#159ce8,#0674b8); color:#fff; }
@@ -49,16 +49,15 @@
 .screen:has(.shelem-game-toolbar) > .shelem-actions--discard.is-my-turn,
 .screen:has(.shelem-game-toolbar) > .shelem-actions--trump.is-my-turn,
 .screen:has(.shelem-game-toolbar) > .shelem-actions--roundresult,
-.screen:has(.shelem-game-toolbar) > .shelem-actions--finished { inset:22% 11% auto; max-height:60%; padding:18px; border:2px solid #b8d4e6; border-radius:12px; background:linear-gradient(#245681,#102a45); box-shadow:0 0 0 100vmax #0006,0 8px 20px #0009; }
-.screen:has(.shelem-game-toolbar) .shelem-bid-values { grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; }
-.screen:has(.shelem-game-toolbar) .shelem-bid-values button { min-height:42px; font-size:23px; border:2px solid #819fc9; border-radius:6px; background:linear-gradient(#527db9,#233e71); box-shadow:inset 0 1px 4px #c8d9f578,0 3px 5px #0005; }
+.screen:has(.shelem-game-toolbar) > .shelem-actions--finished { inset:22% 11% auto; max-height:60%; padding:18px; border:1px solid #bba36a66; border-radius:20px; background:#112630; box-shadow:0 0 0 100vmax #0005,0 16px 40px #0006; }
+.screen:has(.shelem-game-toolbar) .shelem-bid-values { grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; }
+.screen:has(.shelem-game-toolbar) .shelem-bid-values button { min-height:44px; font-size:20px; font-weight:650; border:1px solid #76948c66; border-radius:10px; background:#203c43; box-shadow:none; }
 .screen:has(.shelem-game-toolbar) .shelem-bid-values button[aria-pressed=true] { background:linear-gradient(#ffe487,#d69e20); color:#14273e; }
 .screen:has(.shelem-game-toolbar) .shelem-actions .btn { min-height:40px; font-size:12px; padding:8px; }
 .screen:has(.shelem-game-toolbar) .shelem-actions .btn--outline { background:linear-gradient(#15d879,#008341); color:white; border-color:#79f2bd; }
 .screen:has(.shelem-game-toolbar) .shelem-slam { background:linear-gradient(#d14d4c,#791d28); color:white; }
 .screen:has(.shelem-game-toolbar) .shelem-player--top .shelem-player-status { top:calc(100% + 7px); }
 .screen:has(.shelem-game-toolbar) .shelem-player--bottom .shelem-player-status { bottom:calc(100% + 5px); }
-.screen:has(.shelem-game-toolbar) .shelem-last-trick { inset-block-end:37%; inset-inline-end:17%; max-width:66%; }
 .screen:has(.shelem-game-toolbar) .shelem-dealing { inset:15% 10% 20%; background:#23495be8; border-radius:30px; }
 .shelem-scoreboard { width:min(92%,470px); max-height:85dvh; padding:18px; margin:auto; border:2px solid #b5d0e2; border-radius:12px; color:white; background:linear-gradient(#235783,#0d2742); box-shadow:0 10px 40px #0009; }
 .shelem-scoreboard::backdrop { background:#000a; }
@@ -97,3 +96,19 @@
 .shelem-seat-control { display:grid; gap:5px; width:100%; text-align:start; font-size:11px; margin-block-start:8px; }
 .shelem-seat-control select { width:100%; min-width:0; min-height:42px; padding:6px; border:1px solid #65718c; border-radius:8px; background:#142039; color:#fff; font:inherit; }
 .shelem-lobby-seat { min-width:0; }
+
+/* Keep controls quiet and give immediate bid actions a clear focus state. */
+.shelem-bid-heading { display:grid; gap:4px; text-align:start; margin-block-end:4px; }
+.screen:has(.shelem-game-toolbar) .shelem-bid-values button:enabled:hover { background:#34554f; border-color:#e2b86b; }
+.screen:has(.shelem-game-toolbar) .shelem-bid-values button:focus-visible { outline:2px solid #e2b86b; outline-offset:3px; }
+.screen:has(.shelem-game-toolbar) .shelem-actions .btn--outline { background:transparent; border:1px solid #78938c; color:#e3ede8; }
+.screen:has(.shelem-game-toolbar) .shelem-slam { background:#e2b86b; color:#17242b; }
+.shelem-game-toolbar .shelem-score { border:1px solid #78938c66; border-radius:12px; background:#112630; box-shadow:0 4px 16px #0003; }
+.shelem-game-toolbar .shelem-score > span { background:transparent; }
+.shelem-game-toolbar .shelem-score > span:nth-of-type(2) { background:transparent; }
+.shelem-game-toolbar .shelem-score b { display:block; font-size:18px; }
+.screen:has(.shelem-game-toolbar) .shelem-player { border-radius:12px; box-shadow:0 4px 12px #0003; }
+.screen:has(.shelem-game-toolbar) .shelem-player.team-blue { background:#183c54; border-color:#75b8d180; }
+.screen:has(.shelem-game-toolbar) .shelem-player.team-red { background:#512f40; border-color:#d894a780; box-shadow:0 4px 12px #0003; }
+.screen:has(.shelem-game-toolbar) .shelem-player.is-turn { outline:2px solid #e2b86b; outline-offset:3px; box-shadow:0 0 16px #e2b86b20; }
+.screen:has(.shelem-game-toolbar) > .shelem-voice-entry .btn { background:#112630; border:1px solid #78938c66; }

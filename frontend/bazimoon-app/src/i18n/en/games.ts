@@ -792,6 +792,7 @@ export const games = {
   shelemVoiceFailed: "Voice could not start. Check microphone permission and try again.",
   shelemThinking: "Thinking…",
   shelemWaitingBid: "Waiting for {name} to bid…",
+  shelemTapToBid: "Tap an amount to place your bid.",
   shelemYourBid: "Your bid",
   shelemInviteFull: "This room is full. Ask the host for a new room invitation.",
   shelemInviteStarted: "This game has already started. Join the next game with a new invitation.",

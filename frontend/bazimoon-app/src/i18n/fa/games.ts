@@ -793,6 +793,7 @@ export const games: Record<keyof typeof en, string> = {
   shelemVoiceFailed: "صدا وصل نشد. اجازه میکروفن را بررسی و دوباره تلاش کن.",
   shelemThinking: "در حال فکر…",
   shelemWaitingBid: "منتظر پیشنهاد {name}…",
+  shelemTapToBid: "برای ثبت پیشنهاد، روی امتیاز بزنید.",
   shelemYourBid: "پیشنهاد شما",
   shelemInviteFull: "این میز پر شده است. از میزبان دعوت‌نامهٔ یک میز جدید را بگیر.",
   shelemInviteStarted: "این بازی شروع شده است. برای بازی بعدی از میزبان دعوت‌نامهٔ جدید بگیر.",
