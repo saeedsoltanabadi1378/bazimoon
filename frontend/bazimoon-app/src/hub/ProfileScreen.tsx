@@ -191,7 +191,7 @@ export function ProfileScreen() {
             void saveSettings({ haptics: !s.haptics });
             haptic.tap();
           }} />
-          {(installMode === "prompt" || installMode === "ios") && (
+          {installMode !== "installed" && (
             <SettingRow label={t("installApp")} value={t("addToHomeScreen")} onClick={() => setShowInstall(true)} />
           )}
           <SettingRow label={t("profileFriends")} value={friendsValue} onClick={() => push({ name: "friends" })} />
@@ -203,7 +203,7 @@ export function ProfileScreen() {
           )}
         </section>
       </Body>
-      {showInstall && <InstallSheet mode={installMode} onClose={() => setShowInstall(false)} />}
+      {showInstall && <InstallSheet onClose={() => setShowInstall(false)} />}
       <TabBar />
     </Screen>
   );

@@ -3,7 +3,6 @@ import { useLanguage } from "../i18n/LanguageContext";
 import { useSession } from "../app/session";
 import { Icon } from "../ui/Icon";
 import { enablePush, markPushAsked, pushSupport, shouldAskForPush } from "../lib/push";
-import { useInstallMode } from "../lib/install";
 import { InstallSheet } from "./InstallSheet";
 
 /** "Get told when the game starts?" — asked once, after the player sits at a table, never on
@@ -11,7 +10,6 @@ import { InstallSheet } from "./InstallSheet";
 export function PushPrompt({ active }: { active: boolean }) {
   const { t } = useLanguage();
   const { api } = useSession();
-  const installMode = useInstallMode();
   const [open, setOpen] = useState(false);
   const [install, setInstall] = useState(false);
   const ios = pushSupport() === "ios-not-installed";
@@ -32,7 +30,7 @@ export function PushPrompt({ active }: { active: boolean }) {
     await enablePush(api).catch(() => false);
   }
 
-  if (install) return <InstallSheet mode={installMode === "installed" ? "ios" : installMode} onClose={() => setInstall(false)} />;
+  if (install) return <InstallSheet onClose={() => setInstall(false)} />;
   if (!open) return null;
   const reasons = [t("pushReasonTables"), t("pushReasonCouple"), t("pushReasonDaily")];
   return (

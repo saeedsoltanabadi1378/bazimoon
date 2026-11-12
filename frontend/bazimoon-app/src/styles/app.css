@@ -1628,3 +1628,32 @@ html[lang="fa"] .kicker {
 @media (prefers-reduced-motion: reduce) {
   .snake-gold, .dooz-pop svg, .spy-card { animation: none; }
 }
+
+/* ---------------------------------------------------------------- Install guide */
+.install-hot {
+  position: relative;
+  border-radius: 10px;
+  box-shadow: 0 0 0 2px #F0A83A;
+  background: rgb(240 168 58 / 16%);
+  color: #F6C377;
+}
+.install-hot::after {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  box-shadow: 0 0 0 2px #F0A83A;
+  animation: install-ping 1.6s ease-out infinite;
+  pointer-events: none;
+}
+@keyframes install-ping {
+  from { opacity: 0.9; transform: scale(1); }
+  to { opacity: 0; transform: scale(1.35); }
+}
+.install-pointer {
+  animation: install-bob 1.1s ease-in-out infinite alternate;
+}
+@keyframes install-bob {
+  from { transform: translateY(0); }
+  to { transform: translateY(6px); }
+}
