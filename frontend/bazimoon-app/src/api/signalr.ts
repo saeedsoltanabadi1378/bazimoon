@@ -1,11 +1,12 @@
+import type { MafiaReaction } from "../mafia/reactionTypes";
 import * as signalR from "@microsoft/signalr";
 import type { GraveyardMessage } from "./types";
 
 /**
  * Connects to Bazimoon.Api's GameHub and joins a single game's broadcast group. The hub only
- * ever sends a lightweight "GameUpdated" ping (see Bazimoon.Api.Hubs.GameHub /
+ * sends a lightweight "GameUpdated" ping for state changes (see Bazimoon.Api.Hubs.GameHub /
  * SignalRGameNotifier) — callers should re-fetch the filtered GET /api/games/{id} view in
- * response, never trust a payload pushed over the shared group channel.
+ * response. Ephemeral public reactions and audience-scoped graveyard chat use separate events.
  */
 export async function connectToGameHub(
   baseUrl: string,
@@ -15,6 +16,7 @@ export async function connectToGameHub(
   onGameUpdated: () => void,
   onConnectionChange?: (state: "connected" | "reconnecting" | "closed") => void,
   onGraveyardMessage?: (message: GraveyardMessage) => void,
+  onReaction?: (reaction: MafiaReaction) => void,
 ): Promise<signalR.HubConnection> {
   const connection = new signalR.HubConnectionBuilder()
     .withUrl(`${baseUrl}/hubs/game`, {
@@ -24,6 +26,9 @@ export async function connectToGameHub(
     .build();
 
   connection.on("GameUpdated", onGameUpdated);
+  connection.on("MafiaReaction", (event: { gameId: string; reaction: MafiaReaction }) => {
+    if (event.gameId === gameId) onReaction?.(event.reaction);
+  });
   // Graveyard chat is the one payload pushed directly: the server sends it only to players who are out and spectators.
   connection.on("GraveyardMessage", (event: { gameId: string; message: GraveyardMessage }) => {
     if (event.gameId === gameId) onGraveyardMessage?.(event.message);

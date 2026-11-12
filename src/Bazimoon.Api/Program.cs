@@ -55,6 +55,7 @@ if (!builder.Environment.IsEnvironment("Testing"))
 }
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton<GameMutationLock>();
+builder.Services.AddSingleton<MafiaReactions>();
 builder.Services.AddHostedService<PhaseDeadlineService>();
 builder.Services.AddSingleton<IGameNotifier, SignalRGameNotifier>();
 builder.Services.AddSignalR();

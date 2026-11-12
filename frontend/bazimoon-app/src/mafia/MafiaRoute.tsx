@@ -15,6 +15,8 @@ import { LoadingScreen, StateScreen } from "../app/StateScreen";
 import { useNavigation } from "../app/router";
 import { useLanguage } from "../i18n/LanguageContext";
 import { readLocal, writeLocal } from "../lib/storage";
+import { PhaseCurtain } from "./table";
+import { useMafiaSounds } from "./sounds";
 
 export function MafiaRoute({ gameId }: { gameId: string }) {
   // Keyed so a rematch (new gameId) starts from a clean provider and voice session.
@@ -22,6 +24,7 @@ export function MafiaRoute({ gameId }: { gameId: string }) {
     <GameProvider key={gameId} gameId={gameId}>
       <VoiceProvider>
         <PhaseRouter />
+        <PhaseCurtain />
       </VoiceProvider>
     </GameProvider>
   );
@@ -37,6 +40,7 @@ function PhaseRouter() {
   const [verdictFirst, setVerdictFirst] = useState(false);
   const lastPhase = useRef(view?.phase);
   const lastWordsCause = useRef(view?.lastWords?.cause);
+  useMafiaSounds(view);
 
   // When the town's vote ends the game (after the last words), show the verdict before the final
   // results (design flow).

@@ -1,5 +1,18 @@
 // Mafia (Bazimoon) game flow copy (English).
 export const mafia = {
+  tableMenu: "Table menu",
+  reactionsTitle: "Table reactions",
+  reactionsHint: "Tap a reaction to send it to the table.",
+  reactionsCooldown: "Next reaction in {seconds}s",
+  reactionsOffline: "Reconnect to send reactions.",
+  reactionsFailed: "Reaction could not be sent. Please try again.",
+  reaction_suspect: "Suspicious",
+  reaction_trust: "I trust you",
+  reaction_bluff: "Nice bluff!",
+  reaction_think: "Thinking…",
+  reaction_shock: "No way!",
+  reaction_applause: "Well played!",
+
   roleVillager: "Villager",
   roleDetective: "Detective",
   roleDoctor: "Doctor",

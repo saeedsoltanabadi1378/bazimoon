@@ -3,10 +3,11 @@ import { Icon } from "../ui/Icon";
 import type { NightActionType, Role } from "../api/types";
 import { useGame } from "./GameProvider";
 import { useLanguage, type TranslationKey } from "../i18n/LanguageContext";
-import { Banner, Bar, Body, IconDisc, PhaseHeader, ProgressBar, Screen } from "../ui/components";
-import { findPlayer, isMafiaRole, nightLabelNumber, playerColor, roleMeta } from "./roles";
-import { ActionError, LeaveGameButton, CreatorBox, PhaseTimer, ReconnectingBanner, RolePeek, VoiceStatusLine, TableNotices } from "./parts";
-import { GraveyardBar, SpectatorBanner, SpectatorList } from "./Graveyard";
+import { Banner, Bar, Body, IconDisc, PhaseHeader, Screen } from "../ui/components";
+import { findPlayer, isMafiaRole, nightLabelNumber, roleMeta } from "./roles";
+import { ActionError, PhaseTimer, ReconnectingBanner, RolePeek, VoiceStatusLine, TableNotices } from "./parts";
+import { GraveyardBar, SpectatorBanner } from "./Graveyard";
+import { CreatorBar, HeaderTools, PlayerAvatar, TableRoster } from "./table";
 import { haptic } from "../lib/haptics";
 
 const actions: Partial<Record<Role, { type: NightActionType; verb: TranslationKey; prompt: TranslationKey; includeSelf: boolean }>> = {
@@ -158,7 +159,7 @@ export function NightScreen() {
   return (
     <Screen theme="night">
       <div className="phase-atmosphere phase-atmosphere--night" aria-hidden="true" />
-      <PhaseHeader kicker={t("nightFalls")} title={t("nightN", { number: nightLabelNumber(view) })} right={<RolePeek role={role} alive={alive} />} />
+      <PhaseHeader kicker={t("nightFalls")} title={t("nightN", { number: nightLabelNumber(view) })} right={<HeaderTools><RolePeek role={role} alive={alive} /></HeaderTools>} />
 
       <Body tight>
         <ReconnectingBanner />
@@ -194,9 +195,7 @@ export function NightScreen() {
                       color: "var(--text)", textAlign: "start", opacity: disabled ? 0.4 : 1, cursor: disabled ? "default" : "pointer",
                     }}
                   >
-                    <span className="avatar" aria-hidden="true" style={{ width: 36, height: 36, fontSize: 15, background: playerColor(view, p.playerId) }}>
-                      {Array.from(p.displayName)[0]?.toUpperCase()}
-                    </span>
+                    <PlayerAvatar view={view} playerId={p.playerId} size={36} />
                     <span style={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
                       <span style={{ fontSize: 14, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis" }}>{you ? t("youName", { name: p.displayName }) : p.displayName}</span>
                       {note && <span className="tiny" style={{ color: noteColor }}>{note}</span>}
@@ -214,29 +213,18 @@ export function NightScreen() {
           </section>
         )}
 
-        {view.youAreController && (
-          <CreatorBox>
-            <div className="row row--between" style={{ fontSize: 13 }}>
-              <span className="muted">{t("gameCreator")}</span>
-              {progress && <span className="strong">{t("nightActionsIn", { done: progress.submitted, total: progress.required })}</span>}
-            </div>
-            {progress && <ProgressBar value={progress.required ? (progress.submitted / progress.required) * 100 : 100} label={t("nightActionsIn", { done: progress.submitted, total: progress.required })} />}
-            <button
-              type="button"
-              className={`btn btn--sm${allIn ? " btn--primary" : " btn--locked"}`}
-              disabled={busy || !allIn}
-              onClick={() => void resolveNight()}
-            >
-              {allIn ? t("endNight") : t("waitingNightRoles")}
-            </button>
-          </CreatorBox>
-        )}
+        {!(canAct && action) && <TableRoster />}
         <ActionError />
-        <LeaveGameButton />
-        <SpectatorList />
       </Body>
 
       <Bar>
+        {view.youAreController && (
+          <CreatorBar label={progress ? t("nightActionsIn", { done: progress.submitted, total: progress.required }) : t("gameCreator")}>
+            <button type="button" className={`btn${allIn ? " btn--primary" : " btn--locked"}`} disabled={busy || !allIn} onClick={() => void resolveNight()}>
+              {allIn ? t("endNight") : t("waitingNightRoles")}
+            </button>
+          </CreatorBar>
+        )}
         <GraveyardBar />
         {canAct && action && (
           <button

@@ -1,9 +1,11 @@
+import { Reactions } from "./Reactions";
 import { useGame } from "./GameProvider";
 import { useVoice } from "./VoiceProvider";
 import { useLanguage } from "../i18n/LanguageContext";
 import { Bar, Body, Screen } from "../ui/components";
 import { Icon } from "../ui/Icon";
-import { findPlayer, playerColor } from "./roles";
+import { findPlayer } from "./roles";
+import { PlayerAvatar, TableRoster, VoiceHalo } from "./table";
 import { ActionError, ReconnectingBanner } from "./parts";
 import { GraveyardBar, SpectatorBanner } from "./Graveyard";
 import { useClock, useSecondsLeft } from "./timers";
@@ -64,13 +66,8 @@ export function LastWordsScreen() {
                   style={{ transition: "stroke-dasharray 250ms linear" }}
                 />
               </svg>
-              <span
-                className="avatar display"
-                aria-hidden="true"
-                style={{ position: "absolute", left: 19, top: 19, width: 112, height: 112, fontSize: 44, fontWeight: 800, background: playerColor(view, speaker.playerId), filter: "grayscale(0.5)" }}
-              >
-                {Array.from(speaker.displayName)[0]?.toUpperCase()}
-              </span>
+              <VoiceHalo inset={19} color={accent} />
+              <PlayerAvatar view={view} playerId={speaker.playerId} size={112} seat={false} className="display" style={{ position: "absolute", left: 19, top: 19, fontSize: 44, fontWeight: 800, filter: "grayscale(0.5)" }} />
             </div>
             <div>
               <div className="display" style={{ fontSize: 26, lineHeight: 1.1 }}>{name(speaker.playerId)}</div>
@@ -85,14 +82,8 @@ export function LastWordsScreen() {
           <span>{night ? t("lastWordsNightNote") : t("lastWordsVoteNote")}</span>
         </div>
 
-        <div className="row row--wrap" aria-label={t("players")}>
-          {view.players.map((p) => (
-            <span key={p.playerId} className="chip" style={{ background: "var(--surface)", borderColor: "#2B241B", color: p.isAlive ? "var(--text)" : "var(--faint)", textDecoration: p.isAlive ? "none" : "line-through" }}>
-              {name(p.playerId)}
-              {!p.isAlive && <span className="visually-hidden">, {t("eliminated")}</span>}
-            </span>
-          ))}
-        </div>
+        <TableRoster />
+        <Reactions />
         <ActionError />
       </Body>
 

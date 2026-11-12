@@ -47,6 +47,21 @@ export class VoiceSession {
     track?.setVolume(muted ? 0 : 100);
   }
 
+  /** Loudest live voice right now, 0 to 1: your own mic while you publish, or whoever you can hear. */
+  getLevel(): number {
+    let level = 0;
+    try {
+      if (this.micTrack?.enabled) level = this.micTrack.getVolumeLevel();
+      for (const user of this.client?.remoteUsers ?? []) {
+        if (this.locallyMuted.has(Number(user.uid))) continue;
+        level = Math.max(level, user.audioTrack?.getVolumeLevel() ?? 0);
+      }
+    } catch {
+      return 0;
+    }
+    return level;
+  }
+
   async leave(): Promise<void> {
     return this.enqueue(() => this.leaveNow());
   }

@@ -1,0 +1,336 @@
+/* Shared Mafia table parts: seat avatars, the roster strip, the table menu, phase curtain. */
+
+.mafia-table {
+  --seat-ink: #14110d;
+  --seat-now: #f0a83a;
+  --seat-danger: #f08a7a;
+  --seat-safe: #5fd0be;
+}
+
+/* Seat avatars: a pattern and a seat number back up the colour, so players are told apart without relying on hue. */
+.seat-avatar {
+  position: relative;
+}
+
+.seat-avatar--p1 {
+  background-image: repeating-linear-gradient(45deg, rgb(0 0 0 / 15%) 0 3px, transparent 3px 8px);
+}
+
+.seat-avatar--p2 {
+  background-image: radial-gradient(rgb(0 0 0 / 20%) 1.5px, transparent 2px);
+  background-size: 7px 7px;
+}
+
+.seat-avatar--p3 {
+  background-image: repeating-linear-gradient(-45deg, rgb(0 0 0 / 15%) 0 3px, transparent 3px 8px);
+}
+
+.seat-avatar__no {
+  position: absolute;
+  inset-block-end: -4px;
+  inset-inline-end: -4px;
+  min-width: 17px;
+  height: 17px;
+  padding: 0 3px;
+  box-sizing: border-box;
+  border-radius: 999px;
+  background: #14110d;
+  border: 1px solid rgb(255 255 255 / 22%);
+  color: #f4eee4;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 15px;
+  text-align: center;
+}
+
+/* Voice halo: sits behind the speaker's avatar and swells with the level of whoever holds the floor. */
+.voice-halo {
+  position: absolute;
+  border-radius: 999px;
+  background: var(--halo, #f0a83a);
+  opacity: calc(0.12 + var(--voice, 0) * 0.5);
+  transform: scale(calc(1 + var(--voice, 0) * 0.13));
+  transition: transform 110ms ease-out, opacity 110ms ease-out;
+  pointer-events: none;
+}
+
+/* Roster strip */
+.roster {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.roster__seats {
+  display: flex;
+  gap: 4px;
+  margin: 0;
+  padding: 4px 2px 6px;
+  list-style: none;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.roster__seats::-webkit-scrollbar {
+  display: none;
+}
+
+.roster__seat {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  width: 58px;
+}
+
+.roster__name {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+  color: var(--text-2);
+}
+
+.roster__tag {
+  min-height: 13px;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 13px;
+  white-space: nowrap;
+  color: var(--muted);
+}
+
+.roster__seat--now .seat-avatar {
+  box-shadow: 0 0 0 3px var(--bg), 0 0 0 5px var(--seat-now, #f0a83a);
+}
+
+.roster__seat--now .roster__tag {
+  color: var(--seat-now, #f0a83a);
+}
+
+.roster__seat--done .seat-avatar {
+  opacity: 0.5;
+}
+
+.roster__seat--out .seat-avatar {
+  filter: grayscale(1);
+  opacity: 0.35;
+}
+
+.roster__seat--out .roster__name {
+  color: var(--faint);
+  text-decoration: line-through;
+}
+
+.roster__seat--silenced .roster__tag {
+  color: var(--seat-danger, #f08a7a);
+}
+
+.roster__seat--mayor .roster__tag {
+  color: var(--seat-now, #f0a83a);
+}
+
+/* Morning summary: one line that opens to the full report. */
+.morning-summary {
+  border-radius: 16px;
+  border: 1px solid var(--summary-edge);
+  background: var(--summary-bg);
+  overflow: hidden;
+}
+
+.morning-summary__head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 48px;
+  padding: 8px 12px;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  text-align: start;
+  cursor: pointer;
+}
+
+.morning-summary__head > span:nth-child(2) {
+  flex: 1;
+  min-width: 0;
+}
+
+.morning-summary__chevron {
+  display: flex;
+  color: var(--muted);
+  transform: rotate(90deg);
+  transition: transform 180ms ease;
+}
+
+.morning-summary--open .morning-summary__chevron {
+  transform: rotate(-90deg);
+}
+
+.morning-summary__body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 0 12px 12px;
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--text-2);
+}
+
+.morning-summary__item {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.morning-summary__item b {
+  display: block;
+  color: var(--text);
+  font-weight: 600;
+}
+
+/* Creator controls pinned in the bottom bar. */
+.creator-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 6px 6px 12px;
+  padding-inline: 12px 6px;
+  border-radius: 14px;
+  border: 1.5px dashed var(--edge);
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.creator-bar > span {
+  flex: 1;
+  min-width: 0;
+}
+
+.creator-bar--solo {
+  padding: 0;
+  border: 0;
+}
+
+.creator-bar--solo .btn {
+  flex: 1;
+  border-style: dashed;
+}
+
+.creator-bar .btn {
+  width: auto;
+  min-height: 40px;
+  padding: 0 14px;
+  border-radius: 10px;
+  font-size: 14px;
+}
+
+/* Table menu sheet */
+.table-menu {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: flex-end;
+  background: rgb(8 6 4 / 66%);
+}
+
+.table-menu__sheet {
+  width: 100%;
+  box-sizing: border-box;
+  gap: 10px;
+  padding: 20px 16px calc(26px + var(--safe-bottom, 0px));
+  border-radius: 24px 24px 0 0;
+  background: var(--surface);
+  color: var(--text);
+}
+
+.table-menu__sheet > .btn {
+  align-self: stretch !important;
+  justify-content: flex-start;
+  gap: 10px;
+}
+
+/* Phase curtain: a short full-screen beat when night falls and when morning comes. */
+.phase-curtain {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 24px;
+  text-align: center;
+  color: #f4eee4;
+  animation: phase-curtain 2400ms ease both;
+}
+
+.phase-curtain--night {
+  background: radial-gradient(circle at 50% 38%, #23274a, #0b0d1a 68%);
+  --curtain-accent: #9c8cff;
+}
+
+.phase-curtain--day {
+  background: radial-gradient(circle at 50% 38%, #4a3418, #14110d 68%);
+  --curtain-accent: #f0a83a;
+}
+
+.phase-curtain__disc {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 104px;
+  height: 104px;
+  margin-bottom: 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--curtain-accent) 16%, transparent);
+  color: var(--curtain-accent);
+  box-shadow: 0 0 60px color-mix(in srgb, var(--curtain-accent) 30%, transparent);
+  animation: phase-curtain-disc 900ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.phase-curtain .kicker {
+  color: var(--curtain-accent);
+}
+
+.phase-curtain__title {
+  font-size: 40px;
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+.phase-curtain__line {
+  max-width: 300px;
+  font-size: 16px;
+  line-height: 1.45;
+  color: #d8cfc0;
+  animation: phase-curtain-line 500ms ease 500ms both;
+}
+
+@keyframes phase-curtain {
+  0% { opacity: 0; }
+  10% { opacity: 1; }
+  82% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+@keyframes phase-curtain-disc {
+  from { transform: translateY(28px) scale(0.7); opacity: 0; }
+}
+
+@keyframes phase-curtain-line {
+  from { transform: translateY(8px); opacity: 0; }
+}
+
+.table-menu__sheet > .btn--ghost {
+  border: 1.5px solid var(--edge);
+  color: var(--text) !important;
+}

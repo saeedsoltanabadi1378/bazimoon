@@ -1,11 +1,13 @@
+import { Reactions } from "./Reactions";
 import { useGame } from "./GameProvider";
 import { useVoice } from "./VoiceProvider";
 import { useLanguage } from "../i18n/LanguageContext";
 import { Bar, Body, PhaseHeader, Screen } from "../ui/components";
 import { Icon } from "../ui/Icon";
-import { findPlayer, playerColor } from "./roles";
-import { ActionError, LeaveGameButton, ReconnectingBanner, RolePeek, TableNotices } from "./parts";
-import { GraveyardBar, SpectatorBanner, SpectatorList } from "./Graveyard";
+import { findPlayer } from "./roles";
+import { ActionError, ReconnectingBanner, RolePeek, TableNotices } from "./parts";
+import { GraveyardBar, SpectatorBanner } from "./Graveyard";
+import { HeaderTools, PlayerAvatar, TableRoster, VoiceHalo } from "./table";
 import { useClock, useSecondsLeft } from "./timers";
 
 const RING = 2 * Math.PI * 60;
@@ -36,22 +38,12 @@ export function DefenceScreen() {
 
   return (
     <Screen theme="day">
-      <PhaseHeader kicker={t("defenceKicker", { number: view.nightNumber })} title={t("defenceTitle")} right={<RolePeek role={view.yourRole} alive={view.youAreAlive} />} />
+      <PhaseHeader kicker={t("defenceKicker", { number: view.nightNumber })} title={t("defenceTitle")} right={<HeaderTools><RolePeek role={view.yourRole} alive={view.youAreAlive} /></HeaderTools>} />
 
       <Body tight>
         <ReconnectingBanner />
         <SpectatorBanner />
         <TableNotices />
-        <section className="row" style={{ gap: 12, padding: 14, borderRadius: 18, background: "#241D12", border: "1px solid #4A3A22" }}>
-          <span style={{ width: 44, height: 44, flex: "none", borderRadius: 999, background: "#3A2A16", color: "#F0A83A", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <Icon name="scales" />
-          </span>
-          <div style={{ fontSize: 14, lineHeight: 1.45 }}>
-            <div style={{ fontWeight: 600, fontSize: 15 }}>{t("defenceTieTitle", { names: tied.map(name).join(t("listAnd")) })}</div>
-            <div style={{ color: "var(--text-2)" }}>{t("defenceTieText", { seconds: total })}</div>
-          </div>
-        </section>
-
         {discussion && active && (
           <section className="stack center" style={{ gap: 12, padding: "20px 16px", borderRadius: 24, background: "var(--surface)" }} aria-live="polite">
             <span style={{ padding: "4px 10px", borderRadius: 999, background: "#3A2A16", color: "#F0A83A", fontSize: 12, fontWeight: 700, letterSpacing: 0.8, textTransform: "uppercase" }}>
@@ -66,13 +58,8 @@ export function DefenceScreen() {
                   style={{ transition: "stroke-dasharray 250ms linear" }}
                 />
               </svg>
-              <span
-                className="avatar display"
-                aria-hidden="true"
-                style={{ position: "absolute", left: 16, top: 16, width: 100, height: 100, fontSize: 40, fontWeight: 800, background: playerColor(view, active.playerId) }}
-              >
-                {Array.from(active.displayName)[0]?.toUpperCase()}
-              </span>
+              <VoiceHalo inset={16} />
+              <PlayerAvatar view={view} playerId={active.playerId} size={100} seat={false} className="display" style={{ position: "absolute", left: 16, top: 16, fontSize: 40, fontWeight: 800 }} />
             </div>
             <div style={{ textAlign: "center" }}>
               <div style={{ fontSize: 20, fontWeight: 700 }}>{name(active.playerId)}</div>
@@ -82,42 +69,30 @@ export function DefenceScreen() {
           </section>
         )}
 
-        <section className="stack" style={{ gap: 8 }}>
-          <div className="row row--between" style={{ fontSize: 13 }}>
-            <span className="strong">{t("defenceOrder")}</span>
-            <span className="muted">{t("defenceLengths", { seconds: total })}</span>
+        <TableRoster
+          heading={t("defenceOrder")}
+          note={t("defenceLengths", { seconds: total })}
+          order={tied}
+          nowId={discussion?.activePlayerId}
+          doneIds={completed}
+        />
+
+        <section className="row" style={{ gap: 12, padding: 14, borderRadius: 18, background: "#241D12", border: "1px solid #4A3A22" }}>
+          <span style={{ width: 44, height: 44, flex: "none", borderRadius: 999, background: "#3A2A16", color: "#F0A83A", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <Icon name="scales" />
+          </span>
+          <div style={{ fontSize: 14, lineHeight: 1.45 }}>
+            <div style={{ fontWeight: 600, fontSize: 15 }}>{t("defenceTieTitle", { names: tied.map(name).join(t("listAnd")) })}</div>
+            <div style={{ color: "var(--text-2)" }}>{t("defenceTieText", { seconds: total })}</div>
           </div>
-          <ol className="row" style={{ gap: 8, listStyle: "none", margin: 0, padding: 0 }}>
-            {tied.map((id) => {
-              const p = findPlayer(view, id);
-              const now = id === discussion?.activePlayerId;
-              const done = completed.has(id);
-              return (
-                <li key={id} className="stack center" style={{ gap: 4, minWidth: 56 }}>
-                  <span
-                    className="avatar"
-                    aria-hidden="true"
-                    style={{
-                      width: 40, height: 40, fontSize: 16, background: playerColor(view, id), opacity: done ? 0.45 : 1,
-                      boxShadow: now ? "0 0 0 3px #14110D, 0 0 0 5px #F0A83A" : "none",
-                    }}
-                  >
-                    {Array.from(p?.displayName ?? "?")[0]?.toUpperCase()}
-                  </span>
-                  <span style={{ fontSize: 11, color: now ? "#F0A83A" : "var(--muted)" }}>{now ? t("now") : done ? t("done") : t("next")}</span>
-                </li>
-              );
-            })}
-          </ol>
         </section>
 
+        <Reactions />
         <div className="row" style={{ gap: 10, alignItems: "flex-start", padding: "12px 14px", borderRadius: 14, background: "#1A1611", border: "1px solid #2B241B", fontSize: 13, lineHeight: 1.5, color: "var(--text-2)" }}>
           <span style={{ marginTop: 1 }}><Icon name="info" size={18} color="#F0A83A" /></span>
           <span>{t("defenceNote")}</span>
         </div>
         <ActionError />
-        <LeaveGameButton />
-        <SpectatorList />
       </Body>
 
       {view.youCanUseGraveyard ? (

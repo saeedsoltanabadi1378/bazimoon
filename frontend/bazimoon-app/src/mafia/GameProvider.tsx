@@ -8,6 +8,8 @@ import { useLanguage } from "../i18n/LanguageContext";
 import { haptic } from "../lib/haptics";
 import { localizedGameError } from "./errorText";
 
+import { reactionKinds, type MafiaReaction, type ReactionKind } from "./reactionTypes";
+
 export type GameStatus = "loading" | "ready" | "not-found" | "error";
 export type LinkState = "connected" | "reconnecting" | "closed";
 
@@ -48,6 +50,8 @@ export interface GameContextValue {
   graveyardUnread: number;
   markGraveyardRead(): void;
   sendGraveyard(text: string): Promise<boolean>;
+  reactions: MafiaReaction[];
+  sendReaction(kind: ReactionKind): Promise<boolean>;
   blockedPlayers: PlayerSafetyTarget[];
   safetyPlayers: PlayerSafetyTarget[];
   blockPlayer(playerId: string): Promise<boolean>;
@@ -74,6 +78,16 @@ export function GameProvider({ gameId, children }: { gameId: string; children: R
   const [hubVersion, setHubVersion] = useState(0);
   const [blockedPlayers, setBlockedPlayers] = useState<PlayerSafetyTarget[]>([]);
   const [safetyPlayers, setSafetyPlayers] = useState<PlayerSafetyTarget[]>([]);
+
+  const [reactions, setReactions] = useState<MafiaReaction[]>([]);
+  const addReaction = useCallback((reaction: MafiaReaction) => {
+    if (!reactionKinds.includes(reaction.kind)) return;
+    setReactions(list => [...list.filter(item => item.id !== reaction.id && Date.now() - item.receivedAt < 4500), { ...reaction, receivedAt: Date.now() }].slice(-4));
+  }, []);
+  useEffect(() => {
+    const timer = window.setInterval(() => setReactions(list => list.length ? list.filter(item => Date.now() - item.receivedAt < 4500) : list), 500);
+    return () => window.clearInterval(timer);
+  }, []);
 
   const addGraveyard = useCallback((message: GraveyardMessage) => {
     setGraveyard((list) => (list.some((m) => m.id === message.id) ? list : [...list, message].slice(-200)));
@@ -126,7 +140,7 @@ export function GameProvider({ gameId, children }: { gameId: string; children: R
         recoveredTimer.current = window.setTimeout(() => setConnectionRecovered(false), 4000);
       }
       setLink(state);
-    }, addGraveyard)
+    }, addGraveyard, addReaction)
       .then(async (hub) => {
         if (cancelled) {
           await hub.stop();
@@ -146,7 +160,7 @@ export function GameProvider({ gameId, children }: { gameId: string; children: R
       void hubRef.current?.stop();
       hubRef.current = null;
     };
-  }, [api, gameId, status, refresh, addGraveyard, liveAttempt]);
+  }, [api, gameId, status, refresh, addGraveyard, addReaction, liveAttempt]);
 
   useEffect(() => () => {
     if (recoveredTimer.current !== null) window.clearTimeout(recoveredTimer.current);
@@ -243,6 +257,15 @@ export function GameProvider({ gameId, children }: { gameId: string; children: R
         setActionError(err instanceof ApiError ? localizedGameError(err, t) : t("genericError"));
         return false;
       }
+    },
+    reactions,
+    sendReaction: async (kind) => {
+      if (!hubRef.current || link !== "connected") return false;
+      try {
+        await hubRef.current.invoke("SendReaction", gameId, kind);
+        haptic.tap();
+        return true;
+      } catch { return false; }
     },
     blockedPlayers,
     safetyPlayers,

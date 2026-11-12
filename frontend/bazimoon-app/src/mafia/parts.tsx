@@ -7,7 +7,6 @@ import { roleMeta, eliminatedMeta } from "./roles";
 import { useGame } from "./GameProvider";
 import { useSecondsLeft } from "./timers";
 import { useVoice } from "./VoiceProvider";
-import { PlayerSafetyButton } from "./PlayerSafety";
 import { haptic } from "../lib/haptics";
 
 /** The countdown strip for a timed night or vote (the table's Night or Voting timer). Shows nothing when untimed. */
@@ -211,7 +210,6 @@ export function TableNotices() {
           <span><b>{t("newCreatorTitle")}</b> {t("newCreatorText", { name: firstSeat.displayName })}</span>
         </div>
       )}
-      <PlayerSafetyButton />
     </>
   );
 }

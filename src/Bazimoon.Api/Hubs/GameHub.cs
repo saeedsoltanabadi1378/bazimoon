@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
 using Bazimoon.Api.Auth;
 using Bazimoon.Api.Shelem;
@@ -25,6 +26,16 @@ public sealed class GameHub : Hub
         if (!_shelem.IsMember(code, Context.User!.GetUserId()))
             throw new HubException("You are not in this room.");
         await Groups.AddToGroupAsync(Context.ConnectionId, ShelemGroupName(code));
+    }
+
+    public async Task SendReaction(Guid gameId, string kind,
+        [FromServices] MafiaReactions reactions, [FromServices] Bazimoon.Api.Games.GameMutationLock mutationLock)
+    {
+        using var lease = await mutationLock.EnterAsync(gameId, Context.ConnectionAborted);
+        var game = await _sessionStore.GetAsync(gameId) ?? throw new HubException("reaction_unavailable");
+        var playerId = PlayerIdentity.DeriveId(gameId, Context.User!.GetUserId());
+        var reaction = reactions.Create(game, playerId, kind);
+        await Clients.Group(GroupName(gameId)).SendAsync("MafiaReaction", new { gameId, reaction });
     }
 
     public Task LeaveShelem(string code) => Groups.RemoveFromGroupAsync(Context.ConnectionId, ShelemGroupName(code));

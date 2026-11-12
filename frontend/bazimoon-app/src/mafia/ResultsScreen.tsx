@@ -1,10 +1,11 @@
 import { useGame } from "./GameProvider";
 import { useLanguage } from "../i18n/LanguageContext";
-import { Bar, Body, IconDisc, RoleTag, Screen } from "../ui/components";
+import { Bar, Body, IconDisc, PhaseHeader, RoleTag, Screen } from "../ui/components";
 import { Icon } from "../ui/Icon";
 import { findPlayer, isMafiaRole, playerColor, roleMeta, voteWeight } from "./roles";
-import { ActionError, LeaveGameButton, ReconnectingBanner, useRoleName, TableNotices } from "./parts";
-import { GraveyardBar, SpectatorBanner, SpectatorList } from "./Graveyard";
+import { ActionError, ReconnectingBanner, useRoleName, TableNotices } from "./parts";
+import { GraveyardBar, SpectatorBanner } from "./Graveyard";
+import { HeaderTools, TableRoster } from "./table";
 import { BallotRows } from "./VotingScreen";
 import { RolePortrait } from "./RolePortrait";
 
@@ -48,10 +49,7 @@ export function ResultsScreen({ onSeeFinal }: { onSeeFinal?: () => void }) {
 
   return (
     <Screen theme="day">
-      <header style={{ padding: "16px 16px 8px" }}>
-        <div className="kicker">{t("dayResults", { number: view.nightNumber })}</div>
-        <h1 className="h1" style={{ marginTop: 2 }}>{headline}</h1>
-      </header>
+      <PhaseHeader kicker={t("dayResults", { number: view.nightNumber })} title={headline} right={<HeaderTools />} />
 
       <Body tight>
         <ReconnectingBanner />
@@ -130,17 +128,8 @@ export function ResultsScreen({ onSeeFinal }: { onSeeFinal?: () => void }) {
           </section>
         )}
 
-        <div className="row row--wrap" aria-label={t("players")}>
-          {view.players.map((p) => (
-            <span key={p.playerId} className="chip" style={{ background: "var(--surface)", borderColor: "#2B241B", color: p.isAlive ? "var(--text)" : "var(--faint)", textDecoration: p.isAlive ? "none" : "line-through" }}>
-              {name(p.playerId)}
-              {!p.isAlive && <span className="visually-hidden">, {t("eliminated")}</span>}
-            </span>
-          ))}
-        </div>
+        <TableRoster />
         <ActionError />
-        <LeaveGameButton />
-        <SpectatorList />
       </Body>
 
       <Bar>

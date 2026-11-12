@@ -1,12 +1,14 @@
+import { Reactions } from "./Reactions";
 import { useState } from "react";
 import type { VoteView } from "../api/types";
 import { useGame } from "./GameProvider";
 import { useLanguage } from "../i18n/LanguageContext";
 import { Bar, Body, PhaseHeader, Screen } from "../ui/components";
 import { Icon } from "../ui/Icon";
-import { voteWeight, findPlayer, playerColor } from "./roles";
-import { ActionError, LeaveGameButton, PhaseTimer, ReconnectingBanner, VoiceStatusLine, TableNotices } from "./parts";
-import { GraveyardBar, SpectatorBanner, SpectatorList } from "./Graveyard";
+import { voteWeight, findPlayer } from "./roles";
+import { ActionError, PhaseTimer, ReconnectingBanner, VoiceStatusLine, TableNotices } from "./parts";
+import { GraveyardBar, SpectatorBanner } from "./Graveyard";
+import { CreatorBar, HeaderTools, PlayerAvatar } from "./table";
 import { haptic } from "../lib/haptics";
 
 export function VotingScreen() {
@@ -33,13 +35,13 @@ export function VotingScreen() {
   const alive = view.youAreAlive;
   const open = alive && !voted;
 
-  const tally = candidates
-    .map((p) => {
-      const ballots = votes.filter((v) => v.targetPlayerId === p.playerId);
-      const by = ballots.map((v) => name(v.voterPlayerId));
-      return { p, by, count: ballots.reduce((sum, v) => sum + voteWeight(view, v.voterPlayerId), 0) };
-    })
-    .sort((a, b) => b.count - a.count);
+  // Seat order, never re-sorted: rows that jump as votes arrive make people tap the wrong player.
+  const tally = candidates.map((p) => {
+    const ballots = votes.filter((v) => v.targetPlayerId === p.playerId);
+    const by = ballots.map((v) => name(v.voterPlayerId));
+    return { p, by, count: ballots.reduce((sum, v) => sum + voteWeight(view, v.voterPlayerId), 0) };
+  });
+  const lead = Math.max(0, ...tally.map((row) => row.count));
 
   const outWatching = view.players.filter((p) => !p.isAlive).map((p) => p.displayName);
 
@@ -61,10 +63,12 @@ export function VotingScreen() {
         kicker={revote ? t("revoteKicker", { number: view.nightNumber }) : t("dayN", { number: view.nightNumber })}
         title={revote ? t("revoteTitle") : t("townVote")}
         right={
-          <div style={{ textAlign: "end" }}>
-            <div className="num" style={{ fontSize: 22, fontWeight: 700 }}>{votes.length} / {alivePlayers.length}</div>
-            <div className="tiny muted">{t("votesCast")}</div>
-          </div>
+          <HeaderTools>
+            <div style={{ textAlign: "end" }}>
+              <div className="num" style={{ fontSize: 22, fontWeight: 700 }}>{votes.length} / {alivePlayers.length}</div>
+              <div className="tiny muted">{t("votesCast")}</div>
+            </div>
+          </HeaderTools>
         }
       />
 
@@ -98,10 +102,8 @@ export function VotingScreen() {
                   textAlign: "start", cursor: locked ? "default" : "pointer", position: "relative", overflow: "hidden",
                 }}
               >
-                <span className="vote-candidate__tally" style={{ position: "absolute", insetInlineStart: 0, top: 0, bottom: 0, width: `${pct}%`, background: "#3A2A16" }} />
-                <span className="avatar" aria-hidden="true" style={{ position: "relative", width: 38, height: 38, fontSize: 16, background: playerColor(view, p.playerId) }}>
-                  {Array.from(p.displayName)[0]?.toUpperCase()}
-                </span>
+                <span className="vote-candidate__tally" style={{ position: "absolute", insetInlineStart: 0, top: 0, bottom: 0, width: `${pct}%`, background: count > 0 && count === lead ? "#4A3418" : "#33271A" }} />
+                <PlayerAvatar view={view} playerId={p.playerId} size={38} />
                 <span style={{ position: "relative", flex: 1, minWidth: 0 }}>
                   <span style={{ display: "block", fontSize: 15, fontWeight: 600 }}>{name(p.playerId)}</span>
                   <span style={{ display: "block", fontSize: 12, color: "var(--text-2)" }}>
@@ -109,7 +111,7 @@ export function VotingScreen() {
                   </span>
                   {p.revealed && <span style={{ display: "block", fontSize: 11, fontWeight: 700, color: "#F0A83A" }}>{t("mayorTag")}</span>}
                 </span>
-                <span className="num" style={{ position: "relative", fontSize: 20, fontWeight: 700 }}>{count}</span>
+                <span className="num" style={{ position: "relative", fontSize: 20, fontWeight: 700, color: count > 0 && count === lead ? "#F0A83A" : undefined }}>{count}</span>
               </button>
             );
           })}
@@ -134,17 +136,16 @@ export function VotingScreen() {
           {outWatching.length > 0 && <div className="small muted">{t("outWatching", { names: outWatching.join(", ") })}</div>}
         </section>
 
-        {view.youAreController && (
-          <button type="button" className="btn btn--outline btn--sm" style={{ borderStyle: "dashed" }} disabled={busy} onClick={() => void resolveVoting()}>
-            {t("creatorTallyVotes")}
-          </button>
-        )}
+        <Reactions />
         <ActionError />
-        <LeaveGameButton />
-        <SpectatorList />
       </Body>
 
       <Bar>
+        {view.youAreController && (
+          <CreatorBar>
+            <button type="button" className="btn btn--outline" disabled={busy} onClick={() => void resolveVoting()}>{t("creatorTallyVotes")}</button>
+          </CreatorBar>
+        )}
         <GraveyardBar />
         {open ? (
           <div className="row" style={{ gap: 8 }}>

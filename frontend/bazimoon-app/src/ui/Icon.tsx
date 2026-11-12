@@ -80,6 +80,7 @@ const paths = {
   lock: <><rect x="5" y="11" width="14" height="10" rx="2" /><path d="M8 11V7a4 4 0 0 1 8 0v4" /></>,
   star: <path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1 6.2L12 17.3 6.5 20.2l1-6.2L3 9.6l6.2-.9z" />,
   bolt: <path d="M13 2 4 14h7l-1 8 9-12h-7z" />,
+  more: <path d="M5 12h.01M12 12h.01M19 12h.01" strokeWidth="3" />,
 } satisfies Record<string, ReactNode>;
 
 export type IconName = keyof typeof paths;

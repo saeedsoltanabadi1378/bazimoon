@@ -1,6 +1,19 @@
 import type { mafia as en } from "../en/mafia";
 
 export const mafia: Record<keyof typeof en, string> = {
+  tableMenu: "منوی میز",
+  reactionsTitle: "واکنش‌های میز",
+  reactionsHint: "برای ارسال واکنش به بازیکنان، روی آن بزنید.",
+  reactionsCooldown: "واکنش بعدی تا {seconds} ثانیه دیگر",
+  reactionsOffline: "برای ارسال واکنش، اتصال باید برقرار باشد.",
+  reactionsFailed: "واکنش ارسال نشد. دوباره تلاش کنید.",
+  reaction_suspect: "مشکوکه!",
+  reaction_trust: "بهت اعتماد دارم",
+  reaction_bluff: "چه بلوفی!",
+  reaction_think: "دارم فکر می‌کنم…",
+  reaction_shock: "باورم نمی‌شه!",
+  reaction_applause: "خوب بازی کردی!",
+
   roleVillager: "شهروند",
   roleDetective: "کارآگاه",
   roleDoctor: "دکتر",

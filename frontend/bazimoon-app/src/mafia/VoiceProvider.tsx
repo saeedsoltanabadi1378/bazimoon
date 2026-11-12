@@ -17,6 +17,8 @@ interface VoiceState {
   chooseGraveyard(on: boolean): void;
   isPlayerMuted(playerId: string): boolean;
   setPlayerMuted(playerId: string, voiceUid: number, muted: boolean): void;
+  /** Loudest live voice in your channel right now, 0 to 1. Poll it; it does not re-render. */
+  getLevel(): number;
 }
 
 const VoiceContext = createContext<VoiceState | null>(null);
@@ -105,9 +107,11 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
     setMuted(next);
   }, [muted]);
 
+  const getLevel = useCallback(() => sessionRef.current.getLevel(), []);
+
   const value: VoiceState = {
     channel, publishing, muted, connecting, failed, toggleMute, retry: () => setAttempt((a) => a + 1),
-    graveyardChosen, chooseGraveyard: setGraveyardChosen,
+    graveyardChosen, chooseGraveyard: setGraveyardChosen, getLevel,
     isPlayerMuted: (playerId) => locallyMuted.has(playerId),
     setPlayerMuted: (playerId, voiceUid, nextMuted) => {
       sessionRef.current.setRemoteMuted(voiceUid, nextMuted);
