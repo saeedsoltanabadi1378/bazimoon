@@ -1,11 +1,61 @@
 import { useEffect, useState } from "react";
-import { adminApi, type LiveGame, type Page, type PastGame, type PlayerInGame } from "../adminApi";
+import { adminApi, ALL_GAMES, type LiveGame, type Page, type PastGame, type PlayerInGame } from "../adminApi";
+import { GAME_STYLE } from "../gameStyle";
 import { useAdminI18n } from "../i18n";
-import { AVATAR_COLORS, Header, PageState, PHASE_COLORS, Search, formatDuration, initial, roleName, useAdminData, useLiveDetail, usePhaseLabel } from "../ui";
+import { AVATAR_COLORS, Header, PageState, PHASE_COLORS, Search, Svg, formatDuration, gameName, initial, roleName, useAdminData, useLiveDetail, usePhaseLabel } from "../ui";
+import { GameDetail } from "./GameDetail";
 
 type Selected = { kind: "live"; game: LiveGame } | { kind: "past"; game: PastGame };
+type GameKey = (typeof ALL_GAMES)[number];
+const RANGES = [7, 30, 90] as const;
 
+function gameFromPath(): GameKey {
+  const key = window.location.pathname.split("/")[3] as GameKey | undefined;
+  return key && (ALL_GAMES as readonly string[]).includes(key) ? key : "mafia";
+}
+
+/** Games: one tab per game, each with everything recorded about it. Mafia also keeps its live and past tables. */
 export function GamesPage() {
+  const { t, n, lang } = useAdminI18n();
+  const [game, setGame] = useState<GameKey>(gameFromPath);
+  const [days, setDays] = useState<(typeof RANGES)[number]>(30);
+
+  const pick = (next: GameKey) => {
+    setGame(next);
+    window.history.replaceState({}, "", `/admin/games/${next}`);
+  };
+
+  return (
+    <main className="adm-main">
+      <Header kicker={t("gamesAllKicker")} title={t("gamesTitle")}>
+        <div role="radiogroup" aria-label={t("range")} className="adm-seg">
+          {RANGES.map((d) => (
+            <button key={d} type="button" role="radio" aria-checked={days === d} onClick={() => setDays(d)}>{t("days", { count: n(d) })}</button>
+          ))}
+        </div>
+      </Header>
+
+      <div role="tablist" aria-label={t("gamesTitle")} className="adm-tabs adm-tabs-scroll">
+        {ALL_GAMES.map((g) => {
+          const [, fg, icon] = GAME_STYLE[g] ?? ["", "#C9C8DC", ""];
+          return (
+            <button key={g} type="button" role="tab" aria-selected={game === g} onClick={() => pick(g)}>
+              <Svg d={icon} size={16} stroke={fg} />
+              <span>{gameName(g, lang)}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      <GameDetail key={`${game}-${days}`} game={game} days={days}>
+        {game === "mafia" && <MafiaTables />}
+      </GameDetail>
+    </main>
+  );
+}
+
+/** The Mafia tables: live games (refreshed every 15 seconds) and finished ones, with a detail panel. */
+function MafiaTables() {
   const { t, n, date, time, lang } = useAdminI18n();
   const [tab, setTab] = useState<0 | 1>(0);
   const [search, setSearch] = useState("");
@@ -46,12 +96,13 @@ export function GamesPage() {
   const data = tab === 0 ? live : past;
 
   return (
-    <main className="adm-main">
-      <Header kicker={t("gamesKicker")} title={t("gamesTitle")}>
+    <section style={{ display: "flex", flexDirection: "column", gap: 16 }} aria-labelledby="mafia-tables-title">
+      <div className="adm-panel-head" style={{ alignItems: "center" }}>
+        <h2 id="mafia-tables-title" style={{ fontSize: 18, fontWeight: 700 }}>{t("mafiaTablesTitle")}</h2>
         <Search label={t("searchGames")} placeholder={t("searchGames")} value={search} onChange={setSearch} />
-      </Header>
+      </div>
 
-      <div role="tablist" aria-label={t("gamesTitle")} className="adm-tabs">
+      <div role="tablist" aria-label={t("mafiaTablesTitle")} className="adm-tabs">
         <button type="button" role="tab" aria-selected={tab === 0} onClick={() => { setTab(0); setSelectedId(null); }}>{t("tabLive", { count: live.data?.total ?? 0 })}</button>
         <button type="button" role="tab" aria-selected={tab === 1} onClick={() => { setTab(1); setSelectedId(null); }}>{t("tabHistory")}</button>
       </div>
@@ -154,7 +205,7 @@ export function GamesPage() {
           onDone={() => { setCancelOpen(false); setSelectedId(null); live.reload(); }}
         />
       )}
-    </main>
+    </section>
   );
 }
 

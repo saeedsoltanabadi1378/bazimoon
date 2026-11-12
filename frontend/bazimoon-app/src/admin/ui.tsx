@@ -47,6 +47,13 @@ export function Logo() {
   );
 }
 
+/** Opens the Players page searching for one player (by id), from anywhere in the console. */
+export function openPlayer(id: string) {
+  window.history.pushState({}, "", `/admin/players?q=${encodeURIComponent(id)}`);
+  window.dispatchEvent(new PopStateEvent("popstate"));
+  window.scrollTo(0, 0);
+}
+
 /** Loads one admin endpoint; reload() refetches. */
 export function useAdminData<T>(path: string | null) {
   const [data, setData] = useState<T | null>(null);

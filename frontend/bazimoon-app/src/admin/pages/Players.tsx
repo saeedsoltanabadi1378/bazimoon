@@ -1,30 +1,51 @@
 import { useEffect, useState } from "react";
 import { adminApi } from "../adminApi";
-import type { AcquisitionSummary, ActivityItem, Page, PlayerDetail, PlayerRow } from "../adminApi";
+import type { AcquisitionSummary, ActivityItem, Page, PlayerDetail, PlayerRow, PlayerSegment, RegisteredSummary } from "../adminApi";
+import { DayBars, Kpi, pct } from "../charts";
 import { useAdminI18n } from "../i18n";
 import { AVATAR_COLORS, divisionName, Header, PageState, Search, Svg, ICONS, formatDuration, gameName, initial, roleName, useAdminData } from "../ui";
+
+const SEGMENTS: PlayerSegment[] = ["players", "registered", "bots"];
+const queryFromUrl = () => new URLSearchParams(window.location.search).get("q") ?? "";
 
 const ACTIVITY_FILTERS = [null, "mafia", "puzzle", "admin"] as const;
 const ACTIVITY_PAGE = 10;
 
 export function PlayersPage() {
-  const { t, n, ago, lang } = useAdminI18n();
-  const [search, setSearch] = useState("");
-  const [query, setQuery] = useState("");
+  const { t, n, ago, date, lang } = useAdminI18n();
+  const [search, setSearch] = useState(queryFromUrl);
+  const [query, setQuery] = useState(() => queryFromUrl().trim());
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [bots, setBots] = useState(false);
+  const [segment, setSegment] = useState<PlayerSegment>("players");
+  const bots = segment === "bots";
+  const registered = segment === "registered";
   const [source, setSource] = useState("");
   const [campaign, setCampaign] = useState("");
-  const filters = new URLSearchParams({ pageSize: "50", bots: String(bots), search: query });
+  const filters = new URLSearchParams({ pageSize: "50", segment, search: query });
   if (source) filters.set("source", source);
   if (campaign) filters.set("campaign", campaign);
   const players = useAdminData<Page<PlayerRow>>(`/players?${filters}`);
-  const acquisition = useAdminData<AcquisitionSummary>(`/players/acquisition?bots=${bots}`);
+  const acquisition = useAdminData<AcquisitionSummary>(registered ? null : `/players/acquisition?bots=${bots}`);
+  const summary = useAdminData<RegisteredSummary>(registered ? "/players/registered-summary?days=30" : null);
 
   useEffect(() => {
     const id = window.setTimeout(() => setQuery(search.trim()), 300);
     return () => window.clearTimeout(id);
   }, [search]);
+
+  // Another page can send us here looking for one player (?q=<id>); follow it when we are already open.
+  useEffect(() => {
+    const onPop = () => {
+      const q = queryFromUrl();
+      if (!q) return;
+      setSegment("players");
+      setSearch(q);
+      setQuery(q);
+      setSelectedId(null);
+    };
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
 
   const rows = players.data?.items ?? [];
   const selected = rows.find((r) => r.id === selectedId) ?? rows[0];
@@ -38,17 +59,20 @@ export function PlayersPage() {
       </Header>
 
       <div role="tablist" aria-label={t("navPlayers")} className="adm-tabs">
-        {[false, true].map((b) => {
-          const count = players.data ? (b === bots ? players.data.total : players.data.otherTotal ?? 0) : 0;
+        {SEGMENTS.map((seg) => {
+          const counts = players.data?.counts;
+          const count = counts ? (seg === "bots" ? counts.bots : seg === "registered" ? counts.registered : counts.players) : 0;
           return (
-            <button key={String(b)} type="button" role="tab" aria-selected={bots === b} onClick={() => { setBots(b); setSelectedId(null); setSource(""); setCampaign(""); }}>
-              {t(b ? "tabBots" : "tabPlayers", { count: n(count) })}
+            <button key={seg} type="button" role="tab" aria-selected={segment === seg} onClick={() => { setSegment(seg); setSelectedId(null); setSource(""); setCampaign(""); }}>
+              {t(seg === "bots" ? "tabBots" : seg === "registered" ? "tabRegistered" : "tabPlayers", { count: n(count) })}
             </button>
           );
         })}
       </div>
 
-      {acquisition.data && (
+      {registered && summary.data && <RegisteredPanel s={summary.data} />}
+
+      {!registered && acquisition.data && (
         <section className="adm-panel" aria-labelledby="acquisition-title" style={{ gap: 12 }}>
           <div className="adm-panel-head">
             <div>
@@ -77,7 +101,47 @@ export function PlayersPage() {
       {!data.data ? <PageState error={data.error} onRetry={data.reload} /> : (
         <div className="adm-split">
           <section className="adm-panel flush wide" aria-label={t("navPlayers")}>
-            {rows.length === 0 ? <div className="adm-empty">{t(bots && !query ? "noBots" : "noPlayers")}</div> : (
+            {rows.length === 0 ? <div className="adm-empty">{t(bots && !query ? "noBots" : registered && !query ? "noRegistered" : "noPlayers")}</div> : registered ? (
+              <div className="adm-table-wrap">
+                <table className="adm-table" style={{ minWidth: 820 }}>
+                  <thead>
+                    <tr>
+                      <th scope="col">{t("colPlayer")}</th>
+                      <th scope="col">{t("colEmail")}</th>
+                      <th scope="col">{t("colRegistered")}</th>
+                      <th scope="col">{t("colFirstSeen")}</th>
+                      <th scope="col">{t("colLevel")}</th>
+                      <th scope="col">{t("colLanguage")}</th>
+                      <th scope="col">{t("colLastSeen")}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rows.map((p, i) => {
+                      const on = selected?.id === p.id;
+                      return (
+                        <tr key={p.id} className={on ? "on" : undefined}>
+                          <td>
+                            <button type="button" className="adm-rowbtn" aria-pressed={on} onClick={() => setSelectedId(p.id)}>
+                              <span className="adm-avatar" style={{ width: 30, height: 30, fontSize: 12, background: AVATAR_COLORS[i % AVATAR_COLORS.length], color: "#0B0D1A" }}>{initial(p.name)}</span>
+                              <span>{p.name}</span>
+                            </button>
+                          </td>
+                          <td dir="ltr" style={{ textAlign: "start", overflowWrap: "anywhere" }}>
+                            {p.email ?? t("none")}
+                            {p.provider && <span className="tiny muted" style={{ display: "block" }}>{providerName(p.provider)}</span>}
+                          </td>
+                          <td className="text-2">{p.registeredAt ? date(p.registeredAt, true) : t("none")}</td>
+                          <td className="text-2">{p.joined ? date(p.joined) : t("none")}</td>
+                          <td className="num">{n(p.level)}</td>
+                          <td className="text-2">{p.language === "fa" ? "فارسی" : "English"}</td>
+                          <td className="text-2">{ago(p.lastSeen)}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
               <div className="adm-table-wrap">
                 <table className="adm-table" style={{ minWidth: 760 }}>
                   <thead>
@@ -103,6 +167,7 @@ export function PlayersPage() {
                                 <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
                                   {p.name}
                                   {p.isBot && <span className="adm-pill" style={{ padding: "1px 7px", fontSize: 11, background: "#1E2138", color: "#8FA8FF" }}>{t("botBadge")}</span>}
+                                  {!p.isBot && !p.isGuest && <span className="adm-pill" style={{ padding: "1px 7px", fontSize: 11, background: "#13302C", color: "#5FD0BE" }}>{t("registeredBadge")}</span>}
                                 </span>
                                 <span className="tiny muted num" style={{ fontWeight: 400 }} dir="ltr">{p.id}</span>
                               </span>
@@ -138,6 +203,28 @@ export function PlayersPage() {
 }
 
 const roman = (tier: number) => ["", "I", "II", "III"][tier] ?? "";
+const providerName = (provider: string) => (provider === "google" ? "Google" : provider);
+
+function RegisteredPanel({ s }: { s: RegisteredSummary }) {
+  const { t, n, lang } = useAdminI18n();
+  return (
+    <>
+      <div className="adm-kpis">
+        <Kpi label={t("regTotal")} value={n(s.registered)} note={t("regShare", { pct: pct(s.registeredShare, lang, n), guests: n(s.guests) })} />
+        <Kpi label={t("regNew30")} value={n(s.registeredInRange)} note={t("regNew7", { count: n(s.registeredLast7) })} />
+        <Kpi label={t("regActive7")} value={n(s.activeLast7)} note={t("regNotifications", { count: n(s.withNotifications) })} />
+        <Kpi label={t("regHow")} value={n(s.linkedFromGuest)} note={t("regHowNote", { direct: n(s.signedUpWithGoogle) })} />
+      </div>
+      <section className="adm-panel" aria-labelledby="reg-daily-title">
+        <div className="adm-panel-head">
+          <h2 id="reg-daily-title">{t("regDaily")}</h2>
+          <span className="small muted">{s.providers.map((p) => `${providerName(p.key)} · ${n(p.count)}`).join("  ")}</span>
+        </div>
+        <DayBars label={t("regDaily")} days={s.daily.map((d) => ({ date: d.date, values: [d.count] }))} series={[{ label: t("regSeries"), color: "#5FD0BE" }]} />
+      </section>
+    </>
+  );
+}
 
 function sourceName(source: string, t: ReturnType<typeof useAdminI18n>["t"]) {
   if (source === "direct") return t("sourceDirect");
@@ -201,6 +288,36 @@ function PlayerPanel({ d, color, onBotChanged }: { d: PlayerDetail; color: strin
         <span className="tiny muted" style={{ lineHeight: 1.45 }}>{t("botNote")}</span>
         {error && <span className="tiny" role="alert" style={{ color: "#F08A7A" }}>{error}</span>}
       </div>
+      {d.account && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 8, padding: 12, borderRadius: 12, background: "#0B0D1A" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+            <span className="small" style={{ fontWeight: 600 }}>{t("accountTitle")}</span>
+            <span className="adm-pill" style={d.account.isGuest ? { background: "#1E2138", color: "#C9C8DC" } : { background: "#13302C", color: "#5FD0BE" }}>
+              {d.account.isGuest ? t("accountGuest") : t("accountRegistered")}
+            </span>
+          </div>
+          {d.account.email && <AcquisitionLine label={t("colEmail")} value={d.account.email} ltr />}
+          {d.account.provider && <AcquisitionLine label={t("accountProvider")} value={providerName(d.account.provider)} ltr />}
+          {d.account.registeredAt && <AcquisitionLine label={t("colRegistered")} value={date(d.account.registeredAt, true)} />}
+          <AcquisitionLine label={t("colLastSeen")} value={d.account.lastSeenAt ? date(d.account.lastSeenAt, true) : t("none")} />
+          <AcquisitionLine label={t("accountEvents")} value={t("accountEventsValue", { count: n(d.account.trackedEvents), last: d.account.lastEventAt ? date(d.account.lastEventAt, true) : t("none") })} />
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 6, paddingTop: 4 }}>
+            {[
+              [n(d.account.friends), t("accountFriends")],
+              [n(d.account.friendRequestsOpen), t("accountRequests")],
+              [`${n(d.account.invitesSent)}/${n(d.account.invitesReceived)}`, t("accountInvites")],
+              [n(d.account.pushDevices), t("accountPush")],
+              [n(d.account.reportsAgainst), t("accountReportsAgainst")],
+              [n(d.account.reportsMade), t("accountReportsMade")],
+            ].map(([v, l]) => (
+              <div key={l} style={{ padding: "8px 4px", borderRadius: 10, background: "#151829", textAlign: "center" }}>
+                <div className="num" style={{ fontSize: 15, fontWeight: 700 }}>{v}</div>
+                <div className="tiny muted">{l}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
       {d.acquisition && (
         <div style={{ display: "flex", flexDirection: "column", gap: 8, padding: 12, borderRadius: 12, background: "#0B0D1A" }}>
           <span className="small" style={{ fontWeight: 600 }}>{t("acquisitionTitle")}</span>

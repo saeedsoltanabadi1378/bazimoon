@@ -58,8 +58,14 @@ public static class AdminEndpoints
             return past is not null ? Results.Ok(past) : Results.NotFound();
         });
         group.MapPost("/games/{id:guid}/cancel", async (Guid id, CancelRequest request, HttpContext http, GameService games) => { if (!ValidCsrf(http)) return Results.BadRequest(new { detail = "Invalid CSRF token." }); if (string.IsNullOrWhiteSpace(request.Reason)) return Results.BadRequest(new { detail = "A cancellation reason is required." }); return await games.CancelByAdminAsync(id, request.Reason, http.User.Identity?.Name ?? "admin") ? Results.Ok() : Results.NotFound(); });
-        group.MapGet("/players", async (int? page, int? pageSize, string? search, bool? bots, string? source, string? campaign, AdminDashboardService dash) =>
-            Results.Ok(await dash.GetPlayersAsync(Math.Max(1, page ?? 1), Math.Clamp(pageSize ?? 25, 1, 100), search, bots ?? false, source, campaign)));
+        group.MapGet("/players", async (int? page, int? pageSize, string? search, bool? bots, string? source, string? campaign, string? segment, AdminDashboardService dash) =>
+            Results.Ok(await dash.GetPlayersAsync(Math.Max(1, page ?? 1), Math.Clamp(pageSize ?? 25, 1, 100), search, bots ?? false, source, campaign, segment)));
+        group.MapGet("/players/registered-summary", async (int? days, AdminInsightsService insights) =>
+            Results.Ok(await insights.GetRegisteredSummaryAsync(days ?? 30)));
+        group.MapGet("/game-stats/{game}", async (string game, int? days, AdminInsightsService insights) =>
+            await insights.GetGameStatsAsync(game, days ?? 30) is { } stats ? Results.Ok(stats) : Results.NotFound());
+        group.MapGet("/interactions", async (int? days, AdminInsightsService insights) =>
+            Results.Ok(await insights.GetInteractionsAsync(days ?? 7)));
         group.MapGet("/players/acquisition", async (bool? bots, AdminDashboardService dash) =>
             Results.Ok(await dash.GetAcquisitionSummaryAsync(bots ?? false)));
         group.MapPut("/players/{id:guid}/bot", async (Guid id, BotRequest request, HttpContext http, AdminDashboardService dash) =>
@@ -97,8 +103,8 @@ public static class AdminEndpoints
             await db.SaveChangesAsync();
             return Results.Ok();
         });
-        group.MapGet("/activity", async (string? flow, long? before, int? pageSize, AdminDashboardService dash) =>
-            Results.Ok(await dash.GetActivityFeedAsync(flow, before, Math.Clamp(pageSize ?? 25, 1, 100))));
+        group.MapGet("/activity", async (string? flow, long? before, int? pageSize, Guid? userId, string? name, AdminDashboardService dash) =>
+            Results.Ok(await dash.GetActivityFeedAsync(flow, before, Math.Clamp(pageSize ?? 25, 1, 200), userId, name)));
         group.MapGet("/funnels/{flow}", async (string flow, int? days, AdminDashboardService dash) =>
             Results.Ok(await dash.GetFunnelAsync(flow, days ?? 30)));
         group.MapGet("/puzzles", async (AdminDashboardService dash) => Results.Ok(await dash.GetPuzzlesAsync()));

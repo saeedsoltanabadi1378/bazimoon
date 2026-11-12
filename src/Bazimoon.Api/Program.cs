@@ -44,6 +44,7 @@ builder.Services.AddSingleton<Bazimoon.Api.Shelem.IShelemNotifier, Bazimoon.Api.
 builder.Services.AddHostedService<Bazimoon.Api.Shelem.ShelemTicker>();
 builder.Services.AddSingleton<ReminderStatus>();
 builder.Services.AddScoped<Bazimoon.Api.Admin.AdminDashboardService>();
+builder.Services.AddScoped<Bazimoon.Api.Admin.AdminInsightsService>();
 builder.Services.AddOptions<PushOptions>().Bind(builder.Configuration.GetSection(PushOptions.SectionName));
 builder.Services.AddHttpClient<IPushNotifier, WebPushNotifier>(c => c.Timeout = TimeSpan.FromSeconds(10));
 // Tests drive ReminderService.SendDueAsync directly instead of waiting on the timer.

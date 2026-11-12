@@ -37,7 +37,7 @@ public sealed class EsmFamilRoomService
             Purge();
             string code;
             do code = NewCode(); while (_rooms.ContainsKey(code));
-            var room = new Room { Code = code, Settings = clean, LastActivity = Now };
+            var room = new Room { Code = code, Settings = clean, LastActivity = Now, CreatedAt = Now };
             room.Players.Add(new Seat { Id = room.NextSeat++, UserId = userId, Name = Display(name), Ready = true });
             room.HostSeat = room.Players[0].Id;
             _rooms[code] = room;
@@ -54,6 +54,20 @@ public sealed class EsmFamilRoomService
             if (!_rooms.TryGetValue(NormalizeCode(code), out var room)) return false;
             if (member is { } id && !room.Active.Any(p => p.UserId == id)) return false;
             return room.Phase == EsmPhase.Lobby && room.Active.Count() < EsmFamilRules.MaxPlayers;
+        }
+    }
+
+    /// <summary>Every open room, for the admin console: who is seated, the round and the running scores; never anyone's answers.</summary>
+    public IReadOnlyList<Bazimoon.Api.Admin.AdminLiveRoomDto> AdminRooms()
+    {
+        lock (_gate)
+        {
+            Purge();
+            return _rooms.Values.OrderByDescending(r => r.LastActivity).Select(r => new Bazimoon.Api.Admin.AdminLiveRoomDto(
+                r.Code, r.Phase.ToString(), r.Phase == EsmPhase.Lobby ? 0 : r.Round + 1,
+                r.Active.Count(), r.Active.Count(),
+                r.Active.Select(p => new Bazimoon.Api.Admin.AdminRoomSeatDto(p.Name, false, p.Id == r.HostSeat)).ToList(),
+                string.Join(" · ", r.Active.OrderByDescending(p => p.Total).Select(p => p.Total)), r.CreatedAt, r.LastActivity)).ToList();
         }
     }
 
@@ -390,6 +404,7 @@ public sealed class EsmFamilRoomService
         public bool Rewarded;
         public List<Award>? PendingAwards;
         public DateTimeOffset LastActivity;
+        public DateTimeOffset CreatedAt;
     }
 }
 

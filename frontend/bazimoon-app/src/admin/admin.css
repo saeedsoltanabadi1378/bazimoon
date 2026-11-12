@@ -142,3 +142,19 @@
 }
 .adm-input, .adm-textarea { font-weight: 400; }
 .adm-input::placeholder, .adm-textarea::placeholder { color: var(--muted); }
+
+/* games: one tab per game, scrolling sideways when they do not fit */
+.adm-tabs-scroll { overflow-x: auto; scrollbar-width: thin; }
+.adm-tabs-scroll button { display: inline-flex; align-items: center; gap: 8px; flex: none; white-space: nowrap; }
+
+/* interactions: weekday x hour heatmap */
+.adm-heat { display: grid; grid-template-columns: auto repeat(24, minmax(12px, 1fr)); gap: 3px; align-items: center; min-width: 440px; }
+.adm-heat-cell { display: block; height: 18px; border-radius: 4px; }
+
+/* one player's journey, grouped into sessions */
+.adm-session { display: flex; flex-direction: column; gap: 6px; padding: 12px 14px; border-radius: 14px; background: var(--bg); }
+.adm-session-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 8px; }
+.adm-timeline { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.adm-timeline li { display: flex; align-items: flex-start; gap: 10px; padding: 7px 0; border-top: 1px solid var(--line); font-size: 13px; }
+.adm-timeline li:first-child { border-top: 0; }
+.adm-dot { width: 8px; height: 8px; flex: none; margin-top: 6px; border-radius: 999px; }

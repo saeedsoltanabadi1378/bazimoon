@@ -30,7 +30,7 @@ public sealed class ShelemRoomService
             string code; do code = NewCode(); while (_rooms.ContainsKey(code));
             var game = new ShelemGame();
             var me = game.AddPlayer(userId, name); me.Ready = true;
-            var room = new Room { Code = code, Game = game, HostUserId = userId, LastActivity = Now };
+            var room = new Room { Code = code, Game = game, HostUserId = userId, LastActivity = Now, CreatedAt = Now };
             if (withBots)
             {
                 FillBots(game);
@@ -228,6 +228,20 @@ public sealed class ShelemRoomService
             (int)TurnLimit.TotalMilliseconds, ShelemGame.WinningScore, game.ScoreHistory.ToArray());
     }
 
+    /// <summary>Every open room, for the admin console: no hands or cards, only who is seated and the score.</summary>
+    public IReadOnlyList<Bazimoon.Api.Admin.AdminLiveRoomDto> AdminRooms()
+    {
+        lock (_gate)
+        {
+            Purge();
+            return _rooms.Values.OrderByDescending(r => r.LastActivity).Select(r => new Bazimoon.Api.Admin.AdminLiveRoomDto(
+                r.Code, r.Game.Phase.ToString(), r.Game.Round,
+                r.Game.Players.Count, r.Game.Players.Count(p => !p.IsBot),
+                r.Game.Players.OrderBy(p => p.Seat).Select(p => new Bazimoon.Api.Admin.AdminRoomSeatDto(p.Name, p.IsBot, p.UserId is { } id && id == r.HostUserId)).ToList(),
+                $"{r.Game.TeamScores[0]}–{r.Game.TeamScores[1]}", r.CreatedAt, r.LastActivity)).ToList();
+        }
+    }
+
     private Room Find(string code) => _rooms.TryGetValue(NormalizeCode(code), out var room) ? room : throw new GameException("No room has that code.", "room_not_found");
     private static void RequireHost(Room room, Guid userId) { if (room.HostUserId != userId) throw new ForbiddenGameActionException("Only the host can do that."); }
     private static void FillBots(ShelemGame game) { while (game.Players.Count < 4) game.AddBot(BotNames[game.Players.Count - 1]); }
@@ -246,6 +260,7 @@ public sealed class ShelemRoomService
         public Guid HostUserId;
         public long Version;
         public DateTimeOffset LastActivity;
+        public DateTimeOffset CreatedAt;
         public DateTimeOffset? BotActAt;
         public DateTimeOffset? TurnDeadline;
         public DateTimeOffset TrickVisibleUntil;
