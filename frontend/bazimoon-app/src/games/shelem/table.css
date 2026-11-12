@@ -33,8 +33,7 @@
 .screen:has(.shelem-game-toolbar) .shelem-contract { top:21%; inset-inline-end:18%; padding:4px 7px; background:#112e49; border:1px solid #d8b654; z-index:5; }
 .screen:has(.shelem-game-toolbar) .shelem-bidding-winner { top:35%; inset-inline-start:23%; max-width:54%; background:transparent; border:0; text-align:center; width:54%; padding:0; }
 .screen:has(.shelem-game-toolbar) .shelem-bidding-winner small { color:#e0eaf1; }
-.screen:has(.shelem-game-toolbar) .shelem-trick { inset:39% 32% 34%; }
-.screen:has(.shelem-game-toolbar) .shelem-trick .playing-card { --card-w:clamp(52px,17vw,82px); }
+.screen:has(.shelem-game-toolbar) .shelem-trick { inset:39% 32% 34%; --trick-card-w:clamp(52px,17vw,82px); }
 .screen:has(.shelem-game-toolbar) .shelem-table-mark { display:none; }
 .shelem-kitty { position:absolute; inset-block-start:45%; inset-inline:20%; display:flex; justify-content:center; }
 .shelem-kitty .playing-card { --card-w:54px; margin-inline-start:-12px; }
