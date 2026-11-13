@@ -1,12 +1,13 @@
 import { useGame } from "./GameProvider";
 import { useLanguage } from "../i18n/LanguageContext";
-import { Bar, Body, IconDisc, PhaseHeader, RoleTag, Screen } from "../ui/components";
+import { Bar, IconDisc, PhaseHeader, RoleTag, Screen } from "../ui/components";
 import { Icon } from "../ui/Icon";
 import { findPlayer, isMafiaRole, playerColor, roleMeta, voteWeight } from "./roles";
-import { ActionError, PhaseTimer, ReconnectingBanner, useRoleName, TableNotices } from "./parts";
+import { ActionError, ReconnectingBanner, useRoleName, TableNotices } from "./parts";
 import { GraveyardBar, SpectatorBanner } from "./Graveyard";
 import { HeaderTools } from "./table";
 import { TableScene } from "./TableScene";
+import { PhasePanel } from "./TablePanel";
 import { BallotRows } from "./VotingScreen";
 import { RolePortrait } from "./RolePortrait";
 
@@ -51,14 +52,13 @@ export function ResultsScreen({ onSeeFinal }: { onSeeFinal?: () => void }) {
   return (
     <Screen theme="day" className="screen--table">
       <PhaseHeader kicker={t("dayResults", { number: view.nightNumber })} title={headline} right={<HeaderTools />} />
-      <TableScene />
+      {/* At a timed table the night starts by itself (GameState.ResultsSeconds on the server). */}
+      <TableScene clock={view.phase === "Results" ? { label: t("nightStartsIn"), deadline: view.phaseDeadline } : null} />
 
-      <Body tight>
+      <PhasePanel>
         <ReconnectingBanner />
         <SpectatorBanner />
         <TableNotices />
-        {/* At a timed table the night starts by itself (GameState.ResultsSeconds on the server). */}
-        {view.phase === "Results" && <PhaseTimer deadline={view.phaseDeadline} total={12} label={(seconds) => t("resultsSecondsLeft", { seconds })} />}
         {out ? (
           <section className="stack center" style={{ gap: 12, padding: "24px 16px", borderRadius: 24, background: "var(--surface)", textAlign: "center" }}>
             {out.revealedRole ? (
@@ -133,7 +133,7 @@ export function ResultsScreen({ onSeeFinal }: { onSeeFinal?: () => void }) {
         )}
 
         <ActionError />
-      </Body>
+      </PhasePanel>
 
       <Bar>
         <GraveyardBar />

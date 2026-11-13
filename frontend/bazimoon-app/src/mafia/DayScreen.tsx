@@ -1,32 +1,22 @@
-import { Reactions } from "./Reactions";
-import { useEffect, useState, type CSSProperties } from "react";
 import { useGame } from "./GameProvider";
 import { useVoice } from "./VoiceProvider";
 import { useLanguage } from "../i18n/LanguageContext";
-import { Bar, Body, PhaseHeader, Screen } from "../ui/components";
+import { Bar, PhaseHeader, Screen } from "../ui/components";
 import { Icon, type IconName } from "../ui/Icon";
 import { findPlayer } from "./roles";
 import { ActionError, ReconnectingBanner, RolePeek, useRoleName, TableNotices } from "./parts";
 import { GraveyardBar, SpectatorBanner } from "./Graveyard";
-import { HeaderTools, PlayerAvatar, VoiceHalo } from "./table";
+import { HeaderTools } from "./table";
 import { TableScene } from "./TableScene";
+import { PanelNote, PhasePanel } from "./TablePanel";
+import { ReactionRow } from "./Reactions";
 import { haptic } from "../lib/haptics";
-
-const RING = 2 * Math.PI * 60;
 
 export function DayScreen() {
   const { view, busy, requestChallenge, cancelChallenge, acceptChallenge, rejectChallenge, finishDiscussion, revealMayor, callInquiry } = useGame();
   const voice = useVoice();
   const { t } = useLanguage();
   const roleName = useRoleName();
-  const [now, setNow] = useState(() => Date.now());
-  // The morning report opens as one line; the day it was opened for is remembered so a new day starts closed.
-  const [reportDay, setReportDay] = useState<number | null>(null);
-
-  useEffect(() => {
-    const id = window.setInterval(() => setNow(Date.now()), 250);
-    return () => window.clearInterval(id);
-  }, []);
 
   if (!view) return null;
 
@@ -36,54 +26,21 @@ export function DayScreen() {
     return p.playerId === view.yourPlayerId ? t("youName", { name: p.displayName }) : p.displayName;
   };
 
-  // Morning report.
-  const night = view.lastNightElimination;
-  const dead = findPlayer(view, night?.eliminatedPlayerId);
-  type Report = { title: string; text: string; icon: IconName; bg: string; edge: string; fg: string; ibg: string };
-  let report: Report;
-  if (dead) {
-    report = {
-      title: t("foundDead", { name: name(dead.playerId) }),
-      text: (dead.revealedRole ? t("theyWereThe", { role: roleName(dead.revealedRole) }) : view.rules.revealRolesOnDeath ? "" : t("roleHidden"))
-        + (dead.revealedRole === "Bodyguard" && view.bodyguardDiedId === dead.playerId ? ` ${t("bodyguardDiedText")}` : ""),
-      icon: "coffin", bg: "#2A1612", edge: "#4A2620", fg: "#F08A7A", ibg: "#3A1C1A",
-    };
-  } else if (night?.wasSaved) {
-    report = { title: t("doctorSavedTitle"), text: t("nobodyDied"), icon: "doctor", bg: "#10251F", edge: "#1E4A40", fg: "#5FD0BE", ibg: "#13302C" };
-  } else {
-    report = { title: t("quietNight"), text: t("nobodyDied"), icon: "sun", bg: "#241D12", edge: "#4A3A22", fg: "#F0A83A", ibg: "#3A2A16" };
-  }
-
-  // Notices for the new roles, below the morning report.
-  // Public ones fold into the morning summary; the ones only you see stay on screen.
-  type Notice = { key: string; title: string; text: string; icon: IconName; bg: string; edge: string; fg: string; ibg: string };
-  const notices: Notice[] = [];
+  // What the whole table was told this morning is in the panel's log. Only what you alone are told is pinned here.
+  type Notice = { key: string; title: string; text: string; icon: IconName };
   const personal: Notice[] = [];
-  const shot = findPlayer(view, night?.shotPlayerId);
-  if (shot) {
-    notices.push({ key: "shot", title: t("shotDead", { name: name(shot.playerId) }),
-      text: shot.revealedRole ? t("theyWereThe", { role: roleName(shot.revealedRole) }) : view.rules.revealRolesOnDeath ? "" : t("roleHidden"),
-      icon: "target", bg: "#2A1612", edge: "#4A2620", fg: "#F08A7A", ibg: "#3A1C1A" });
-  }
   if (view.youWereRecruited) {
-    personal.push({ key: "recruited", title: t("recruitedTitle"), text: t("recruitedText"), icon: "link", bg: "#2A1612", edge: "#4A2620", fg: "#F08A7A", ibg: "#3A1C1A" });
+    personal.push({ key: "recruited", title: t("recruitedTitle"), text: t("recruitedText"), icon: "link" });
   } else if (view.yourNegotiation) {
-    personal.push({ key: "negotiation", title: t(view.yourNegotiation.succeeded ? "negotiationWorked" : "negotiationFailed", { name: name(view.yourNegotiation.targetPlayerId) }), text: t("onlyMafiaSees"), icon: "link", bg: "#2A1612", edge: "#4A2620", fg: "#F08A7A", ibg: "#3A1C1A" });
+    personal.push({ key: "negotiation", title: t(view.yourNegotiation.succeeded ? "negotiationWorked" : "negotiationFailed", { name: name(view.yourNegotiation.targetPlayerId) }), text: t("onlyMafiaSees"), icon: "link" });
   }
   if (view.youSurvivedTheNight) {
-    personal.push({ key: "diehard", title: t("dieHardSurvivedTitle"), text: t("dieHardSurvivedText"), icon: "shield", bg: "#10251F", edge: "#1E4A40", fg: "#5FD0BE", ibg: "#13302C" });
+    personal.push({ key: "diehard", title: t("dieHardSurvivedTitle"), text: t("dieHardSurvivedText"), icon: "shield" });
   }
-  const silenced = findPlayer(view, view.silencedPlayerId);
   const youSilenced = view.silencedPlayerId === view.yourPlayerId;
-  if (silenced) {
-    if (youSilenced) personal.push({ key: "silenced", title: t("silencedYouTitle"), text: t("silencedYouText"), icon: "mute", bg: "#2A1612", edge: "#4A2620", fg: "#F08A7A", ibg: "#3A1C1A" });
-    else notices.push({ key: "silenced", title: t("silencedOtherTitle", { name: name(silenced.playerId) }), text: t("silencedOtherText"), icon: "mute", bg: "#2A1612", edge: "#4A2620", fg: "#F08A7A", ibg: "#3A1C1A" });
-  }
-  for (const mayor of view.players.filter((p) => p.revealed && p.isAlive)) {
-    notices.push({ key: `mayor-${mayor.playerId}`, title: t("mayorRevealedTitle", { name: name(mayor.playerId) }), text: t("mayorRevealedText"), icon: "townHall", bg: "#241D12", edge: "#4A3A22", fg: "#F0A83A", ibg: "#3A2A16" });
-  }
+  if (youSilenced) personal.push({ key: "silenced", title: t("silencedYouTitle"), text: t("silencedYouText"), icon: "mute" });
   if (view.yourRole === "Mayor" && view.discussion?.activePlayerId === view.yourPlayerId && view.discussion.segmentType === "Speaker" && !findPlayer(view, view.yourPlayerId)?.revealed) {
-    personal.push({ key: "mayorTurn", title: t("mayorTurnTitle"), text: t("mayorTurnText"), icon: "townHall", bg: "#241D12", edge: "#4A3A22", fg: "#F0A83A", ibg: "#3A2A16" });
+    personal.push({ key: "mayorTurn", title: t("mayorTurnTitle"), text: t("mayorTurnText"), icon: "townHall" });
   }
   // At tables that hide roles, out players with a role shown were announced by the Die Hard's Inquiry.
   const inquiry = view.rules.revealRolesOnDeath ? [] : view.players.filter((p) => !p.isAlive && p.revealedRole);
@@ -94,13 +51,7 @@ export function DayScreen() {
   const challenge = discussion?.segmentType === "Challenge";
   const youActive = discussion?.activePlayerId === view.yourPlayerId;
   const youSpeaker = youActive && !challenge;
-  const total = challenge ? view.rules.challengeSeconds : view.rules.speakerSeconds;
-  const seconds = discussion ? Math.max(0, Math.ceil((new Date(discussion.deadline).getTime() - now) / 1000)) : 0;
-  const frac = Math.min(1, seconds / total);
-  const clock = `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
-  const order = discussion?.speakerOrder ?? [];
   const completed = new Set(discussion?.completedSpeakerIds ?? []);
-  const segFg = challenge ? "#F0A83A" : "#F4EEE4";
 
   let speakerSub = t("speakingNow");
   if (challenge) speakerSub = t("challengingName", { name: name(discussion?.originalSpeakerId) });
@@ -111,94 +62,30 @@ export function DayScreen() {
   const pending = discussion?.yourChallengeIsPending ?? false;
   const canChallenge = discussion?.youCanRequestChallenge ?? false;
   const live = voice.publishing && !voice.muted;
-  const hasDetails = Boolean(report.text) || notices.length > 0;
-  const reportOpen = hasDetails && reportDay === view.nightNumber;
+  const requests = youSpeaker ? discussion?.pendingChallengerIds ?? [] : [];
+  const mayorCanReveal = youSpeaker && view.yourRole === "Mayor" && !findPlayer(view, view.yourPlayerId)?.revealed;
 
   return (
     <Screen theme="day" className="screen--table">
       <PhaseHeader kicker={t("morning")} title={t("dayN", { number: view.nightNumber })} right={<HeaderTools><RolePeek role={view.yourRole} alive={view.youAreAlive} /></HeaderTools>} />
-      <TableScene nowId={discussion?.activePlayerId} doneIds={completed} />
+      <TableScene
+        nowId={discussion?.activePlayerId}
+        doneIds={completed}
+        clock={discussion && active ? {
+          label: challenge ? t("challenge") : t("speakerTurn"),
+          name: name(active.playerId),
+          sub: speakerSub,
+          deadline: discussion.deadline,
+          accent: challenge ? "#F0A83A" : undefined,
+        } : null}
+      />
 
-      <Body tight>
+      <PhasePanel>
         <ReconnectingBanner />
         <SpectatorBanner />
         <TableNotices />
 
-        {personal.map((n) => (
-          <section key={n.key} role="status" className="row phase-notice" style={{ gap: 12, padding: 14, borderRadius: 18, background: n.bg, border: `1px solid ${n.edge}` }}>
-            <span style={{ width: 44, height: 44, flex: "none", borderRadius: 999, background: n.ibg, color: n.fg, display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <Icon name={n.icon} />
-            </span>
-            <div style={{ fontSize: 14, lineHeight: 1.45 }}>
-              <div style={{ fontWeight: 600, fontSize: 15 }}>{n.title}</div>
-              <div style={{ color: "var(--text-2)" }}>{n.text}</div>
-            </div>
-          </section>
-        ))}
-
-        {discussion && active && (
-          <section className={`stack center speaker-card discussion-card${seconds <= 5 ? " discussion-card--urgent" : ""}`} style={{ gap: 10, padding: "16px 16px", borderRadius: 24, background: "var(--surface)" }} aria-live="polite">
-            <span style={{ padding: "4px 10px", borderRadius: 999, background: challenge ? "#3A2A16" : "#2B241B", color: segFg, fontSize: 12, fontWeight: 700, letterSpacing: 0.8, textTransform: "uppercase" }}>
-              {challenge ? t("challenge") : t("speakerTurn")}
-            </span>
-            <div className="speaker-card__ring" style={{ position: "relative", width: 132, height: 132 }}>
-              <svg width="132" height="132" viewBox="0 0 132 132" aria-hidden="true" style={{ position: "absolute", inset: 0 }}>
-                <circle cx="66" cy="66" r="60" fill="none" stroke="#342C22" strokeWidth="7" />
-                <circle
-                  cx="66" cy="66" r="60" fill="none" stroke={segFg} strokeWidth="7" strokeLinecap="round"
-                  strokeDasharray={`${(RING * frac).toFixed(1)} ${RING.toFixed(1)}`} transform="rotate(-90 66 66)"
-                  style={{ transition: "stroke-dasharray 250ms linear" }}
-                />
-              </svg>
-              <VoiceHalo inset={16} color={segFg} />
-              <PlayerAvatar view={view} playerId={active.playerId} size={100} seat={false} className="display" style={{ position: "absolute", left: 16, top: 16, fontSize: 40, fontWeight: 800 }} />
-            </div>
-            <div style={{ textAlign: "center" }}>
-              <div style={{ fontSize: 20, fontWeight: 700 }}>{name(active.playerId)}</div>
-              <div style={{ fontSize: 14, color: active.isBot ? "var(--text-soft)" : "var(--muted)" }}>{speakerSub}</div>
-            </div>
-            <div className="display num" style={{ fontSize: 34 }} aria-label={t("secondsLeft", { seconds })}>{clock}</div>
-          </section>
-        )}
-
-        {youSpeaker && (discussion?.pendingChallengerIds.length ?? 0) > 0 && (
-          <section className="stack" style={{ padding: 14, borderRadius: 18, background: "var(--surface)", border: "1px solid var(--edge)" }}>
-            <h2 style={{ fontSize: 14, fontWeight: 600 }}>{t("challengeRequests")}</h2>
-            {discussion!.pendingChallengerIds.map((id) => (
-              <div key={id} className="row" style={{ gap: 8 }}>
-                <span className="grow" style={{ fontSize: 15 }}>{name(id)}</span>
-                <button type="button" className="btn btn--outline btn--auto" style={{ minHeight: 44, borderRadius: 12, fontSize: 14 }} disabled={busy} onClick={() => void rejectChallenge(id)}>{t("reject")}</button>
-                <button type="button" className="btn btn--primary btn--auto" style={{ minHeight: 44, borderRadius: 12, fontSize: 14 }} disabled={busy} onClick={() => void acceptChallenge(id)}>{t("accept")}</button>
-              </div>
-            ))}
-          </section>
-        )}
-
-        {order.length > 0 && <p className="tiny muted" style={{ margin: 0 }}>{t("turnLengths", { speaker: view.rules.speakerSeconds, challenge: view.rules.challengeSeconds })}</p>}
-
-        <section
-          className={`morning-summary phase-notice${reportOpen ? " morning-summary--open" : ""}`}
-          style={{ "--summary-bg": report.bg, "--summary-edge": report.edge } as CSSProperties}
-        >
-          <button type="button" className="morning-summary__head" aria-expanded={reportOpen} aria-controls="morning-summary-body" disabled={!hasDetails} onClick={() => setReportDay(reportOpen ? null : view.nightNumber)}>
-            <span style={{ display: "flex", color: report.fg }}><Icon name={report.icon} size={20} /></span>
-            <span>{report.title}</span>
-            {hasDetails && <span className="morning-summary__chevron"><Icon name="forward" size={16} /></span>}
-          </button>
-          {reportOpen && (
-            <div id="morning-summary-body" className="morning-summary__body">
-              {report.text && <div>{report.text}</div>}
-              {notices.map((n) => (
-                <div key={n.key} className="morning-summary__item">
-                  <span style={{ display: "flex", marginTop: 2, color: n.fg }}><Icon name={n.icon} size={18} /></span>
-                  <span><b>{n.title}</b>{n.text}</span>
-                </div>
-              ))}
-            </div>
-          )}
-        </section>
-
-        <Reactions />
+        {personal.map((notice) => <PanelNote key={notice.key} icon={notice.icon} title={notice.title}>{notice.text}</PanelNote>)}
 
         {inquiry.length > 0 && (
           <section className="list" aria-label={t("inquiryTitle")}>
@@ -219,30 +106,43 @@ export function DayScreen() {
           </div>
         )}
         <ActionError />
-      </Body>
+      </PhasePanel>
 
       {view.youCanUseGraveyard ? (
         <Bar><GraveyardBar /></Bar>
       ) : (
       <Bar>
+        {/* Requests need an answer, so they sit with the buttons and not in the scrolling panel. */}
+        {requests.length > 0 && (
+          <section className="dock-requests" aria-live="polite">
+            <h2>{t("challengeRequests")}</h2>
+            {requests.map((id) => (
+              <div key={id} className="row" style={{ gap: 6 }}>
+                <span className="grow" style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontSize: 14 }}>{name(id)}</span>
+                <button type="button" className="btn btn--outline btn--auto" disabled={busy} onClick={() => void rejectChallenge(id)}>{t("reject")}</button>
+                <button type="button" className="btn btn--primary btn--auto" disabled={busy} onClick={() => void acceptChallenge(id)}>{t("accept")}</button>
+              </div>
+            ))}
+          </section>
+        )}
         <div className="row" style={{ gap: 10 }}>
         {!view.youAreAlive ? (
-          <div className="grow" style={{ minHeight: 52, padding: "8px 14px", borderRadius: 16, border: "1.5px dashed var(--edge)", color: "var(--text-2)", fontSize: 14, display: "flex", alignItems: "center" }}>
+          <div className="grow" style={{ minHeight: 44, padding: "6px 12px", borderRadius: 14, border: "1.5px dashed var(--edge)", color: "var(--text-2)", fontSize: 13, display: "flex", alignItems: "center" }}>
             {view.youAreSpectator ? t("daySpectatorNote") : t("dayDeadNote")}
           </div>
         ) : youActive ? (
           <div className="grow stack" style={{ gap: 8 }}>
-            {youSpeaker && view.yourRole === "Mayor" && !findPlayer(view, view.yourPlayerId)?.revealed && (
+            {mayorCanReveal && (
               <button type="button" className="btn btn--primary" style={{ fontSize: 15 }} disabled={busy} onClick={() => { haptic.success(); void revealMayor(); }}>
                 {t("revealAsMayor")}
               </button>
             )}
-            <button type="button" className={`btn ${view.yourRole === "Mayor" && youSpeaker && !findPlayer(view, view.yourPlayerId)?.revealed ? "btn--outline" : "btn--primary"}`} style={{ fontSize: 15 }} disabled={busy} onClick={() => void finishDiscussion()}>
+            <button type="button" className={`btn ${mayorCanReveal ? "btn--outline" : "btn--primary"}`} style={{ fontSize: 15 }} disabled={busy} onClick={() => void finishDiscussion()}>
               {t("finishEarly")}
             </button>
           </div>
         ) : youSilenced ? (
-          <div className="grow" style={{ minHeight: 52, padding: "8px 14px", borderRadius: 16, border: "1.5px dashed var(--edge)", color: "var(--text-2)", fontSize: 14, display: "flex", alignItems: "center" }}>
+          <div className="grow" style={{ minHeight: 44, padding: "6px 12px", borderRadius: 14, border: "1.5px dashed var(--edge)", color: "var(--text-2)", fontSize: 13, display: "flex", alignItems: "center" }}>
             {t("silencedNote")}
           </div>
         ) : (
@@ -277,6 +177,7 @@ export function DayScreen() {
           </span>
         </div>
         </div>
+        <ReactionRow />
       </Bar>
       )}
     </Screen>

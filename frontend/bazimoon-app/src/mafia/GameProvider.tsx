@@ -12,6 +12,19 @@ import { reactionKinds, type MafiaReaction, type ReactionKind } from "./reaction
 
 export type GameStatus = "loading" | "ready" | "not-found" | "error";
 export type LinkState = "connected" | "reconnecting" | "closed";
+export type PanelTab = "events" | "chat";
+
+/** A chat message that has just arrived, shown for a moment at its sender's seat. */
+export interface SeatLine {
+  id: string;
+  senderId: string;
+  text: string;
+  at: number;
+}
+
+/** How long a reaction or a chat line stays at a seat. */
+const SEAT_BUBBLE_MS = 4500;
+const REACTION_COOLDOWN_MS = 3000;
 
 export interface GameContextValue {
   apiClient: BazimoonApiClient;
@@ -57,8 +70,16 @@ export interface GameContextValue {
   tableChatUnread: number;
   markTableChatRead(): void;
   sendTableChat(text: string): Promise<boolean>;
+  /** Chat lines that have just arrived, newest per sender, for the bubbles at the seats. */
+  seatLines: SeatLine[];
+  /** Which side of the phase panel is open; kept across phases. */
+  panelTab: PanelTab;
+  setPanelTab(tab: PanelTab): void;
   reactions: MafiaReaction[];
-  sendReaction(kind: ReactionKind): Promise<boolean>;
+  /** True for a few seconds after you react: the table allows one reaction at a time. */
+  reactionCooling: boolean;
+  /** Sends a reaction to the table, aimed at another player when `targetPlayerId` is given. */
+  sendReaction(kind: ReactionKind, targetPlayerId?: string): Promise<boolean>;
   blockedPlayers: PlayerSafetyTarget[];
   safetyPlayers: PlayerSafetyTarget[];
   blockPlayer(playerId: string): Promise<boolean>;
@@ -89,11 +110,27 @@ export function GameProvider({ gameId, children }: { gameId: string; children: R
   const [reactions, setReactions] = useState<MafiaReaction[]>([]);
   const addReaction = useCallback((reaction: MafiaReaction) => {
     if (!reactionKinds.includes(reaction.kind)) return;
-    setReactions(list => [...list.filter(item => item.id !== reaction.id && Date.now() - item.receivedAt < 4500), { ...reaction, receivedAt: Date.now() }].slice(-4));
+    // One bubble per seat: a player's newer reaction replaces their last one.
+    setReactions(list => [...list.filter(item => item.id !== reaction.id && item.senderId !== reaction.senderId && Date.now() - item.receivedAt < SEAT_BUBBLE_MS), { ...reaction, receivedAt: Date.now() }].slice(-12));
   }, []);
+  const [reactionCooling, setReactionCooling] = useState(false);
+  const coolingTimer = useRef<number | null>(null);
+  const [seatLines, setSeatLines] = useState<SeatLine[]>([]);
+  const [panelTab, setPanelTab] = useState<PanelTab>("events");
   useEffect(() => {
-    const timer = window.setInterval(() => setReactions(list => list.length ? list.filter(item => Date.now() - item.receivedAt < 4500) : list), 500);
-    return () => window.clearInterval(timer);
+    const timer = window.setInterval(() => {
+      const fresh = <T extends { at?: number; receivedAt?: number }>(list: T[]) => {
+        if (!list.length) return list;
+        const kept = list.filter(item => Date.now() - (item.at ?? item.receivedAt ?? 0) < SEAT_BUBBLE_MS);
+        return kept.length === list.length ? list : kept;
+      };
+      setReactions(fresh);
+      setSeatLines(fresh);
+    }, 500);
+    return () => {
+      window.clearInterval(timer);
+      if (coolingTimer.current !== null) window.clearTimeout(coolingTimer.current);
+    };
   }, []);
 
   const addGraveyard = useCallback((message: GraveyardMessage) => {
@@ -104,6 +141,9 @@ export function GameProvider({ gameId, children }: { gameId: string; children: R
   const [tableChatSeen, setTableChatSeen] = useState(0);
   const addTableChat = useCallback((message: TableChatMessage) => {
     setTableChat((list) => (list.some((m) => m.id === message.id) ? list : [...list, message].slice(-200)));
+    // Only messages that arrive live pop up at a seat; the history loaded on arrival does not.
+    setSeatLines((list) => (list.some((line) => line.id === message.id) ? list
+      : [...list.filter((line) => line.senderId !== message.senderId), { id: message.id, senderId: message.senderId, text: message.text, at: Date.now() }]));
   }, []);
 
   const refresh = useCallback(async () => {
@@ -199,6 +239,12 @@ export function GameProvider({ gameId, children }: { gameId: string; children: R
   useEffect(() => () => {
     if (recoveredTimer.current !== null) window.clearTimeout(recoveredTimer.current);
   }, []);
+
+  // The chat is closed at night, and the night's prompt is on the events side.
+  const phase = view?.phase;
+  useEffect(() => {
+    if (phase === "Night" || phase === "NightZero") setPanelTab("events");
+  }, [phase]);
 
   // Once you're out (or watching), join the graveyard group and load its history.
   const canGraveyard = Boolean(view?.youCanUseGraveyard);
@@ -309,11 +355,19 @@ export function GameProvider({ gameId, children }: { gameId: string; children: R
         return false;
       }
     },
+    seatLines,
+    panelTab,
+    setPanelTab,
     reactions,
-    sendReaction: async (kind) => {
-      if (!hubRef.current || link !== "connected") return false;
+    reactionCooling,
+    sendReaction: async (kind, targetPlayerId) => {
+      if (!hubRef.current || link !== "connected" || reactionCooling) return false;
+      setReactionCooling(true);
+      if (coolingTimer.current !== null) window.clearTimeout(coolingTimer.current);
+      coolingTimer.current = window.setTimeout(() => setReactionCooling(false), REACTION_COOLDOWN_MS);
       try {
-        await hubRef.current.invoke("SendReaction", gameId, kind);
+        if (targetPlayerId) await hubRef.current.invoke("SendAimedReaction", gameId, kind, targetPlayerId);
+        else await hubRef.current.invoke("SendReaction", gameId, kind);
         haptic.tap();
         return true;
       } catch { return false; }

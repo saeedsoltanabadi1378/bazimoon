@@ -1,15 +1,16 @@
-import { Reactions } from "./Reactions";
+import { ReactionRow } from "./Reactions";
 import { useState } from "react";
 import type { VoteView } from "../api/types";
 import { useGame } from "./GameProvider";
 import { useLanguage } from "../i18n/LanguageContext";
-import { Bar, Body, PhaseHeader, Screen } from "../ui/components";
+import { Bar, PhaseHeader, Screen } from "../ui/components";
 import { Icon } from "../ui/Icon";
 import { voteWeight, findPlayer } from "./roles";
-import { ActionError, PhaseTimer, ReconnectingBanner, VoiceStatusLine, TableNotices } from "./parts";
+import { ActionError, ReconnectingBanner, VoiceStatusLine, TableNotices } from "./parts";
 import { GraveyardBar, SpectatorBanner } from "./Graveyard";
 import { HeaderTools, PlayerAvatar } from "./table";
 import { TableScene } from "./TableScene";
+import { PhasePanel } from "./TablePanel";
 import { haptic } from "../lib/haptics";
 
 export function VotingScreen() {
@@ -76,13 +77,13 @@ export function VotingScreen() {
         pick={open ? { selected: picked, canPick: (id) => !busy && id !== view.yourPlayerId && candidates.some((p) => p.playerId === id), onPick: setPicked } : null}
         counts={new Map(tally.map((row) => [row.p.playerId, row.count]))}
         dimIds={revote ? new Set(alivePlayers.filter((p) => !runoff.has(p.playerId)).map((p) => p.playerId)) : undefined}
+        clock={{ label: revote ? t("revoteTitle") : t("townVote"), deadline: view.phaseDeadline }}
       />
 
-      <Body tight>
+      <PhasePanel>
         <ReconnectingBanner />
         <SpectatorBanner />
         <TableNotices />
-        <PhaseTimer deadline={view.phaseDeadline} total={view.rules.votingSeconds} label={(seconds) => t("votingSecondsLeft", { seconds })} />
         {revote && <p style={{ margin: 0, fontSize: 14, lineHeight: 1.5, color: "var(--text-2)" }}>{t("revoteRule")}</p>}
         <div className="stack" style={{ gap: 8 }} role="radiogroup" aria-label={revote ? t("revoteTitle") : t("townVote")}>
           {tally.map(({ p, by, count }) => {
@@ -142,9 +143,8 @@ export function VotingScreen() {
           {outWatching.length > 0 && <div className="small muted">{t("outWatching", { names: outWatching.join(", ") })}</div>}
         </section>
 
-        <Reactions />
         <ActionError />
-      </Body>
+      </PhasePanel>
 
       <Bar>
         <GraveyardBar />
@@ -164,6 +164,7 @@ export function VotingScreen() {
           </div>
         )}
         <VoiceStatusLine />
+        <ReactionRow />
       </Bar>
     </Screen>
   );

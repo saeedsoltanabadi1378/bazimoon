@@ -11,7 +11,8 @@ import { LeaveGameButton, useRoleName } from "./parts";
 import { usePlayerNotes, type PlayerNote } from "./notes";
 import { PlayerSafetyButton } from "./PlayerSafety";
 import { SpectatorList } from "./Graveyard";
-import { TableTalkButton } from "./TableTalk";
+import { ReactionArt, reactionColors } from "./Reactions";
+import { aimedReactionKinds, type ReactionKind } from "./reactionTypes";
 import "./table.css";
 
 /** A player's avatar: seat colour, a pattern and (optionally) the seat number, so colour is never the only cue. */
@@ -60,8 +61,16 @@ export function VoiceHalo({ inset, color }: { inset: number; color?: string }) {
   return <span ref={ref} className="voice-halo" aria-hidden="true" style={{ inset, "--halo": color } as CSSProperties} />;
 }
 
-/** Your private read on one player: trust or suspect, and the role they claimed. Kept on this device only. */
-export function NoteSheet({ gameId, player, onClose }: { gameId: string; player: PlayerView; onClose: () => void }) {
+/**
+ * Your private read on one player: trust or suspect, and the role they claimed. Kept on this device only.
+ * With `aim`, the sheet also offers the public reactions that can be aimed at this player.
+ */
+export function NoteSheet({ gameId, player, onClose, aim }: {
+  gameId: string;
+  player: PlayerView;
+  onClose: () => void;
+  aim?: { disabled: boolean; send(kind: ReactionKind): void };
+}) {
   const { t } = useLanguage();
   const roleName = useRoleName();
   const { notes, setNote } = usePlayerNotes(gameId);
@@ -96,6 +105,21 @@ export function NoteSheet({ gameId, player, onClose }: { gameId: string; player:
             </button>
           ))}
         </div>
+        {aim && (
+          // Kept apart from the private notes above, and labelled, because the whole table sees these.
+          <div className="stack" style={{ gap: 8, paddingTop: 12, borderTop: "1px solid var(--edge-soft)" }}>
+            <strong style={{ fontSize: 14 }}>{t("aimTitle", { name: player.displayName })}</strong>
+            <p className="small muted" style={{ margin: 0 }}>{t("aimNote")}</p>
+            <div className="row row--wrap" style={{ gap: 8 }}>
+              {aimedReactionKinds.map((kind) => (
+                <button key={kind} type="button" disabled={aim.disabled} style={{ ...chip(false, reactionColors[kind]), display: "inline-flex", alignItems: "center", gap: 6, opacity: aim.disabled ? 0.4 : 1 }} onClick={() => aim.send(kind)}>
+                  <ReactionArt kind={kind} size={18} />
+                  {t(`reaction_${kind}`)}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
         <button type="button" className="btn btn--outline" style={{ justifyContent: "center" }} autoFocus onClick={onClose}>{t("close")}</button>
       </div>
     </div>
@@ -107,7 +131,6 @@ export function HeaderTools({ children }: { children?: ReactNode }) {
   return (
     <div className="row" style={{ gap: 6, flex: "none" }}>
       {children}
-      <TableTalkButton />
       <TableMenu />
     </div>
   );

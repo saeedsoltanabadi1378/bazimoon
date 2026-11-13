@@ -71,6 +71,22 @@ public class MafiaReactionTests
     }
 
     [Fact]
+    public void AimedReactionsNeedAnotherLivingPlayer()
+    {
+        using var service = new MafiaReactions(TimeProvider.System);
+        var (game, id) = Create();
+        var snapshot = game.ToSnapshot();
+        var other = snapshot.Players[1].Id;
+        Assert.Throws<HubException>(() => service.Create(game, id, "suspect", id));
+        Assert.Throws<HubException>(() => service.Create(game, id, "suspect", Guid.NewGuid()));
+        var otherDead = GameState.FromSnapshot(snapshot with { Players = snapshot.Players.Select(p => p.Id == other ? p with { IsAlive = false } : p).ToList() });
+        Assert.Throws<HubException>(() => service.Create(otherDead, id, "suspect", other));
+        // A refused aim does not start the cooldown.
+        Assert.Equal(other, service.Create(game, id, "suspect", other).TargetId);
+        Assert.Null(service.Create(game, snapshot.Players[2].Id, "trust").TargetId);
+    }
+
+    [Fact]
     public async Task CooldownIsAtomicPerPlayerAndExpires()
     {
         var clock = new ReactionClock();

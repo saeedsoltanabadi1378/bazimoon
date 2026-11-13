@@ -1,18 +1,15 @@
-import { Reactions } from "./Reactions";
+import { ReactionRow } from "./Reactions";
 import { useGame } from "./GameProvider";
 import { useVoice } from "./VoiceProvider";
 import { useLanguage } from "../i18n/LanguageContext";
-import { Bar, Body, Screen } from "../ui/components";
-import { Icon } from "../ui/Icon";
+import { Bar, Screen } from "../ui/components";
 import { findPlayer } from "./roles";
-import { HeaderTools, PlayerAvatar, VoiceHalo } from "./table";
+import { HeaderTools } from "./table";
 import { TableScene } from "./TableScene";
+import { PanelNote, PhasePanel } from "./TablePanel";
 import { ActionError, ReconnectingBanner } from "./parts";
 import { GraveyardBar, SpectatorBanner } from "./Graveyard";
-import { useClock, useSecondsLeft } from "./timers";
 import { MicState } from "./DefenceScreen";
-
-const RING = 2 * Math.PI * 68;
 
 /**
  * A player who is out speaks once before their role is shown: always after being voted out, and at
@@ -22,8 +19,6 @@ export function LastWordsScreen() {
   const { view, busy, finishLastWords } = useGame();
   const voice = useVoice();
   const { t } = useLanguage();
-  const clock = useClock();
-  const seconds = useSecondsLeft(view?.lastWords?.deadline) ?? 0;
   if (!view) return null;
 
   const name = (id: string | null | undefined) => {
@@ -38,7 +33,6 @@ export function LastWordsScreen() {
   const speaking = lastWords?.youAreSpeaking ?? false;
   const accent = night ? "#F08A7A" : "#F0A83A";
   const total = view.rules.lastWordsSeconds;
-  const frac = Math.min(1, seconds / total);
   const live = voice.publishing && !voice.muted;
 
   return (
@@ -52,59 +46,41 @@ export function LastWordsScreen() {
         </div>
         <HeaderTools />
       </header>
-      <TableScene nowId={lastWords?.playerId} />
+      <TableScene
+        nowId={lastWords?.playerId}
+        clock={lastWords && speaker ? {
+          label: night ? t("killedLastNight") : t("votedOutByTown"),
+          name: name(speaker.playerId),
+          sub: speaking ? t("yourLastWords") : t("sayingLastWords"),
+          deadline: lastWords.deadline,
+          accent,
+        } : null}
+      />
 
-      <Body tight>
+      <PhasePanel>
         <ReconnectingBanner />
         <SpectatorBanner />
-        {speaker && (
-          <section className="stack center speaker-card" style={{ gap: 14, padding: "26px 16px", borderRadius: 24, background: "var(--surface)", textAlign: "center" }} aria-live="polite">
-            <span style={{ padding: "4px 10px", borderRadius: 999, background: night ? "#3A1C1A" : "#3A2A16", color: accent, fontSize: 12, fontWeight: 700, letterSpacing: 0.8 }}>
-              {night ? t("killedLastNight") : t("votedOutByTown")}
-            </span>
-            <div className="speaker-card__ring" style={{ position: "relative", width: 150, height: 150 }}>
-              <svg width="150" height="150" viewBox="0 0 150 150" aria-hidden="true" style={{ position: "absolute", inset: 0 }}>
-                <circle cx="75" cy="75" r="68" fill="none" stroke="#342C22" strokeWidth="7" />
-                <circle
-                  cx="75" cy="75" r="68" fill="none" stroke={accent} strokeWidth="7" strokeLinecap="round"
-                  strokeDasharray={`${(RING * frac).toFixed(1)} ${RING.toFixed(1)}`} transform="rotate(-90 75 75)"
-                  style={{ transition: "stroke-dasharray 250ms linear" }}
-                />
-              </svg>
-              <VoiceHalo inset={19} color={accent} />
-              <PlayerAvatar view={view} playerId={speaker.playerId} size={112} seat={false} className="display" style={{ position: "absolute", left: 19, top: 19, fontSize: 44, fontWeight: 800, filter: "grayscale(0.5)" }} />
-            </div>
-            <div>
-              <div className="display" style={{ fontSize: 26, lineHeight: 1.1 }}>{name(speaker.playerId)}</div>
-              <div style={{ marginTop: 4, fontSize: 14, color: "var(--muted)" }}>{speaking ? t("yourLastWords") : t("sayingLastWords")}</div>
-            </div>
-            <div className="display num" style={{ fontSize: 36 }} aria-label={t("secondsLeft", { seconds })}>{clock(seconds)}</div>
-          </section>
-        )}
-
-        <div className="row" style={{ gap: 10, alignItems: "flex-start", padding: "12px 14px", borderRadius: 14, background: "#1A1611", border: "1px solid #2B241B", fontSize: 13, lineHeight: 1.5, color: "var(--text-2)" }}>
-          <span style={{ marginTop: 1 }}><Icon name="info" size={18} color={accent} /></span>
-          <span>{night ? t("lastWordsNightNote") : t("lastWordsVoteNote")}</span>
-        </div>
-
-        <Reactions />
+        <PanelNote icon="info" title={t("lastWordsTitle")}>{night ? t("lastWordsNightNote") : t("lastWordsVoteNote")}</PanelNote>
         <ActionError />
-      </Body>
+      </PhasePanel>
 
       {view.youCanUseGraveyard && !view.lastWords?.youAreSpeaking ? (
         <Bar><GraveyardBar /></Bar>
       ) : (
-      <Bar row>
-        {speaking ? (
-          <button type="button" className="btn btn--primary grow" style={{ fontSize: 15 }} disabled={busy} onClick={() => void finishLastWords()}>
-            {t("finishEarly")}
-          </button>
-        ) : (
-          <div className="grow" style={{ minHeight: 52, padding: "8px 14px", borderRadius: 16, border: "1.5px dashed var(--edge)", color: "var(--text-2)", fontSize: 14, display: "flex", alignItems: "center" }}>
-            {t("lastWordsListening", { seconds: total })}
-          </div>
-        )}
-        <MicState live={live} />
+      <Bar>
+        <div className="row" style={{ gap: 10 }}>
+          {speaking ? (
+            <button type="button" className="btn btn--primary grow" style={{ fontSize: 15 }} disabled={busy} onClick={() => void finishLastWords()}>
+              {t("finishEarly")}
+            </button>
+          ) : (
+            <div className="grow" style={{ minHeight: 44, padding: "6px 12px", borderRadius: 14, border: "1.5px dashed var(--edge)", color: "var(--text-2)", fontSize: 13, display: "flex", alignItems: "center" }}>
+              {t("lastWordsListening", { seconds: total })}
+            </div>
+          )}
+          <MicState live={live} />
+        </div>
+        <ReactionRow />
       </Bar>
       )}
     </Screen>

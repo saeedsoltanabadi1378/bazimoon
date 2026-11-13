@@ -28,13 +28,23 @@ public sealed class GameHub : Hub
         await Groups.AddToGroupAsync(Context.ConnectionId, ShelemGroupName(code));
     }
 
-    public async Task SendReaction(Guid gameId, string kind,
+    public Task SendReaction(Guid gameId, string kind,
         [FromServices] MafiaReactions reactions, [FromServices] Bazimoon.Api.Games.GameMutationLock mutationLock)
+        => BroadcastReaction(gameId, kind, null, reactions, mutationLock);
+
+    /// <summary>A reaction aimed at another living player. A separate method, so apps that only know
+    /// <see cref="SendReaction"/> keep working.</summary>
+    public Task SendAimedReaction(Guid gameId, string kind, Guid targetId,
+        [FromServices] MafiaReactions reactions, [FromServices] Bazimoon.Api.Games.GameMutationLock mutationLock)
+        => BroadcastReaction(gameId, kind, targetId, reactions, mutationLock);
+
+    private async Task BroadcastReaction(Guid gameId, string kind, Guid? targetId,
+        MafiaReactions reactions, Bazimoon.Api.Games.GameMutationLock mutationLock)
     {
         using var lease = await mutationLock.EnterAsync(gameId, Context.ConnectionAborted);
         var game = await _sessionStore.GetAsync(gameId) ?? throw new HubException("reaction_unavailable");
         var playerId = PlayerIdentity.DeriveId(gameId, Context.User!.GetUserId());
-        var reaction = reactions.Create(game, playerId, kind);
+        var reaction = reactions.Create(game, playerId, kind, targetId);
         await Clients.Group(GroupName(gameId)).SendAsync("MafiaReaction", new { gameId, reaction });
     }
 

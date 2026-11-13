@@ -43,12 +43,77 @@ function view(id) {
   return base;
 }
 
+// A small stand-in for the SignalR game hub over long polling, so reactions and the table chat can
+// be tried against the mock: what you send is echoed to the table, and another player answers.
+const RS = "";
+const hub = { queue: [], waiting: null };
+const push = (message) => {
+  hub.queue.push(JSON.stringify(message) + RS);
+  if (hub.waiting) flush();
+};
+function flush() {
+  const res = hub.waiting;
+  hub.waiting = null;
+  res.writeHead(200, { "Content-Type": "text/plain; charset=utf-8" });
+  res.end(hub.queue.splice(0).join(""));
+}
+let nextId = 0;
+const reaction = (gameId, sender, kind, targetId = null) => push({ type: 1, target: "MafiaReaction", arguments: [{ gameId, reaction: { id: `r${++nextId}`, senderId: sender.playerId, senderName: sender.displayName, kind, phase: view(gameId).phase, round: 2, targetId } }] });
+const chat = (gameId, sender, text) => {
+  const message = { id: `m${++nextId}`, senderId: sender.playerId, senderName: sender.displayName, text, sentAt: new Date().toISOString() };
+  push({ type: 1, target: "TableChatMessage", arguments: [{ gameId, message }] });
+  return message;
+};
+function hubMessage(message) {
+  if (message.type !== 1) return;
+  const [gameId, kind, targetId] = message.arguments;
+  if (message.target === "SendReaction" || message.target === "SendAimedReaction") {
+    reaction(gameId, players[0], kind, targetId ?? null);
+    setTimeout(() => reaction(gameId, players[2], "suspect", players[0].playerId), 900);
+    setTimeout(() => reaction(gameId, players[3], "think"), 1500);
+  }
+  if (message.invocationId) push({ type: 3, invocationId: message.invocationId, result: null });
+}
+
 const server = http.createServer((req, res) => {
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Headers", "Authorization, Content-Type");
+  // The hub client sends credentials, which rules out the "*" origin.
+  res.setHeader("Access-Control-Allow-Origin", req.headers.origin ?? "*");
+  res.setHeader("Access-Control-Allow-Credentials", "true");
+  res.setHeader("Access-Control-Allow-Headers", "Authorization, Content-Type, X-Requested-With, X-SignalR-User-Agent");
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
   if (req.method === "OPTIONS") { res.writeHead(204); return res.end(); }
   const send = (status, body) => { res.writeHead(status, { "Content-Type": "application/json; charset=utf-8" }); res.end(JSON.stringify(body)); };
+  if (req.url?.startsWith("/hubs/game/negotiate")) {
+    // The mock holds one connection: a page that connects again starts it afresh.
+    if (hub.waiting) flush();
+    hub.queue.length = 0;
+    hub.opened = false;
+  }
+  if (req.url?.startsWith("/hubs/game/negotiate")) return send(200, { negotiateVersion: 1, connectionId: "mock", connectionToken: "mock", availableTransports: [{ transport: "LongPolling", transferFormats: ["Text"] }] });
+  if (req.url?.startsWith("/hubs/game")) {
+    if (req.method === "POST") {
+      let body = "";
+      req.on("data", (chunk) => { body += chunk; });
+      req.on("end", () => {
+        for (const part of body.split(RS).filter(Boolean)) {
+          const message = JSON.parse(part);
+          if (message.protocol) push({});
+          else hubMessage(message);
+        }
+        res.writeHead(200);
+        res.end();
+      });
+      return;
+    }
+    if (req.method === "DELETE") { res.writeHead(202); return res.end(); }
+    // The first poll only opens the connection; later ones wait for something to send.
+    if (!hub.opened) { hub.opened = true; res.writeHead(200); return res.end(); }
+    if (hub.waiting) flush();
+    hub.waiting = res;
+    if (hub.queue.length) flush();
+    else setTimeout(() => { if (hub.waiting === res) push({ type: 6 }); }, 10_000);
+    return;
+  }
   if (req.url === "/api/auth/guest") return send(200, { accessToken: "rtl-token", refreshToken: "rtl-refresh", user: { id: "rtl-user", displayName: "آرمان", isGuest: true, language: "fa" } });
   if (req.url === "/api/hub/config") return send(200, { disabledGames: [] });
   if (req.url === "/api/invites") return send(200, []);
@@ -60,6 +125,17 @@ const server = http.createServer((req, res) => {
   if (game && req.method === "GET") return send(200, view(decodeURIComponent(game[1])));
   if (req.url?.startsWith("/api/me/games/")) return send(200, { won: true, rating: 1516, ratingDelta: 16, isMvp: true, newAchievements: [] });
   if (req.url?.includes("/graveyard/messages")) return send(200, []);
+  const chatPost = req.method === "POST" && req.url?.match(/^\/api\/games\/([^/?]+)\/chat\/messages/);
+  if (chatPost) {
+    let body = "";
+    req.on("data", (chunk) => { body += chunk; });
+    req.on("end", () => {
+      const gameId = decodeURIComponent(chatPost[1]);
+      send(200, chat(gameId, players[0], JSON.parse(body || "{}").text ?? ""));
+      setTimeout(() => chat(gameId, players[1], "من هم همین فکر را می‌کنم."), 1200);
+    });
+    return;
+  }
   if (req.url?.includes("/chat/messages")) return send(200, [
     { id: "c1", senderId: players[1].playerId, senderName: players[1].displayName, text: "به نظرم کیان مشکوک است.", sentAt: new Date().toISOString() },
     { id: "c2", senderId: players[2].playerId, senderName: players[2].displayName, text: "من فقط منطقی حرف زدم.", sentAt: new Date().toISOString() },

@@ -1,10 +1,11 @@
 import { useGame } from "./GameProvider";
 import { useVoice } from "./VoiceProvider";
 import { useLanguage } from "../i18n/LanguageContext";
-import { Bar, Body, IconDisc, PhaseHeader, Screen } from "../ui/components";
-import { findPlayer, isMafiaRole, playerColor } from "./roles";
+import { Bar, PhaseHeader, Screen } from "../ui/components";
+import { isMafiaRole } from "./roles";
 import { TableScene, type SeatTag } from "./TableScene";
-import { ActionError, MicButton, PhaseTimer, ReconnectingBanner, RolePeek, useRoleName } from "./parts";
+import { PanelNote, PhasePanel } from "./TablePanel";
+import { ActionError, MicButton, ReconnectingBanner, RolePeek, useRoleName } from "./parts";
 import { GraveyardBar, SpectatorBanner } from "./Graveyard";
 
 export function FirstNightScreen() {
@@ -15,74 +16,30 @@ export function FirstNightScreen() {
   if (!view) return null;
 
   const mafia = isMafiaRole(view.yourRole) && view.youAreAlive;
-  // Only the Mafia see who is on their side, marked on the seats.
+  // Only the Mafia see who is on their side: each teammate's seat carries their role.
   const teamTags = new Map<string, SeatTag>();
-  if (mafia) for (const member of view.mafiaTeam ?? []) if (member.playerId !== view.yourPlayerId) teamTags.set(member.playerId, { text: t("yourTeam"), color: "#F08A7A" });
+  if (mafia) for (const member of view.mafiaTeam ?? []) if (member.playerId !== view.yourPlayerId) teamTags.set(member.playerId, { text: member.rank === 2 && member.role === "Mafia" ? t("mafiaNextInLine") : roleName(member.role), color: "#F08A7A" });
 
   return (
     <Screen theme="night" className="screen--table">
       <PhaseHeader kicker={t("nightN", { number: 0 })} title={t("firstNight")} right={<RolePeek role={view.yourRole} alive={view.youAreAlive} />} />
-      <TableScene tags={teamTags} />
+      <TableScene
+        tags={teamTags}
+        clock={{
+          label: t("firstNight"),
+          name: mafia ? t("privateMafiaVoice") : t("townSleeps"),
+          sub: mafia ? t("mafiaPlanHint") : t("townSleepsText"),
+          deadline: view.phaseDeadline,
+          accent: mafia ? "#F08A7A" : "#C9A25A",
+        }}
+      />
 
-      <Body>
+      <PhasePanel>
         <ReconnectingBanner />
         <SpectatorBanner />
-        <PhaseTimer
-          deadline={view.phaseDeadline} total={view.rules.nightSeconds} label={(seconds) => t("nightSecondsLeft", { seconds })}
-        />
-        <div className="card" style={{ fontSize: 14, lineHeight: 1.5, color: "var(--text-2)", padding: "12px 14px", borderRadius: 14 }}>
-          {t("firstNightInfo")}
-        </div>
-
-        {mafia ? (
-          <section className="stack stack--lg" style={{ padding: 18, borderRadius: 22, background: "var(--mafia-deep)", border: "1px solid var(--mafia-edge)" }}>
-            <div className="row" style={{ gap: 8 }}>
-              <span style={{ width: 8, height: 8, borderRadius: 999, background: "#E5604D" }} />
-              <span style={{ fontSize: 13, fontWeight: 600, color: "#F08A7A" }}>{t("privateMafiaVoice")}</span>
-            </div>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 12 }}>
-              {(view.mafiaTeam ?? []).map((member) => {
-                const player = findPlayer(view, member.playerId);
-                const you = member.playerId === view.yourPlayerId;
-                const live = you && voice.channel === "mafia" && !voice.muted;
-                const name = player?.displayName ?? "";
-                return (
-                  <div key={member.playerId} className="stack center" style={{ gap: 8, padding: "16px 8px", borderRadius: 18, background: "#2A1820", textAlign: "center" }}>
-                    <span
-                      className="avatar"
-                      aria-hidden="true"
-                      style={{
-                        width: 64, height: 64, fontSize: 24, fontWeight: 800, background: playerColor(view, member.playerId),
-                        boxShadow: live ? "0 0 0 3px #2A1820, 0 0 0 6px #E5604D" : "none",
-                      }}
-                    >
-                      {Array.from(name)[0]?.toUpperCase()}
-                    </span>
-                    <span style={{ fontSize: 15, fontWeight: 600 }}>{you ? t("youName", { name }) : name}</span>
-                    <span className="tiny" style={{ color: "#F08A7A" }}>
-                      {member.rank === 2 && member.role === "Mafia" ? t("mafiaNextInLine") : roleName(member.role)}
-                    </span>
-                    {you && (
-                      <span className="tiny" style={{ color: "#B9A6A9" }}>
-                        {voice.channel === "mafia" ? (voice.muted ? t("muted") : t("micOn")) : t("voiceConnecting")}
-                      </span>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-            <p className="small" style={{ color: "#B9A6A9" }}>{t("mafiaPlanHint")}</p>
-          </section>
-        ) : (
-          <section className="stack center" style={{ gap: 14, padding: "36px 18px", borderRadius: 22, background: "var(--surface-3)", textAlign: "center" }}>
-            <IconDisc icon="moon" size={88} iconSize={40} bg="#2A1E14" fg="#C9A25A" />
-            <h2 className="display" style={{ fontSize: 22, fontWeight: 700 }}>{t("townSleeps")}</h2>
-            <p style={{ fontSize: 14, lineHeight: 1.5, color: "var(--text-2)", maxWidth: 280 }}>{t("townSleepsText")}</p>
-          </section>
-        )}
-
+        <PanelNote icon="info" title={t("firstNight")}>{t("firstNightInfo")}</PanelNote>
         <ActionError />
-      </Body>
+      </PhasePanel>
 
       {view.youCanUseGraveyard ? (
         <Bar><GraveyardBar /></Bar>

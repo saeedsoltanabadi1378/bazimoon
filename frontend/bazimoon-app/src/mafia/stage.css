@@ -206,29 +206,6 @@ html[lang="fa"] .mafia-stage {
   border-radius: 10px !important;
 }
 
-/* The speaker glows at their seat, so the card keeps only the label, the name and the clock. */
-.screen--table .speaker-card {
-  gap: 4px !important;
-  padding: 12px !important;
-  border: 1px solid var(--edge-soft);
-  border-radius: 14px !important;
-}
-
-.screen--table .speaker-card__ring {
-  display: none;
-}
-
-.screen--table .speaker-card .display.num {
-  font-size: 30px !important;
-  line-height: 1.1;
-  color: var(--gold-hi);
-}
-
-.screen--table .morning-summary,
-.screen--table .phase-notice {
-  border-radius: 12px !important;
-}
-
 /* ---------- role reveal: the card lies sideways, portrait beside the text ---------- */
 
 .mafia-stage .role-reveal-card {
@@ -497,16 +474,270 @@ html[lang="fa"] .mafia-stage {
   z-index: -1;
 }
 
-/* ---------- game log and table chat ---------- */
+/* ---------- on the table: the clock, and what players say and react ---------- */
 
-.table-talk__button {
-  position: relative;
+.table-clock {
+  --clock: var(--gold-hi);
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  padding: 8px 22px;
+  background: radial-gradient(closest-side, rgb(8 5 4 / 62%), transparent);
+  text-align: center;
+  text-shadow: 0 1px 6px rgb(0 0 0 / 90%);
+  pointer-events: none;
 }
 
-.table-talk__badge {
+.table-clock__label {
+  color: var(--clock);
+  font-family: var(--font-body);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  line-height: 1.3;
+  text-transform: uppercase;
+}
+
+/* Persian letters join, so they are never spaced apart. */
+html[lang="fa"] .table-clock__label {
+  font-size: 11px;
+  letter-spacing: 0;
+}
+
+.table-clock__who {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.table-clock__name {
+  display: -webkit-box;
+  max-width: 100%;
+  overflow: hidden;
+  font-family: var(--font-noir);
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.table-clock__sub {
+  display: -webkit-box;
+  overflow: hidden;
+  color: #cdbfa6;
+  font-family: var(--font-body);
+  font-size: 11px;
+  line-height: 1.3;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+
+.table-clock__time {
+  color: var(--gold-hi);
+  font-size: 32px;
+  font-weight: 700;
+  line-height: 1.05;
+}
+
+.table-clock--compact .table-clock__name {
+  font-size: 15px;
+}
+
+.table-clock--compact .table-clock__time {
+  font-size: 25px;
+}
+
+.table-clock--urgent .table-clock__time {
+  color: #f08a7a;
+  animation: table-clock-urgent 1s ease-in-out infinite;
+}
+
+@keyframes table-clock-urgent {
+  50% { opacity: 0.55; }
+}
+
+.table-scene__spoken {
   position: absolute;
-  top: -5px;
-  inset-inline-end: -5px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.table-seat--saying {
+  z-index: 6;
+}
+
+.seat-say {
+  --shift: -50%;
+  position: absolute;
+  left: 50%;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: max-content;
+  max-width: 176px;
+  padding: 5px 9px;
+  border: 1px solid var(--gold);
+  border-radius: 12px;
+  background: linear-gradient(#2a1e14, #17100b);
+  box-shadow: 0 6px 16px rgb(0 0 0 / 70%);
+  color: #f3e9d6;
+  font-family: var(--font-body);
+  font-size: 12px;
+  line-height: 1.3;
+  text-align: start;
+  pointer-events: none;
+  transform: translateX(var(--shift));
+  animation: seat-say 4500ms ease both;
+}
+
+.seat-say--above {
+  bottom: calc(100% + 6px);
+}
+
+.seat-say--below {
+  top: calc(100% + 6px);
+}
+
+.seat-say--start {
+  --shift: 0%;
+  left: 0;
+}
+
+.seat-say--end {
+  --shift: 0%;
+  left: auto;
+  right: 0;
+}
+
+.seat-say__text {
+  min-width: 0;
+}
+
+.seat-say__text b {
+  display: block;
+  font-weight: 600;
+}
+
+.seat-say__text small {
+  display: block;
+  color: #cdbfa6;
+  font-size: 11px;
+}
+
+.seat-say__text--chat {
+  display: -webkit-box;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+
+@keyframes seat-say {
+  0% { opacity: 0; transform: translateX(var(--shift)) scale(0.8); }
+  6% { opacity: 1; transform: translateX(var(--shift)) scale(1.05); }
+  10% { transform: translateX(var(--shift)) scale(1); }
+  88% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* An aimed reaction: a line from the sender to the player it is about, who lights up in its colour. */
+.table-aims {
+  position: absolute;
+  inset: 0;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.table-aims g {
+  animation: table-aim-fade 4500ms ease both;
+}
+
+.table-aims line {
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: table-aim-draw 500ms ease-out forwards;
+}
+
+.table-aims circle {
+  stroke: none;
+  opacity: 0;
+  animation: table-aim-land 250ms ease-out 450ms forwards;
+}
+
+.table-seat--aimed .table-seat__face {
+  box-shadow: 0 0 0 3px var(--aim), 0 0 18px 5px color-mix(in srgb, var(--aim) 60%, transparent), 0 6px 14px rgb(0 0 0 / 80%);
+}
+
+@keyframes table-aim-draw {
+  to { stroke-dashoffset: 0; }
+}
+
+@keyframes table-aim-land {
+  to { opacity: 1; }
+}
+
+@keyframes table-aim-fade {
+  0%, 85% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* ---------- phase panel: events and chat, beside the table ---------- */
+
+.screen--table > .phase-panel {
+  gap: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+.phase-panel__tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  flex: none;
+  border-bottom: 1px solid var(--gold-lo);
+}
+
+.phase-panel__tabs button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 38px;
+  padding: 0 8px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: #b9aa90;
+  font-family: var(--font-noir);
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.phase-panel__tabs button.on {
+  border-bottom-color: var(--gold);
+  background: rgb(201 162 90 / 10%);
+  color: #f3e9d6;
+}
+
+.phase-panel__tabs button:focus-visible {
+  outline: 2px solid var(--gold-hi);
+  outline-offset: -3px;
+}
+
+.panel-badge {
   min-width: 18px;
   height: 18px;
   padding: 0 5px;
@@ -520,185 +751,230 @@ html[lang="fa"] .mafia-stage {
   text-align: center;
 }
 
-.table-talk__badge--inline {
-  position: static;
-  display: inline-block;
-  margin-inline-start: 6px;
-}
-
-.table-talk {
-  --gold: #c9a25a;
-  --gold-hi: #f1d79a;
-  --gold-lo: #7a5a2a;
-  position: fixed;
-  inset: 0;
-  z-index: 70;
-  display: flex;
-  justify-content: flex-end;
-  background: rgb(4 3 2 / 62%);
-  color: #f3e9d6;
-  font-family: var(--font-body);
-}
-
-.table-talk__sheet {
-  display: flex;
-  flex-direction: column;
-  width: min(380px, 92%);
-  height: 100%;
-  padding: 0 12px;
-  border-inline-start: 1px solid var(--gold);
-  background: linear-gradient(#1a130e, #0c0806);
-}
-
-/* Opened over a turned stage: upright and full screen, so the keyboard sits the right way round. */
-.table-talk--upright {
-  z-index: 200;
-}
-
-.table-talk--upright .table-talk__sheet {
-  width: 100%;
-  padding-top: env(safe-area-inset-top, 0px);
-  border-inline-start: 0;
-}
-
-.table-talk__tabs {
-  display: flex;
-  align-items: flex-end;
-  gap: 6px;
-  flex: none;
-  padding-top: 10px;
-  border-bottom: 1px solid var(--gold-lo);
-}
-
-.table-talk__tabs > button {
-  min-height: 40px;
-  padding: 0 14px;
-  border: 1px solid var(--gold-lo);
-  border-bottom: 0;
-  border-radius: 8px 8px 0 0;
-  background: transparent;
-  color: #b9aa90;
-  font-family: var(--font-noir, inherit);
-  font-size: 17px;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.table-talk__tabs > button.on {
-  border-color: var(--gold);
-  background: #241a12;
-  color: #f3e9d6;
-}
-
-.table-talk__tabs > .table-talk__close {
-  display: grid;
-  place-items: center;
-  width: 40px;
-  margin-inline-start: auto;
-  padding: 0;
-  border: 0;
-  color: var(--gold-hi);
-}
-
-.table-talk__list {
+.phase-panel__scroll {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 10px 2px;
-  font-size: 14px;
+  gap: 10px;
+  padding: 10px 12px;
+}
+
+.panel-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 9px 10px;
+  border: 1px solid var(--gold-lo);
+  border-inline-start: 3px solid var(--gold);
+  border-radius: 10px;
+  background: #1a130e;
+  font-size: 13px;
   line-height: 1.45;
 }
 
-.table-talk__empty,
-.table-talk__closed {
+.panel-note__icon {
+  display: flex;
+  margin-top: 1px;
+  color: var(--gold-hi);
+}
+
+.panel-note b {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.panel-note span {
+  color: var(--text-2);
+}
+
+.panel-log {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--edge-soft);
+}
+
+.panel-log:first-child {
+  padding-top: 0;
+  border-top: 0;
+}
+
+.panel-log__heading {
+  margin: 0 0 3px;
+  color: var(--gold-hi);
+  font-family: var(--font-noir);
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.panel-log__line {
+  margin: 0 0 4px;
+  padding-inline-start: 10px;
+  border-inline-start: 1px solid var(--gold-lo);
+  color: #e6dcc8;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.panel-chat__list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 12px;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.panel-chat__empty,
+.panel-chat__closed {
   margin: 0;
   color: #a8998a;
   font-size: 13px;
   text-align: center;
 }
 
-.table-talk__empty {
-  padding: 24px 0;
+.panel-chat__empty {
+  padding: 16px 0;
 }
 
-.table-talk__heading {
-  margin: 4px 0 2px;
-  color: var(--gold-hi);
-  font-family: var(--font-noir, inherit);
-  font-size: 17px;
-  font-weight: 600;
-}
-
-.table-talk__line {
-  margin: 0;
-  padding-inline-start: 10px;
-  border-inline-start: 1px solid var(--gold-lo);
-  color: #e6dcc8;
-}
-
-.table-talk__message {
+.panel-chat__message {
   display: flex;
   align-items: flex-start;
   gap: 8px;
 }
 
-.table-talk__face {
-  width: 32px;
-  height: 32px;
+.panel-chat__face {
+  width: 28px;
+  height: 28px;
   flex: none;
   border-radius: 50%;
   background: #1a120c center / cover;
   box-shadow: 0 0 0 1.5px var(--gold);
 }
 
-.table-talk__bubble {
+.panel-chat__bubble {
   min-width: 0;
-  padding: 6px 10px;
+  padding: 5px 9px;
   border-radius: 10px;
   background: #241a12;
   overflow-wrap: anywhere;
 }
 
-.table-talk__bubble b {
+.panel-chat__bubble b {
   display: block;
   color: var(--gold-hi);
   font-size: 12px;
   font-weight: 600;
 }
 
-.table-talk__message--mine {
+.panel-chat__message--mine {
   flex-direction: row-reverse;
 }
 
-.table-talk__message--mine .table-talk__bubble {
+.panel-chat__message--mine .panel-chat__bubble {
   background: #3a2c14;
 }
 
-.table-talk__compose {
+.panel-chat__compose {
   flex: none;
-  padding: 10px 0 calc(12px + env(safe-area-inset-bottom, 0px));
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 6px 12px;
   border-top: 1px solid var(--gold-lo);
 }
 
-.table-talk__error {
-  margin: 0 0 8px;
+.panel-chat__error {
+  margin: 0;
   color: #f08a7a;
   font-size: 13px;
 }
 
-.table-talk__compose form {
+/* One row: "Write" and the quick phrases, or the field once you choose to type. */
+.panel-chat__quick {
   display: flex;
-  gap: 8px;
+  gap: 6px;
+  min-width: 0;
 }
 
-.table-talk__compose input {
+.panel-chat__write {
+  flex: none;
+  min-height: 34px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--gold);
+  color: #1a1206;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.quick-phrases {
+  display: flex;
+  flex: 1;
+  gap: 6px;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.quick-phrases::-webkit-scrollbar {
+  display: none;
+}
+
+.quick-phrases button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex: none;
+  min-height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--gold-lo);
+  border-radius: 999px;
+  background: #1a130e;
+  color: #f3e9d6;
+  font: inherit;
+  font-size: 13px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.quick-phrases button b {
+  color: var(--gold-hi);
+}
+
+.quick-phrases button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.quick-phrases .quick-phrases__back {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  padding: 0;
+  color: var(--gold-hi);
+}
+
+.panel-chat__compose form {
+  display: flex;
+  gap: 6px;
+}
+
+.panel-chat__compose input {
   flex: 1;
   min-width: 0;
-  min-height: 44px;
-  padding: 0 12px;
+  min-height: 36px;
+  padding: 0 10px;
   border: 1px solid var(--gold-lo);
   border-radius: 8px;
   background: #0d0907;
@@ -708,11 +984,24 @@ html[lang="fa"] .mafia-stage {
   font-size: 16px;
 }
 
-.table-talk__compose form button {
+.panel-chat__compose form .panel-chat__back {
   display: grid;
   place-items: center;
-  width: 44px;
-  height: 44px;
+  width: 36px;
+  height: 36px;
+  flex: none;
+  border: 1px solid var(--gold-lo);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--gold-hi);
+  cursor: pointer;
+}
+
+.panel-chat__compose form button[type="submit"] {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 36px;
   flex: none;
   border: 0;
   border-radius: 8px;
@@ -721,9 +1010,77 @@ html[lang="fa"] .mafia-stage {
   cursor: pointer;
 }
 
-.table-talk__compose form button:disabled {
+.panel-chat__compose form button[type="submit"]:disabled {
   opacity: 0.45;
   cursor: default;
+}
+
+/* Typing on a turned stage: the chat opens upright over the whole screen, so the keyboard sits
+   the right way round. It is mounted on the page, outside the stage, and brings its own colours. */
+.chat-upright {
+  --gold: #c9a25a;
+  --gold-hi: #f1d79a;
+  --gold-lo: #7a5a2a;
+  --text-2: #cdbfa6;
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  background: linear-gradient(#1a130e, #0c0806);
+  color: #f3e9d6;
+  font-family: var(--font-body);
+}
+
+.chat-upright__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex: none;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--gold-lo);
+}
+
+.chat-upright__head h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.chat-upright__head button {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border: 0;
+  background: transparent;
+  color: var(--gold-hi);
+  cursor: pointer;
+}
+
+/* The dock: what you can do now. It never scrolls. */
+.dock-requests {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 96px;
+  overflow-y: auto;
+}
+
+.dock-requests h2 {
+  margin: 0;
+  color: var(--gold-hi);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.dock-requests .btn {
+  min-height: 36px;
+  padding: 0 12px;
+  border-radius: 10px;
+  font-size: 13px;
 }
 
 /* ---------- loading: the art comes in before the table is shown ---------- */
@@ -801,5 +1158,22 @@ html[lang="fa"] .mafia-stage {
   .table-seat__face,
   .stage-loader__bar > span {
     transition: none;
+  }
+
+  /* Bubbles and aim lines are taken away by a timer, so they need no fade. */
+  .seat-say,
+  .table-aims g,
+  .table-aims line,
+  .table-aims circle,
+  .table-clock--urgent .table-clock__time {
+    animation: none;
+  }
+
+  .table-aims line {
+    stroke-dashoffset: 0;
+  }
+
+  .table-aims circle {
+    opacity: 1;
   }
 }

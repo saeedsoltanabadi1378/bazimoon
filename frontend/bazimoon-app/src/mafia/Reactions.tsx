@@ -1,77 +1,76 @@
-import { useEffect, useRef, useState } from "react";
+import { useState, type ReactNode } from "react";
 import { useGame } from "./GameProvider";
 import { useLanguage } from "../i18n/LanguageContext";
 import { reactionKinds, type ReactionKind } from "./reactionTypes";
 import "./reactions.css";
 
-const colors: Record<ReactionKind, string> = { suspect: '#e2b86b', trust: '#78d7b5', bluff: '#ef8d93', think: '#b6a0ec', shock: '#8cc9ee', applause: '#f1ca75' };
-const eyes: Record<ReactionKind, string> = {
-  suspect: 'M17 27l8 3m14-3-8 3', trust: 'M17 30l3 3 5-6m7 3 3 3 5-6',
-  bluff: 'M17 27l8 6m0-6-8 6m15-6 8 6m0-6-8 6', think: 'M17 30h8m8 0h7',
-  shock: 'M21 27v7m15-7v7', applause: 'M17 32l4-5 4 5m7 0 4-5 4 5',
+export const reactionColors: Record<ReactionKind, string> = { suspect: "#e2b86b", trust: "#78d7b5", bluff: "#ef8d93", think: "#b6a0ec", shock: "#8cc9ee", applause: "#f1ca75" };
+
+/** One shape per reaction, so they are told apart at a glance and not by colour alone. */
+const glyphs: Record<ReactionKind, ReactNode> = {
+  // An eye.
+  suspect: <><path d="M2 12s3.6-6.5 10-6.5S22 12 22 12s-3.6 6.5-10 6.5S2 12 2 12Z" /><circle cx="12" cy="12" r="2.8" fill="currentColor" stroke="none" /></>,
+  // A thumbs-up.
+  trust: <><path d="M7 10.5v10.5" /><path d="M14.6 6 13.8 10.5h5.6a2 2 0 0 1 1.9 2.6l-2.2 6.5a2 2 0 0 1-1.9 1.4H4.5a1.5 1.5 0 0 1-1.5-1.5V12a1.5 1.5 0 0 1 1.5-1.5h2.3a2 2 0 0 0 1.8-1.1L11.6 3a2.8 2.8 0 0 1 3 3Z" /></>,
+  // A masquerade mask.
+  bluff: <><path d="M2.5 8.5c3-1.8 6.5-1.6 9.5.6 3-2.2 6.5-2.4 9.5-.6 0 5-2.6 8.5-5.8 8.5-1.7 0-2.6-1.8-3.7-1.8s-2 1.8-3.7 1.8c-3.2 0-5.8-3.5-5.8-8.5Z" /><path d="M6.3 11.5h3M14.7 11.5h3" /></>,
+  // A thought bubble.
+  think: <><path d="M20.5 11a8 7 0 0 1-8.5 7 9.5 9.5 0 0 1-3.3-.6L4 19.5l1.3-3.7A6.6 6.6 0 0 1 3.5 11a8 7 0 0 1 8.5-7 8 7 0 0 1 8.5 7Z" /><path d="M8.5 11h.01M12 11h.01M15.5 11h.01" strokeWidth="2.6" /></>,
+  // An exclamation mark.
+  shock: <><path d="M12 3.5v10.5" strokeWidth="3.2" /><path d="M12 19.5h.01" strokeWidth="3.4" /><path d="M4.5 6.5l2.2 1.8M19.5 6.5l-2.2 1.8" /></>,
+  // A star.
+  applause: <path d="m12 3 2.7 5.6 6.1.8-4.5 4.3 1.1 6.1L12 16.9l-5.4 2.9 1.1-6.1L3.2 9.4l6.1-.8Z" />,
 };
-/** Original vector stickers, kept crisp in both the picker and live feed. */
-export function ReactionArt({ kind }: { kind: ReactionKind }) {
-  return <svg viewBox="0 0 56 56" aria-hidden="true" className="mafia-reaction-art">
-    <circle cx="28" cy="29" r="24" fill={colors[kind]} opacity=".12" />
-    <path d="M12 23Q28 16 44 23L42 36Q28 52 14 36Z" fill={colors[kind]} />
-    <path d="M9 22h38M16 20l3-12 9 4 9-4 3 12" fill="#24202f" stroke={colors[kind]} strokeWidth="2" strokeLinejoin="round" />
-    <path d={eyes[kind]} stroke="#24202f" strokeWidth="2.6" strokeLinecap="round" fill="none" />
-    {kind === 'shock' ? <ellipse cx="28" cy="39" rx="3" ry="4" fill="#24202f" /> :
-      <path d={kind === 'trust' || kind === 'applause' ? 'M23 38q5 6 10 0' : kind === 'bluff' ? 'M23 40l10-4' : 'M24 39h8'} fill="none" stroke="#24202f" strokeWidth="2" strokeLinecap="round" />}
-    {kind === 'think' && <path d="M43 10q6-5 8 0t-5 5v2m0 4v1" fill="none" stroke={colors[kind]} strokeWidth="2" strokeLinecap="round" />}
-    {kind === 'applause' && <path d="M5 29l-3-3m3 12-3 2m49-11 3-3m-3 12 3 2" stroke={colors[kind]} strokeWidth="2" strokeLinecap="round" />}
-  </svg>;
+
+/** The reaction's own line icon in its colour, crisp at every size. */
+export function ReactionArt({ kind, size = 24 }: { kind: ReactionKind; size?: number }) {
+  return (
+    <svg viewBox="0 0 24 24" width={size} height={size} aria-hidden="true" className="mafia-reaction-art" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" style={{ color: reactionColors[kind] }}>
+      {glyphs[kind]}
+    </svg>
+  );
 }
 
-export function Reactions() {
-  const { view, link, reactions, sendReaction, blockedPlayers } = useGame();
-  const { t, n } = useLanguage();
-  const [open, setOpen] = useState(false);
-  const [until, setUntil] = useState(0);
-  const [now, setNow] = useState(Date.now);
+/** Whether you may react right now: alive, not silenced, and the town is awake. */
+export function useCanReact() {
+  const { view } = useGame();
+  if (!view) return false;
+  const awake = view.phase === "Day" || view.phase === "Defence" || view.phase === "Voting" || view.phase === "LastWords";
+  return awake && view.youAreAlive && !view.youAreSpectator && view.silencedPlayerId !== view.yourPlayerId;
+}
+
+/**
+ * The reactions, one tap each, in the dock. What is sent shows at your seat on the table, so there
+ * is no feed here and nothing that moves while you aim for a button.
+ */
+export function ReactionRow() {
+  const { link, sendReaction, reactionCooling } = useGame();
+  const { t } = useLanguage();
+  const canReact = useCanReact();
   const [failed, setFailed] = useState(false);
-  const sending = useRef(false);
-  useEffect(() => {
-    if (!until) return;
-    const timer = window.setInterval(() => {
-      const time = Date.now();
-      setNow(time);
-      if (time >= until) setUntil(0);
-    }, 250);
-    return () => window.clearInterval(timer);
-  }, [until]);
-  if (!view) return null;
-  const canSend = view.youAreAlive && !view.youAreSpectator && view.silencedPlayerId !== view.yourPlayerId;
-  const remaining = Math.max(0, Math.ceil((until - now) / 1000));
-  const visible = reactions.filter(r => r.phase === view.phase && r.round === view.nightNumber && !blockedPlayers.some(p => p.playerId === r.senderId));
-  async function send(kind: ReactionKind) {
-    if (sending.current || Date.now() < until) return;
-    sending.current = true;
-    setFailed(false);
-    setNow(Date.now());
-    setUntil(Date.now() + 3000);
-    const ok = await sendReaction(kind);
-    setFailed(!ok);
-    sending.current = false;
-  }
-  return <section className="mafia-reactions" aria-label={t('reactionsTitle')}>
-    <div className="mafia-reactions__feed" role="status" aria-live="polite" aria-relevant="additions">
-      {visible.map(r => <div className="mafia-reactions__bubble" key={r.id}>
-        <ReactionArt kind={r.kind} /><span><b dir="auto">{r.senderName}</b><small>{t(`reaction_${r.kind}`)}</small></span>
-      </div>)}
+  if (!canReact) return null;
+  const offline = link !== "connected";
+  return (
+    <div className="reaction-row-wrap">
+      <div className={`reaction-row${reactionCooling ? " reaction-row--cooling" : ""}`} role="group" aria-label={t("reactionsTitle")}>
+        {reactionKinds.map((kind) => (
+          <button
+            key={kind}
+            type="button"
+            disabled={offline || reactionCooling}
+            aria-label={t(`reaction_${kind}`)}
+            title={t(`reaction_${kind}`)}
+            onClick={async () => {
+              setFailed(false);
+              setFailed(!(await sendReaction(kind)));
+            }}
+          >
+            <ReactionArt kind={kind} size={22} />
+          </button>
+        ))}
+      </div>
+      {offline ? <p className="reaction-row__note">{t("reactionsOffline")}</p>
+        : failed && <p className="reaction-row__note reaction-row__note--error" role="alert">{t("reactionsFailed")}</p>}
     </div>
-    {canSend && <>
-      <button type="button" className="mafia-reactions__toggle" aria-expanded={open} aria-controls="mafia-reaction-picker" onClick={() => setOpen(v => !v)}>
-        <ReactionArt kind="suspect" /><span>{t('reactionsTitle')}</span><span aria-hidden="true">{open ? '−' : '+'}</span>
-      </button>
-      {open && <div id="mafia-reaction-picker" className="mafia-reactions__picker">
-        <p>{link !== 'connected' ? t('reactionsOffline') : remaining ? t('reactionsCooldown', { seconds: n(remaining) }) : t('reactionsHint')}</p>
-        <div className="mafia-reactions__grid">{reactionKinds.map(kind => <button type="button" key={kind} disabled={remaining > 0 || link !== 'connected'} onClick={() => void send(kind)} aria-label={t(`reaction_${kind}`)}>
-          <ReactionArt kind={kind} /><span>{t(`reaction_${kind}`)}</span>
-        </button>)}</div>
-      </div>}
-      {failed && <p className="mafia-reactions__error" role="alert">{t('reactionsFailed')}</p>}
-    </>}
-  </section>;
+  );
 }

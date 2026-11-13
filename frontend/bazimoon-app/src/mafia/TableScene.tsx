@@ -8,6 +8,9 @@ import { useGame } from "./GameProvider";
 import { useVoice } from "./VoiceProvider";
 import { usePlayerNotes } from "./notes";
 import { NoteSheet, VoiceHalo } from "./table";
+import { ReactionArt, reactionColors, useCanReact } from "./Reactions";
+import type { ReactionKind } from "./reactionTypes";
+import { useClock, useSecondsLeft } from "./timers";
 
 const PORTRAIT_COUNT = 16;
 
@@ -29,6 +32,43 @@ export interface SeatPick {
 export interface SeatTag {
   text: string;
   color?: string;
+}
+
+/** The countdown everyone is watching, drawn on the felt in the middle of the table. */
+export interface TableClock {
+  /** What is being timed: a speaker's turn, a challenge, the vote. */
+  label: string;
+  /** Who holds the floor, when the clock is theirs. */
+  name?: string;
+  sub?: string;
+  deadline: string | null | undefined;
+  accent?: string;
+}
+
+function CentreClock({ clock, width, compact }: { clock: TableClock; width: number; compact: boolean }) {
+  const { t } = useLanguage();
+  const seconds = useSecondsLeft(clock.deadline);
+  const format = useClock();
+  if (seconds === null && !clock.name) return null;
+  return (
+    <div className={`table-clock${compact ? " table-clock--compact" : ""}${seconds !== null && seconds <= 5 ? " table-clock--urgent" : ""}`} style={{ maxWidth: width, "--clock": clock.accent } as CSSProperties}>
+      <span className="table-clock__label" dir="auto">{clock.label}</span>
+      <span className="table-clock__who" aria-live="polite">
+        {clock.name && <span className="table-clock__name" dir="auto">{clock.name}</span>}
+        {clock.sub && <span className="table-clock__sub" dir="auto">{clock.sub}</span>}
+      </span>
+      {seconds !== null && <span className="table-clock__time display num" role="timer" aria-label={t("secondsLeft", { seconds })}>{format(seconds)}</span>}
+    </div>
+  );
+}
+
+/** What a seat is showing for a moment: a reaction, or the chat line its player just sent. */
+interface SeatBubble {
+  key: string;
+  at: number;
+  kind?: ReactionKind;
+  targetId?: string | null;
+  text?: string;
 }
 
 /** The painted table is 834 wide for every 356 of height. */
@@ -65,7 +105,7 @@ function seatPoints(count: number, rx: number, ry: number): [number, number][] {
  * The table with everyone seated around it, the same on every phase: who is alive, out, speaking,
  * silenced or a revealed Mayor. Seats are tapped to pick a player, or to open your private note.
  */
-export function TableScene({ pick, tags, counts, nowId, doneIds, dimIds }: {
+export function TableScene({ pick, tags, counts, nowId, doneIds, dimIds, clock }: {
   pick?: SeatPick | null;
   tags?: ReadonlyMap<string, SeatTag>;
   /** Votes against each player, shown on their seat. */
@@ -75,8 +115,10 @@ export function TableScene({ pick, tags, counts, nowId, doneIds, dimIds }: {
   doneIds?: ReadonlySet<string>;
   /** Seats that take no part right now (a re-vote is only between the tied players). */
   dimIds?: ReadonlySet<string>;
+  clock?: TableClock | null;
 }) {
-  const { view } = useGame();
+  const { view, reactions, seatLines, blockedPlayers, sendReaction, reactionCooling, link } = useGame();
+  const canReact = useCanReact();
   const voice = useVoice();
   const { t, n } = useLanguage();
   const { notes } = usePlayerNotes(view?.gameId ?? "");
@@ -111,9 +153,57 @@ export function TableScene({ pick, tags, counts, nowId, doneIds, dimIds }: {
   const canNote = !view.youAreSpectator && view.phase !== "Ended";
   const speaking = Boolean(nowId);
 
+  // Reactions and fresh chat lines show where they came from: at the sender's seat.
+  const blocked = new Set(blockedPlayers.map((player) => player.playerId));
+  const seatOf = new Map(view.players.map((player, index) => [player.playerId, index]));
+  const bubbles = new Map<string, SeatBubble>();
+  const shownReactions = reactions.filter((r) => r.phase === view.phase && r.round === view.nightNumber && !blocked.has(r.senderId));
+  for (const r of shownReactions) bubbles.set(r.senderId, { key: r.id, at: r.receivedAt, kind: r.kind, targetId: r.targetId });
+  for (const line of seatLines) {
+    if (blocked.has(line.senderId)) continue;
+    const shown = bubbles.get(line.senderId);
+    if (!shown || line.at > shown.at) bubbles.set(line.senderId, { key: line.id, at: line.at, text: line.text });
+  }
+  // An aimed reaction also draws a line across the table to the player it is about.
+  const aims = points.length === 0 ? [] : shownReactions.flatMap((r) => {
+    const from = points[seatOf.get(r.senderId) ?? -1];
+    const to = points[seatOf.get(r.targetId ?? "") ?? -1];
+    if (!from || !to || bubbles.get(r.senderId)?.key !== r.id) return [];
+    const length = Math.hypot(to[0] - from[0], to[1] - from[1]) || 1;
+    const inset = Math.min(face * 0.62, length / 3);
+    const [ux, uy] = [(to[0] - from[0]) / length, (to[1] - from[1]) / length];
+    return [{ id: r.id, targetId: r.targetId!, color: reactionColors[r.kind], x1: w / 2 + from[0] + ux * inset, y1: h / 2 + from[1] + uy * inset, x2: w / 2 + to[0] - ux * inset, y2: h / 2 + to[1] - uy * inset }];
+  });
+  const aimedAt = new Map(aims.map((aim) => [aim.targetId, aim.color]));
+  const seatName = (id: string | null | undefined) => {
+    const p = view.players[seatOf.get(id ?? "") ?? -1];
+    return !p ? t("unknown") : p.playerId === view.yourPlayerId ? t("you") : p.displayName;
+  };
+
   return (
     <section ref={ref} className="table-scene" dir="ltr" aria-label={t("players")}>
       <img className="table-scene__table" src={tableArt.table} alt="" draggable={false} style={{ width: tableWidth, height: tableHeight }} />
+      {aims.length > 0 && (
+        <svg className="table-aims" width={w} height={h} aria-hidden="true">
+          {aims.map((aim) => (
+            <g key={aim.id} stroke={aim.color} fill={aim.color}>
+              <line x1={aim.x1} y1={aim.y1} x2={aim.x2} y2={aim.y2} pathLength={1} />
+              <circle cx={aim.x2} cy={aim.y2} r={4} />
+            </g>
+          ))}
+        </svg>
+      )}
+      {/* Drawn after the aim lines, so the clock stays readable when one crosses it. */}
+      {clock && w > 0 && <CentreClock clock={clock} width={Math.round(tableWidth * 0.6)} compact={compact} />}
+      <div className="table-scene__spoken" role="log" aria-live="polite">
+        {[...bubbles].map(([senderId, bubble]) => (
+          <p key={bubble.key}>
+            {bubble.kind
+              ? t(bubble.targetId ? "reactionSaysTo" : "reactionSays", { name: seatName(senderId), text: t(`reaction_${bubble.kind}`), target: seatName(bubble.targetId) })
+              : t("reactionSays", { name: seatName(senderId), text: bubble.text ?? "" })}
+          </p>
+        ))}
+      </div>
       {points.map(([x, y], index) => {
         const p = view.players[index];
         const id = p.playerId;
@@ -129,8 +219,10 @@ export function TableScene({ pick, tags, counts, nowId, doneIds, dimIds }: {
         const notable = canNote && !you;
         const mark = view.phase === "Ended" ? undefined : notes[id]?.mark;
         const votes = counts?.get(id) ?? 0;
+        const bubble = bubbles.get(id);
+        const aimColor = aimedAt.get(id);
         // You hear your own mic state; for everyone else the floor decides who can be heard.
-        const live = now && (you ? voice.publishing && !voice.muted : true);
+        const micLive = now && (you ? voice.publishing && !voice.muted : true);
         const state = !p.isAlive ? t("outTag") : tag ? tag.text : now ? t("now") : silenced ? t("silencedTag") : mayor ? t("roleMayor") : done ? t("done") : p.isBot ? t("botTag") : t("aliveTag");
         const classes = ["table-seat"];
         if (pickable || notable) classes.push("table-seat--tap");
@@ -140,12 +232,14 @@ export function TableScene({ pick, tags, counts, nowId, doneIds, dimIds }: {
         if (done) classes.push("table-seat--done");
         if (selected) classes.push("table-seat--selected");
         if (p.isAlive && !pickable && (dimIds?.has(id) || (pick && !you))) classes.push("table-seat--dim");
+        if (bubble) classes.push("table-seat--saying");
+        if (aimColor) classes.push("table-seat--aimed");
         return (
           <button
             key={id}
             type="button"
             className={classes.join(" ")}
-            style={{ left: w / 2 + x, top: h / 2 + y, "--face": `${face}px` } as CSSProperties}
+            style={{ left: w / 2 + x, top: h / 2 + y, "--face": `${face}px`, "--aim": aimColor } as CSSProperties}
             aria-label={`${n(index + 1)} ${you ? t("youName", { name: p.displayName }) : p.displayName}, ${state}`}
             aria-pressed={pick ? selected : undefined}
             aria-disabled={!pickable && !notable}
@@ -164,8 +258,8 @@ export function TableScene({ pick, tags, counts, nowId, doneIds, dimIds }: {
               {mark && <span className={`table-seat__mark table-seat__mark--${mark}`} />}
               <span className="table-seat__no">{n(index + 1)}</span>
               {speaking && (p.isAlive || now) && (
-                <span className={`table-seat__mic${live ? " table-seat__mic--live" : ""}`}>
-                  <Icon name={live ? "mic" : "micOff"} size={Math.max(10, Math.round(face * 0.2))} strokeWidth={2.2} />
+                <span className={`table-seat__mic${micLive ? " table-seat__mic--live" : ""}`}>
+                  <Icon name={micLive ? "mic" : "micOff"} size={Math.max(10, Math.round(face * 0.2))} strokeWidth={2.2} />
                 </span>
               )}
               {votes > 0 && <span className="table-seat__votes">{n(votes)}</span>}
@@ -174,10 +268,37 @@ export function TableScene({ pick, tags, counts, nowId, doneIds, dimIds }: {
               <span className="table-seat__name" dir="auto">{you ? t("you") : p.displayName}</span>
               {(!compact || tag) && <span className="table-seat__state" style={tag?.color && p.isAlive ? { color: tag.color } : undefined}>{state}</span>}
             </span>
+            {bubble && (
+              // Bubbles open towards the middle of the table, so they never run off its edge.
+              <span key={bubble.key} className={`seat-say seat-say--${y < 0 ? "below" : "above"}${x < -w / 5 ? " seat-say--start" : x > w / 5 ? " seat-say--end" : ""}`}>
+                {bubble.kind ? (
+                  <>
+                    <ReactionArt kind={bubble.kind} size={20} />
+                    <span className="seat-say__text">
+                      <b dir="auto">{t(`reaction_${bubble.kind}`)}</b>
+                      {bubble.targetId && <small dir="auto">{t("reactionTo", { name: seatName(bubble.targetId) })}</small>}
+                    </span>
+                  </>
+                ) : (
+                  <span className="seat-say__text seat-say__text--chat" dir="auto">{bubble.text}</span>
+                )}
+              </span>
+            )}
           </button>
         );
       })}
-      {noting && createPortal(<NoteSheet gameId={view.gameId} player={noting.player} onClose={() => setNoting(null)} />, noting.host)}
+      {noting && createPortal(<NoteSheet
+          gameId={view.gameId}
+          player={noting.player}
+          onClose={() => setNoting(null)}
+          aim={canReact && noting.player.isAlive ? {
+            disabled: reactionCooling || link !== "connected",
+            send: (kind) => {
+              void sendReaction(kind, noting.player.playerId);
+              setNoting(null);
+            },
+          } : undefined}
+        />, noting.host)}
     </section>
   );
 }

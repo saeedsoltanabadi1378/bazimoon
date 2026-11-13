@@ -3,12 +3,13 @@ import { Icon } from "../ui/Icon";
 import type { NightActionType, Role } from "../api/types";
 import { useGame } from "./GameProvider";
 import { useLanguage, type TranslationKey } from "../i18n/LanguageContext";
-import { Banner, Bar, Body, IconDisc, PhaseHeader, Screen } from "../ui/components";
+import { Banner, Bar, PhaseHeader, Screen } from "../ui/components";
 import { findPlayer, isMafiaRole, nightLabelNumber, roleMeta } from "./roles";
-import { ActionError, PhaseTimer, ReconnectingBanner, RolePeek, VoiceStatusLine, TableNotices } from "./parts";
+import { ActionError, ReconnectingBanner, RolePeek, VoiceStatusLine, TableNotices } from "./parts";
 import { GraveyardBar, SpectatorBanner } from "./Graveyard";
 import { HeaderTools } from "./table";
 import { TableScene, type SeatTag } from "./TableScene";
+import { PhasePanel } from "./TablePanel";
 import { haptic } from "../lib/haptics";
 
 interface NightAction {
@@ -215,32 +216,23 @@ export function NightScreen() {
       <TableScene
         pick={picking ? { selected: picked, canPick: (id) => !busy && pickable.has(id), onPick: setPicked } : null}
         tags={picking ? seatTags : undefined}
+        clock={{
+          label: t("nightFalls"),
+          name: picking ? prompt : waitTitle,
+          sub: !picking ? waitText : picked ? t("seatPicked", { name: name(picked) }) : t("tapASeat"),
+          deadline: view.phaseDeadline,
+          accent: "#C9A25A",
+        }}
       />
 
-      <Body tight>
+      <PhasePanel>
         <ReconnectingBanner />
         <SpectatorBanner />
         <TableNotices />
-        <PhaseTimer
-          deadline={view.phaseDeadline} total={view.rules.nightSeconds} label={(seconds) => t("nightSecondsLeft", { seconds })}
-        />
         {info && picking && <Banner icon="info" iconColor={accent} background={infoBg}><span style={{ color: "var(--text-soft)" }}>{info}</span></Banner>}
 
-        {picking ? (
-          <section className="stack" style={{ gap: 6, padding: 14, borderRadius: 16, background: "var(--surface)", border: "1px solid var(--edge-soft)" }} aria-live="polite">
-            <h2 style={{ fontSize: 17, fontWeight: 600 }}>{prompt}</h2>
-            <p className="small" style={{ color: picked ? accent : "var(--muted)" }}>{picked ? t("seatPicked", { name: name(picked) }) : t("tapASeat")}</p>
-          </section>
-        ) : (
-          <section className="stack center" style={{ gap: 12, padding: "36px 18px", borderRadius: 22, background: "var(--surface-3)", textAlign: "center" }}>
-            <IconDisc icon={view.youAreSpectator ? "moon" : !alive ? "eliminated" : action || suspected ? "check" : "moon"} size={80} iconSize={36} bg="#2A1E14" fg="#C9A25A" />
-            <h2 className="display" style={{ fontSize: 21, fontWeight: 700 }}>{waitTitle}</h2>
-            <p style={{ fontSize: 14, lineHeight: 1.5, color: "var(--text-2)", maxWidth: 280 }}>{waitText}</p>
-          </section>
-        )}
-
         <ActionError />
-      </Body>
+      </PhasePanel>
 
       <Bar>
         <GraveyardBar />

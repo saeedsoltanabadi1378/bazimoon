@@ -132,69 +132,6 @@
   color: var(--seat-now, #f0a83a);
 }
 
-/* Morning summary: one line that opens to the full report. */
-.morning-summary {
-  border-radius: 16px;
-  border: 1px solid var(--summary-edge);
-  background: var(--summary-bg);
-  overflow: hidden;
-}
-
-.morning-summary__head {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  width: 100%;
-  min-height: 48px;
-  padding: 8px 12px;
-  border: 0;
-  background: transparent;
-  color: var(--text);
-  font: inherit;
-  font-size: 14px;
-  font-weight: 600;
-  text-align: start;
-  cursor: pointer;
-}
-
-.morning-summary__head > span:nth-child(2) {
-  flex: 1;
-  min-width: 0;
-}
-
-.morning-summary__chevron {
-  display: flex;
-  color: var(--muted);
-  transform: rotate(90deg);
-  transition: transform 180ms ease;
-}
-
-.morning-summary--open .morning-summary__chevron {
-  transform: rotate(-90deg);
-}
-
-.morning-summary__body {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  padding: 0 12px 12px;
-  font-size: 14px;
-  line-height: 1.45;
-  color: var(--text-2);
-}
-
-.morning-summary__item {
-  display: flex;
-  gap: 10px;
-  align-items: flex-start;
-}
-
-.morning-summary__item b {
-  display: block;
-  color: var(--text);
-  font-weight: 600;
-}
-
 /* Table menu sheet */
 .table-menu {
   position: fixed;
