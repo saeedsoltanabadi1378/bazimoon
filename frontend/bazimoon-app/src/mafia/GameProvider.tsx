@@ -34,10 +34,7 @@ export interface GameContextValue {
   addBot(): Promise<boolean>;
   removeBot(botId: string): Promise<boolean>;
   submitAccolade(kind: AccoladeKind, targetPlayerId: string): Promise<boolean>;
-  resolveNight(): Promise<boolean>;
   submitVote(targetPlayerId: string | null): Promise<boolean>;
-  resolveVoting(): Promise<boolean>;
-  startVoting(): Promise<boolean>;
   startNight(): Promise<boolean>;
   requestChallenge(): Promise<boolean>;
   cancelChallenge(): Promise<boolean>;
@@ -238,10 +235,7 @@ export function GameProvider({ gameId, children }: { gameId: string; children: R
     addBot: () => run(() => api.addBot(gameId)),
     removeBot: (botId) => run(() => api.removeBot(gameId, botId)),
     submitAccolade: (kind, target) => run(() => api.submitAccolade(gameId, kind, target)),
-    resolveNight: () => run(() => api.resolveNight(gameId)),
     submitVote: (target) => run(() => api.submitVote(gameId, target)),
-    resolveVoting: () => run(() => api.resolveVoting(gameId)),
-    startVoting: () => run(() => api.startVoting(gameId)),
     startNight: () => run(() => api.startNight(gameId)),
     requestChallenge: () => run(() => api.requestChallenge(gameId)),
     cancelChallenge: () => run(() => api.cancelChallenge(gameId)),

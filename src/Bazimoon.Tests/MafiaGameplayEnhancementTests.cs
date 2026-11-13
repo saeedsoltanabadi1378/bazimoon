@@ -75,12 +75,15 @@ public class MafiaGameplayEnhancementTests
     }
 
     [Fact]
-    public void PublicTables_GetTimers_UnlessTurnedOff()
+    public void NightAndVote_AreAlwaysTimed()
     {
-        Assert.Equal(GameConfig.OpenTableNightSeconds, GameService.BuildConfig(3, 10, null, isOpen: true).NightSeconds);
-        Assert.Null(GameService.BuildConfig(3, 10, null, isOpen: false).NightSeconds);
-        Assert.Equal(GameConfig.OpenTableVotingSeconds, GameService.BuildConfig(3, 10, new TableRules(), isOpen: true).VotingSeconds);
-        Assert.Null(GameService.BuildConfig(3, 10, new TableRules(NightSeconds: 0, VotingSeconds: 0), isOpen: true).NightSeconds);
+        Assert.Equal(GameConfig.DefaultNightSeconds, GameService.BuildConfig(3, 10, null, isOpen: true).NightSeconds);
+        Assert.Equal(GameConfig.DefaultNightSeconds, GameService.BuildConfig(3, 10, null, isOpen: false).NightSeconds);
+        Assert.Equal(GameConfig.DefaultVotingSeconds, GameService.BuildConfig(3, 10, new TableRules(), isOpen: true).VotingSeconds);
+        Assert.Equal(GameConfig.DefaultVotingSeconds, GameService.BuildConfig(3, 10, null, isOpen: false).VotingSeconds);
+        var off = GameService.BuildConfig(3, 10, new TableRules(NightSeconds: 0, VotingSeconds: 0), isOpen: true);
+        Assert.Equal(GameConfig.DefaultNightSeconds, off.NightSeconds);
+        Assert.Equal(GameConfig.DefaultVotingSeconds, off.VotingSeconds);
         Assert.Equal(90, GameService.BuildConfig(3, 10, new TableRules(NightSeconds: 90), isOpen: false).NightSeconds);
     }
 

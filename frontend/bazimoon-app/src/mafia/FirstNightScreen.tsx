@@ -3,11 +3,11 @@ import { useVoice } from "./VoiceProvider";
 import { useLanguage } from "../i18n/LanguageContext";
 import { Bar, Body, IconDisc, PhaseHeader, Screen } from "../ui/components";
 import { findPlayer, isMafiaRole, playerColor } from "./roles";
-import { ActionError, CreatorBox, MicButton, PhaseTimer, ReconnectingBanner, RolePeek, useRoleName } from "./parts";
+import { ActionError, MicButton, PhaseTimer, ReconnectingBanner, RolePeek, useRoleName } from "./parts";
 import { GraveyardBar, SpectatorBanner } from "./Graveyard";
 
 export function FirstNightScreen() {
-  const { view, busy, resolveNight } = useGame();
+  const { view } = useGame();
   const voice = useVoice();
   const { t } = useLanguage();
   const roleName = useRoleName();
@@ -93,13 +93,6 @@ export function FirstNightScreen() {
           </div>
         </section>
 
-        {view.youAreController && (
-          <CreatorBox note={t("creatorEndFirstNight")}>
-            <button type="button" className="btn btn--sm" style={{ fontSize: 15 }} disabled={busy} onClick={() => void resolveNight()}>
-              {t("endFirstNight")}
-            </button>
-          </CreatorBox>
-        )}
         <ActionError />
       </Body>
 

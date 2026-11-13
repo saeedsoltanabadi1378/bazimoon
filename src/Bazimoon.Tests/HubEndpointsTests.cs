@@ -172,12 +172,11 @@ public class HubEndpointsTests : IClassFixture<BazimoonApiFactory>, IAsyncLifeti
         var views = new List<GameView>();
         foreach (var c in clients) views.Add((await c.GetFromJsonAsync<GameView>($"/api/games/{gameId}"))!);
         var godfather = views.Single(v => v.YourRole == Role.Godfather).YourPlayerId;
-        (await clients[0].PostAsync($"/api/games/{gameId}/resolve-night", null)).EnsureSuccessStatusCode();
-        (await clients[0].PostAsync($"/api/games/{gameId}/start-voting", null)).EnsureSuccessStatusCode();
+        await AuthTestHelper.EndFirstNightAsync(_factory, gameId);
+        await AuthTestHelper.FinishDiscussionAsync(clients, gameId);
+        // Everyone votes (the Godfather abstains), so the vote is counted by itself.
         for (int i = 0; i < clients.Count; i++)
-            if (views[i].YourPlayerId != godfather)
-                (await clients[i].PostAsJsonAsync($"/api/games/{gameId}/votes", new SubmitVoteRequest(godfather))).EnsureSuccessStatusCode();
-        (await clients[0].PostAsync($"/api/games/{gameId}/resolve-voting", null)).EnsureSuccessStatusCode();
+            (await clients[i].PostAsJsonAsync($"/api/games/{gameId}/votes", new SubmitVoteRequest(views[i].YourPlayerId == godfather ? null : godfather))).EnsureSuccessStatusCode();
         (await clients[views.FindIndex(v => v.YourPlayerId == godfather)].PostAsync($"/api/games/{gameId}/last-words/finish", null)).EnsureSuccessStatusCode();
 
         for (int i = 0; i < clients.Count; i++)

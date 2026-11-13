@@ -195,42 +195,6 @@
   font-weight: 600;
 }
 
-/* Creator controls pinned in the bottom bar. */
-.creator-bar {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 6px 6px 6px 12px;
-  padding-inline: 12px 6px;
-  border-radius: 14px;
-  border: 1.5px dashed var(--edge);
-  font-size: 13px;
-  color: var(--muted);
-}
-
-.creator-bar > span {
-  flex: 1;
-  min-width: 0;
-}
-
-.creator-bar--solo {
-  padding: 0;
-  border: 0;
-}
-
-.creator-bar--solo .btn {
-  flex: 1;
-  border-style: dashed;
-}
-
-.creator-bar .btn {
-  width: auto;
-  min-height: 40px;
-  padding: 0 14px;
-  border-radius: 10px;
-  font-size: 14px;
-}
-
 /* Table menu sheet */
 .table-menu {
   position: fixed;

@@ -207,16 +207,6 @@ export function TableMenu() {
   );
 }
 
-/** Creator-only control, pinned in the bottom bar so it never scrolls out of reach. */
-export function CreatorBar({ label, children }: { label?: ReactNode; children: ReactNode }) {
-  return (
-    <div className={`creator-bar${label ? "" : " creator-bar--solo"}`}>
-      {label && <span>{label}</span>}
-      {children}
-    </div>
-  );
-}
-
 /** A short full-screen beat when night falls and when morning comes. Tap to skip. */
 export function PhaseCurtain() {
   const { view } = useGame();

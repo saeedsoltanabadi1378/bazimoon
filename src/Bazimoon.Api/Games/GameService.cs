@@ -222,17 +222,8 @@ public sealed class GameService
         await _notifier.NotifyGameUpdatedAsync(game);
     }
 
-    public async Task<NightResult> ResolveNightAsync(Guid gameId, Guid userId)
-    {
-        using var held = await _mutationLock.EnterAsync(gameId);
-        var game = await LoadOrThrowAsync(gameId);
-        EnsureController(game, userId);
-        if (game.CurrentPhase == GamePhase.Night && !game.AreRequiredNightActionsComplete())
-            throw new GameException("All living night roles must submit their actions before night can end.");
-        var result = game.ResolveNight(DateTimeOffset.UtcNow);
-        await SaveAndNotifyAsync(game);
-        return result;
-    }
+    // Nights and votes are never ended by hand: they resolve once everyone alive has acted or voted
+    // (AdvanceIfEveryoneActed), or when their timer runs out (AdvanceExpiredAsync).
 
     public async Task SubmitVoteAsync(Guid gameId, Guid userId, Guid? targetPlayerId)
     {
@@ -241,24 +232,6 @@ public sealed class GameService
         var voterId = PlayerIdentity.DeriveId(gameId, userId);
         game.SubmitVote(voterId, targetPlayerId);
         game.AdvanceIfEveryoneActed(DateTimeOffset.UtcNow);
-        await SaveAndNotifyAsync(game);
-    }
-
-    public async Task<VotingResult> ResolveVotingAsync(Guid gameId, Guid userId)
-    {
-        var game = await LoadOrThrowAsync(gameId);
-        EnsureController(game, userId);
-        var result = game.ResolveVoting(DateTimeOffset.UtcNow);
-        await SaveAndNotifyAsync(game);
-        return result;
-    }
-
-    public async Task StartVotingAsync(Guid gameId, Guid userId)
-    {
-        using var held = await _mutationLock.EnterAsync(gameId);
-        var game = await LoadOrThrowAsync(gameId);
-        EnsureController(game, userId);
-        game.StartVoting(DateTimeOffset.UtcNow);
         await SaveAndNotifyAsync(game);
     }
 
@@ -471,13 +444,13 @@ public sealed class GameService
     public static GameConfig BuildConfig(int minPlayers, int maxPlayers, TableRules? rules, bool isOpen = false)
     {
         var d = GameConfig.Default;
-        // A public table runs on timers unless its creator turns them off: strangers should not wait on one person.
+        // The night and the vote always run on a timer: nobody waits on the creator.
         if (rules is null)
             return new GameConfig
             {
                 MinPlayers = minPlayers, MaxPlayers = maxPlayers, AllowSpectators = isOpen,
-                NightSeconds = isOpen ? GameConfig.OpenTableNightSeconds : null,
-                VotingSeconds = isOpen ? GameConfig.OpenTableVotingSeconds : null,
+                NightSeconds = GameConfig.DefaultNightSeconds,
+                VotingSeconds = GameConfig.DefaultVotingSeconds,
             };
         return new GameConfig
         {
@@ -487,8 +460,9 @@ public sealed class GameService
             ChallengeSeconds = Pick(rules.ChallengeSeconds, GameConfig.ChallengeChoices, d.ChallengeSeconds, "challenge"),
             DefenceSeconds = Pick(rules.DefenceSeconds, GameConfig.DefenceChoices, d.DefenceSeconds, "defence"),
             LastWordsSeconds = Pick(rules.LastWordsSeconds, GameConfig.LastWordsChoices, d.LastWordsSeconds, "last words"),
-            NightSeconds = PickOptional(rules.NightSeconds, GameConfig.NightChoices, "night", isOpen ? GameConfig.OpenTableNightSeconds : null),
-            VotingSeconds = PickOptional(rules.VotingSeconds, GameConfig.VotingChoices, "voting", isOpen ? GameConfig.OpenTableVotingSeconds : null),
+            // 0 used to mean "the creator ends this phase"; it now takes the default, so old tables can still be rematched.
+            NightSeconds = Pick(rules.NightSeconds is 0 ? null : rules.NightSeconds, GameConfig.NightChoices, GameConfig.DefaultNightSeconds, "night"),
+            VotingSeconds = Pick(rules.VotingSeconds is 0 ? null : rules.VotingSeconds, GameConfig.VotingChoices, GameConfig.DefaultVotingSeconds, "voting"),
             LastWordsForNightKills = rules.LastWordsForNightKills ?? false,
             Roles = BuildSetup(rules),
             // The Iranian preset turns "Godfather looks innocent" on unless the creator says otherwise.
@@ -520,10 +494,6 @@ public sealed class GameService
         value is not { } v ? fallback
         : choices.Contains(v) ? v
         : throw new GameException($"The {name} timer must be one of {string.Join(", ", choices)} seconds.");
-
-    // 0 means off: the creator moves the phase on by hand. Not saying (null) takes the table's default.
-    private static int? PickOptional(int? value, IReadOnlyList<int> choices, string name, int? fallback = null) =>
-        value is null ? fallback : value == 0 ? null : Pick(value, choices, 0, name);
 }
 
 /// <summary>How a table is set up when it is created from the app (or copied into a rematch).
@@ -531,7 +501,7 @@ public sealed class GameService
 public sealed record TableOptions(string? Name, bool IsOpen, int? Seats, TableRules? Rules = null);
 
 /// <summary>Timers (seconds) and rule switches the creator picks on Create a table. Missing values keep
-/// the defaults; NightSeconds and VotingSeconds of 0 or null mean the creator ends that phase by hand.</summary>
+/// the defaults. The night and the vote always have a timer.</summary>
 public sealed record TableRules(
     int? SpeakerSeconds = null,
     int? ChallengeSeconds = null,

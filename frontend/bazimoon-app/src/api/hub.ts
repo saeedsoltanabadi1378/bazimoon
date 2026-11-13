@@ -290,8 +290,7 @@ export interface Weekly {
   rows: { rank: number; name: string; isYou: boolean; score: number }[];
 }
 
-/** Timers in seconds and rule switches for a new table. nightSeconds / votingSeconds of 0 mean the
- * creator moves that phase on by hand. */
+/** Timers in seconds and rule switches for a new table. Every phase has a timer. */
 export interface TableRules {
   speakerSeconds: number;
   challengeSeconds: number;

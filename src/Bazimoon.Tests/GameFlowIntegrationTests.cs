@@ -70,10 +70,11 @@ public class GameFlowIntegrationTests : IClassFixture<BazimoonApiFactory>, IAsyn
         }
         Assert.Equal(GamePhase.NightZero, views[0].Phase);
 
-        // Night Zero is discussion-only. The controller ends it, then advances through the first
-        // day/vote before role actions become available on Night 1.
-        (await creator.Client.PostAsync($"/api/games/{gameId}/resolve-night", null)).EnsureSuccessStatusCode();
-        (await creator.Client.PostAsync($"/api/games/{gameId}/start-voting", null)).EnsureSuccessStatusCode();
+        // Night Zero is discussion-only and ends on its timer; voting then starts by itself once
+        // every speaker has had their turn. Role actions become available on Night 1.
+        var clients = players.Select(p => p.Client).ToList();
+        await AuthTestHelper.EndFirstNightAsync(_factory, gameId);
+        await AuthTestHelper.FinishDiscussionAsync(clients, gameId);
         (await players[0].Client.PostAsJsonAsync($"/api/games/{gameId}/votes", new SubmitVoteRequest(views[1].YourPlayerId))).EnsureSuccessStatusCode();
         (await players[1].Client.PostAsJsonAsync($"/api/games/{gameId}/votes", new SubmitVoteRequest(views[0].YourPlayerId))).EnsureSuccessStatusCode();
 
@@ -83,7 +84,9 @@ public class GameFlowIntegrationTests : IClassFixture<BazimoonApiFactory>, IAsyn
         Assert.Contains(votingView.Votes, vote => vote.VoterPlayerId == views[1].YourPlayerId && vote.TargetPlayerId == views[0].YourPlayerId);
 
         // players[0] and players[1] voted for each other: a tie, so they each defend, then round 2.
-        (await creator.Client.PostAsync($"/api/games/{gameId}/resolve-voting", null)).EnsureSuccessStatusCode();
+        // The vote is counted by itself as soon as everyone alive has voted or abstained.
+        foreach (var rest in players.Skip(2))
+            (await rest.Client.PostAsJsonAsync($"/api/games/{gameId}/votes", new SubmitVoteRequest(null))).EnsureSuccessStatusCode();
         var defenceView = await players[2].Client.GetFromJsonAsync<GameView>($"/api/games/{gameId}");
         Assert.Equal(GamePhase.Defence, defenceView!.Phase);
         Assert.Equal(2, defenceView.VotingRound);
@@ -99,7 +102,8 @@ public class GameFlowIntegrationTests : IClassFixture<BazimoonApiFactory>, IAsyn
         // Round 2 is between the tied players only.
         var outsiderVote = await players[0].Client.PostAsJsonAsync($"/api/games/{gameId}/votes", new SubmitVoteRequest(views[2].YourPlayerId));
         Assert.Equal(HttpStatusCode.BadRequest, outsiderVote.StatusCode);
-        (await creator.Client.PostAsync($"/api/games/{gameId}/resolve-voting", null)).EnsureSuccessStatusCode();
+        foreach (var player in players)
+            (await player.Client.PostAsJsonAsync($"/api/games/{gameId}/votes", new SubmitVoteRequest(null))).EnsureSuccessStatusCode();
         (await creator.Client.PostAsync($"/api/games/{gameId}/start-night", null)).EnsureSuccessStatusCode();
 
         var godfather = players[FindIndexByRole(views, Role.Godfather)];
@@ -122,10 +126,9 @@ public class GameFlowIntegrationTests : IClassFixture<BazimoonApiFactory>, IAsyn
             new SubmitNightActionRequest(doctorSelfId, NightActionType.Heal));
         healResponse.EnsureSuccessStatusCode();
 
-        var resolveNightResponse = await creator.Client.PostAsync($"/api/games/{gameId}/resolve-night", null);
-        resolveNightResponse.EnsureSuccessStatusCode();
-        var nightResult = await resolveNightResponse.Content.ReadFromJsonAsync<NightResult>();
-        Assert.Equal(villagerId, nightResult!.Eliminated);
+        // The night ends by itself once everyone alive has acted.
+        foreach (var idle in players.Where(p => p != godfather && p != detective && p != doctor))
+            (await idle.Client.PostAsync($"/api/games/{gameId}/night-pass", null)).EnsureSuccessStatusCode();
 
         // The dead villager's role should now be visible to everyone (dead players are revealed).
         var postNightView = await godfather.Client.GetFromJsonAsync<GameView>($"/api/games/{gameId}");
@@ -144,8 +147,7 @@ public class GameFlowIntegrationTests : IClassFixture<BazimoonApiFactory>, IAsyn
         Assert.Null(villagerView!.YourLastInvestigationResult);
 
         // Day -> Voting -> vote out the (living) doctor -> Results.
-        var startVotingResponse = await creator.Client.PostAsync($"/api/games/{gameId}/start-voting", null);
-        startVotingResponse.EnsureSuccessStatusCode();
+        await AuthTestHelper.FinishDiscussionAsync(clients, gameId);
 
         var doctorTargetId = views[players.IndexOf(doctor)].YourPlayerId;
         foreach (var voter in players.Where(p => p != doctor && p != villager))
@@ -154,10 +156,10 @@ public class GameFlowIntegrationTests : IClassFixture<BazimoonApiFactory>, IAsyn
             voteResponse.EnsureSuccessStatusCode();
         }
 
-        var resolveVotingResponse = await creator.Client.PostAsync($"/api/games/{gameId}/resolve-voting", null);
-        resolveVotingResponse.EnsureSuccessStatusCode();
-        var votingResult = await resolveVotingResponse.Content.ReadFromJsonAsync<VotingResult>();
-        Assert.Equal(doctorTargetId, votingResult!.Eliminated);
+        (await doctor.Client.PostAsJsonAsync($"/api/games/{gameId}/votes", new SubmitVoteRequest(null))).EnsureSuccessStatusCode();
+
+        var votedView = await creator.Client.GetFromJsonAsync<GameView>($"/api/games/{gameId}");
+        Assert.False(votedView!.Players.Single(p => p.PlayerId == doctorTargetId).IsAlive);
     }
 
     [Fact]
@@ -235,7 +237,7 @@ public class GameFlowIntegrationTests : IClassFixture<BazimoonApiFactory>, IAsyn
         Assert.Equal("Subscriber", mainToken.Role);
 
         // During the day discussion only the player holding the floor may speak; everyone else listens.
-        (await creator.Client.PostAsync($"/api/games/{created.GameId}/resolve-night", null)).EnsureSuccessStatusCode();
+        await AuthTestHelper.EndFirstNightAsync(_factory, created.GameId);
         var dayView = await creator.Client.GetFromJsonAsync<GameView>($"/api/games/{created.GameId}");
         var speakerId = dayView!.Discussion!.ActivePlayerId;
         foreach (var player in players)
@@ -270,14 +272,11 @@ public class GameFlowIntegrationTests : IClassFixture<BazimoonApiFactory>, IAsyn
             views.Add((await player.Client.GetFromJsonAsync<GameView>($"/api/games/{gameId}"))!);
         var godfather = views.Single(v => v.YourRole == Role.Godfather).YourPlayerId;
 
-        (await creator.Client.PostAsync($"/api/games/{gameId}/resolve-night", null)).EnsureSuccessStatusCode();
-        (await creator.Client.PostAsync($"/api/games/{gameId}/start-voting", null)).EnsureSuccessStatusCode();
+        await AuthTestHelper.EndFirstNightAsync(_factory, gameId);
+        await AuthTestHelper.FinishDiscussionAsync(players.Select(p => p.Client).ToList(), gameId);
+        // Everyone votes (the Godfather abstains), so the vote is counted by itself.
         for (int i = 0; i < players.Count; i++)
-        {
-            if (views[i].YourPlayerId == godfather) continue;
-            (await players[i].Client.PostAsJsonAsync($"/api/games/{gameId}/votes", new SubmitVoteRequest(godfather))).EnsureSuccessStatusCode();
-        }
-        (await creator.Client.PostAsync($"/api/games/{gameId}/resolve-voting", null)).EnsureSuccessStatusCode();
+            (await players[i].Client.PostAsJsonAsync($"/api/games/{gameId}/votes", new SubmitVoteRequest(views[i].YourPlayerId == godfather ? null : godfather))).EnsureSuccessStatusCode();
         (await players[views.FindIndex(v => v.YourPlayerId == godfather)].Client.PostAsync($"/api/games/{gameId}/last-words/finish", null)).EnsureSuccessStatusCode();
 
         var first = await (await players[1].Client.PostAsync($"/api/games/{gameId}/rematch", null)).Content.ReadFromJsonAsync<CreateGameResponse>();

@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { useLanguage } from "../i18n/LanguageContext";
 import { useNavigation } from "../app/router";
 import { Body, Screen, TopBar } from "../ui/components";
@@ -16,14 +16,14 @@ const MAX_SEATS = 12;
 
 type TimerKey = "speakerSeconds" | "challengeSeconds" | "defenceSeconds" | "lastWordsSeconds" | "nightSeconds" | "votingSeconds";
 
-/** The choices the server accepts for each timer (0 = off: the creator moves that phase on by hand). */
+/** The choices the server accepts for each timer. */
 const TIMERS: { key: TimerKey; label: "timerSpeak" | "timerChallenge" | "timerDefence" | "timerLastWords" | "timerNight" | "timerVoting"; choices: number[]; initial: number }[] = [
   { key: "speakerSeconds", label: "timerSpeak", choices: [30, 45, 60, 90], initial: 60 },
   { key: "challengeSeconds", label: "timerChallenge", choices: [20, 30, 40], initial: 40 },
   { key: "defenceSeconds", label: "timerDefence", choices: [20, 30, 45], initial: 30 },
   { key: "lastWordsSeconds", label: "timerLastWords", choices: [10, 20, 30], initial: 20 },
-  { key: "nightSeconds", label: "timerNight", choices: [0, 45, 60, 90], initial: 60 },
-  { key: "votingSeconds", label: "timerVoting", choices: [0, 30, 45, 60], initial: 45 },
+  { key: "nightSeconds", label: "timerNight", choices: [45, 60, 90], initial: 60 },
+  { key: "votingSeconds", label: "timerVoting", choices: [30, 45, 60], initial: 45 },
 ];
 
 /** Open a Mafia table: public (listed for everyone) or private, a name, seats, timers and rules.
@@ -39,17 +39,6 @@ export function CreateTableScreen() {
   const [timers, setTimers] = useState<Record<TimerKey, number>>(
     () => Object.fromEntries(TIMERS.map((tm) => [tm.key, tm.initial])) as Record<TimerKey, number>,
   );
-  // A public table runs its night and vote on a timer and a private one waits for its creator,
-  // until the creator picks a value for that timer themselves.
-  const touched = useRef(new Set<TimerKey>());
-  function choosePublic(open: boolean) {
-    setIsOpen(open);
-    setTimers((cur) => ({
-      ...cur,
-      nightSeconds: touched.current.has("nightSeconds") ? cur.nightSeconds : open ? 60 : 0,
-      votingSeconds: touched.current.has("votingSeconds") ? cur.votingSeconds : open ? 45 : 0,
-    }));
-  }
   const [nightLastWords, setNightLastWords] = useState(false);
   const [preset, setPreset] = useState<RolePreset>("Classic");
   const [mafiaCount, setMafiaCount] = useState(2);
@@ -105,7 +94,7 @@ export function CreateTableScreen() {
     </button>
   );
   const teamShort = (r: Role) => (roleMeta[r].team === "mafia" ? t("teamMafiaShort") : roleMeta[r].team === "independent" ? t("teamOwnShort") : t("teamTownShort"));
-  const sec = (v: number) => (v === 0 ? t("timerOff") : t("secondsShort", { count: v }));
+  const sec = (v: number) => t("secondsShort", { count: v });
   const selected = (on: boolean) => ({ border: `2px solid ${on ? "#9C8CFF" : "#262A44"}`, background: on ? "#1A1836" : "var(--surface)" });
 
   return (
@@ -117,7 +106,7 @@ export function CreateTableScreen() {
           {options.map((o) => {
             const on = o.open === isOpen;
             return (
-              <button key={String(o.open)} type="button" role="radio" aria-checked={on} onClick={() => choosePublic(o.open)} className="row" style={{ ...selected(on), alignItems: "flex-start", gap: 12, padding: 14, borderRadius: 16, color: "var(--text)", font: "inherit", textAlign: "start", cursor: "pointer" }}>
+              <button key={String(o.open)} type="button" role="radio" aria-checked={on} onClick={() => setIsOpen(o.open)} className="row" style={{ ...selected(on), alignItems: "flex-start", gap: 12, padding: 14, borderRadius: 16, color: "var(--text)", font: "inherit", textAlign: "start", cursor: "pointer" }}>
                 <span style={{ width: 36, height: 36, flex: "none", borderRadius: 10, background: o.bg, color: o.fg, display: "flex", alignItems: "center", justifyContent: "center" }}>
                   <Icon name={o.icon} size={18} />
                 </span>
@@ -259,7 +248,6 @@ export function CreateTableScreen() {
                           aria-checked={on}
                           onClick={() => {
                             haptic.select();
-                            touched.current.add(tm.key);
                             setTimers((cur) => ({ ...cur, [tm.key]: v }));
                           }}
                           style={{
@@ -274,7 +262,7 @@ export function CreateTableScreen() {
                   </div>
                 </div>
               ))}
-              <span className="tiny muted" style={{ lineHeight: 1.45 }}>{t("timersOffNote")}</span>
+              <span className="tiny muted" style={{ lineHeight: 1.45 }}>{t("timersNote")}</span>
             </div>
           )}
         </section>

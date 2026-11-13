@@ -90,12 +90,12 @@ public class TableEndpointsTests : IClassFixture<BazimoonApiFactory>, IAsyncLife
         Assert.Equal(HttpStatusCode.BadRequest, bad.StatusCode);
 
         var response = await host.PostAsJsonAsync("/api/tables",
-            new CreateTableRequest(null, false, 6, new TableRules(SpeakerSeconds: 45, NightSeconds: 60, VotingSeconds: 0, LastWordsForNightKills: true)));
+            new CreateTableRequest(null, false, 6, new TableRules(SpeakerSeconds: 45, NightSeconds: 90, VotingSeconds: 30, LastWordsForNightKills: true)));
         response.EnsureSuccessStatusCode();
         var gameId = (await response.Content.ReadFromJsonAsync<CreateGameResponse>())!.GameId;
 
         var view = await host.GetFromJsonAsync<GameView>($"/api/games/{gameId}");
-        Assert.Equal(new RulesView(45, 40, 30, 20, 60, null, true), view!.Rules);
+        Assert.Equal(new RulesView(45, 40, 30, 20, 90, 30, true), view!.Rules);
     }
 
     [Fact]

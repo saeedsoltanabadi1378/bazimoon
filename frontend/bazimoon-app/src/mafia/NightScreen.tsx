@@ -7,7 +7,7 @@ import { Banner, Bar, Body, IconDisc, PhaseHeader, Screen } from "../ui/componen
 import { findPlayer, isMafiaRole, nightLabelNumber, roleMeta } from "./roles";
 import { ActionError, PhaseTimer, ReconnectingBanner, RolePeek, VoiceStatusLine, TableNotices } from "./parts";
 import { GraveyardBar, SpectatorBanner } from "./Graveyard";
-import { CreatorBar, HeaderTools, PlayerAvatar, TableRoster } from "./table";
+import { HeaderTools, PlayerAvatar, TableRoster } from "./table";
 import { haptic } from "../lib/haptics";
 
 interface NightAction {
@@ -31,7 +31,7 @@ const actions: Partial<Record<Role, NightAction>> = {
 };
 
 export function NightScreen() {
-  const { view, busy, submitNightAction, submitSuspicion, passNight, resolveNight } = useGame();
+  const { view, busy, submitNightAction, submitSuspicion, passNight } = useGame();
   const { t } = useLanguage();
   const [picked, setPicked] = useState<string | null>(null);
   const [confirmShot, setConfirmShot] = useState(false);
@@ -151,8 +151,6 @@ export function NightScreen() {
     return { p, you, note, noteColor, disabled };
   });
 
-  const progress = view.nightProgress;
-  const allIn = view.requiredNightActionsComplete;
   const prompt = canSuspect ? t("suspectTitle") : action ? t(action.prompt) : "";
   const passLabel = canSuspect ? t("skipTonight") : canAct && action?.pass ? t(action.pass) : null;
 
@@ -264,13 +262,6 @@ export function NightScreen() {
       </Body>
 
       <Bar>
-        {view.youAreController && (
-          <CreatorBar label={progress ? t("nightActionsIn", { done: progress.submitted, total: progress.required }) : t("gameCreator")}>
-            <button type="button" className={`btn${allIn ? " btn--primary" : " btn--locked"}`} disabled={busy || !allIn} onClick={() => void resolveNight()}>
-              {allIn ? t("endNight") : t("waitingNightRoles")}
-            </button>
-          </CreatorBar>
-        )}
         <GraveyardBar />
         {picking && (
           <button

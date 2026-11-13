@@ -19,10 +19,12 @@ public sealed class GameConfig
     /// <summary>How long a player who is out gets for their last words.</summary>
     public int LastWordsSeconds { get; init; } = 20;
 
-    /// <summary>When set, the night resolves on its own after this long; null means the creator ends it.</summary>
+    /// <summary>The night resolves on its own after this long (or sooner, once everyone alive has acted).
+    /// Every table gets a value; null is only found in games saved before the night was always timed.</summary>
     public int? NightSeconds { get; init; }
 
-    /// <summary>When set, each vote closes on its own after this long; null means the creator tallies it.</summary>
+    /// <summary>Each vote closes on its own after this long (or sooner, once everyone alive has voted).
+    /// Every table gets a value; null is only found in games saved before the vote was always timed.</summary>
     public int? VotingSeconds { get; init; }
 
     /// <summary>Players killed at night also get last words, at the start of the day.</summary>
@@ -45,9 +47,11 @@ public sealed class GameConfig
 
     public static GameConfig Default { get; } = new();
 
-    /// <summary>The night and voting timers a public table gets unless its creator turns them off.</summary>
-    public const int OpenTableNightSeconds = 60;
-    public const int OpenTableVotingSeconds = 45;
+    /// <summary>The night timer a table gets unless its creator picks another.</summary>
+    public const int DefaultNightSeconds = 60;
+
+    /// <summary>The voting timer a table gets unless its creator picks another.</summary>
+    public const int DefaultVotingSeconds = 45;
 
     public static readonly IReadOnlyList<int> SpeakerChoices = [30, 45, 60, 90];
     public static readonly IReadOnlyList<int> ChallengeChoices = [20, 30, 40];

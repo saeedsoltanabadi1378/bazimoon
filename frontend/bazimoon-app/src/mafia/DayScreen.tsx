@@ -8,13 +8,13 @@ import { Icon, type IconName } from "../ui/Icon";
 import { findPlayer } from "./roles";
 import { ActionError, ReconnectingBanner, RolePeek, useRoleName, TableNotices } from "./parts";
 import { GraveyardBar, SpectatorBanner } from "./Graveyard";
-import { CreatorBar, HeaderTools, PlayerAvatar, TableRoster, VoiceHalo } from "./table";
+import { HeaderTools, PlayerAvatar, TableRoster, VoiceHalo } from "./table";
 import { haptic } from "../lib/haptics";
 
 const RING = 2 * Math.PI * 60;
 
 export function DayScreen() {
-  const { view, busy, requestChallenge, cancelChallenge, acceptChallenge, rejectChallenge, finishDiscussion, startVoting, revealMayor, callInquiry } = useGame();
+  const { view, busy, requestChallenge, cancelChallenge, acceptChallenge, rejectChallenge, finishDiscussion, revealMayor, callInquiry } = useGame();
   const voice = useVoice();
   const { t } = useLanguage();
   const roleName = useRoleName();
@@ -112,11 +112,6 @@ export function DayScreen() {
   const live = voice.publishing && !voice.muted;
   const hasDetails = Boolean(report.text) || notices.length > 0;
   const reportOpen = hasDetails && reportDay === view.nightNumber;
-  const creatorBar = view.youAreController && (
-    <CreatorBar>
-      <button type="button" className="btn btn--outline" disabled={busy} onClick={() => void startVoting()}>{t("creatorStartVoting")}</button>
-    </CreatorBar>
-  );
 
   return (
     <Screen theme="day">
@@ -232,10 +227,9 @@ export function DayScreen() {
       </Body>
 
       {view.youCanUseGraveyard ? (
-        <Bar>{creatorBar}<GraveyardBar /></Bar>
+        <Bar><GraveyardBar /></Bar>
       ) : (
       <Bar>
-        {creatorBar}
         <div className="row" style={{ gap: 10 }}>
         {!view.youAreAlive ? (
           <div className="grow" style={{ minHeight: 52, padding: "8px 14px", borderRadius: 16, border: "1.5px dashed var(--edge)", color: "var(--text-2)", fontSize: 14, display: "flex", alignItems: "center" }}>

@@ -5,10 +5,8 @@ import type {
   MyGameResult,
   NightActionType,
   AccoladeKind,
-  NightResult,
   AuthSession,
   VoiceTokenResponse,
-  VotingResult,
   PlayerSafety,
   PlayerSafetyTarget,
 } from "./types";
@@ -202,20 +200,8 @@ export class BazimoonApiClient {
     return this.request<void>("POST", `/api/games/${gameId}/accolades`, { kind, targetPlayerId });
   }
 
-  resolveNight(gameId: string) {
-    return this.request<NightResult>("POST", `/api/games/${gameId}/resolve-night`);
-  }
-
   submitVote(gameId: string, targetPlayerId: string | null) {
     return this.request<void>("POST", `/api/games/${gameId}/votes`, { targetPlayerId });
-  }
-
-  resolveVoting(gameId: string) {
-    return this.request<VotingResult>("POST", `/api/games/${gameId}/resolve-voting`);
-  }
-
-  startVoting(gameId: string) {
-    return this.request<void>("POST", `/api/games/${gameId}/start-voting`);
   }
 
   startNight(gameId: string) {

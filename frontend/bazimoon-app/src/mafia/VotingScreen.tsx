@@ -8,11 +8,11 @@ import { Icon } from "../ui/Icon";
 import { voteWeight, findPlayer } from "./roles";
 import { ActionError, PhaseTimer, ReconnectingBanner, VoiceStatusLine, TableNotices } from "./parts";
 import { GraveyardBar, SpectatorBanner } from "./Graveyard";
-import { CreatorBar, HeaderTools, PlayerAvatar } from "./table";
+import { HeaderTools, PlayerAvatar } from "./table";
 import { haptic } from "../lib/haptics";
 
 export function VotingScreen() {
-  const { view, busy, submitVote, resolveVoting } = useGame();
+  const { view, busy, submitVote } = useGame();
   const { t } = useLanguage();
   const [picked, setPicked] = useState<string | null>(null);
   if (!view) return null;
@@ -141,11 +141,6 @@ export function VotingScreen() {
       </Body>
 
       <Bar>
-        {view.youAreController && (
-          <CreatorBar>
-            <button type="button" className="btn btn--outline" disabled={busy} onClick={() => void resolveVoting()}>{t("creatorTallyVotes")}</button>
-          </CreatorBar>
-        )}
         <GraveyardBar />
         {open ? (
           <div className="row" style={{ gap: 8 }}>

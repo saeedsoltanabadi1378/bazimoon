@@ -85,29 +85,11 @@ public static class GameEndpoints
             return Results.Ok();
         }).WithName("SubmitAccolade");
 
-        group.MapPost("/{gameId:guid}/resolve-night", async (Guid gameId, GameService games, HttpContext http) =>
-        {
-            var result = await games.ResolveNightAsync(gameId, http.User.GetUserId());
-            return Results.Ok(result);
-        }).WithName("ResolveNight");
-
         group.MapPost("/{gameId:guid}/votes", async (Guid gameId, SubmitVoteRequest request, GameService games, HttpContext http) =>
         {
             await games.SubmitVoteAsync(gameId, http.User.GetUserId(), request.TargetPlayerId);
             return Results.Ok();
         }).WithName("SubmitVote");
-
-        group.MapPost("/{gameId:guid}/resolve-voting", async (Guid gameId, GameService games, HttpContext http) =>
-        {
-            var result = await games.ResolveVotingAsync(gameId, http.User.GetUserId());
-            return Results.Ok(result);
-        }).WithName("ResolveVoting");
-
-        group.MapPost("/{gameId:guid}/start-voting", async (Guid gameId, GameService games, HttpContext http) =>
-        {
-            await games.StartVotingAsync(gameId, http.User.GetUserId());
-            return Results.Ok();
-        }).WithName("StartVoting");
 
         group.MapPost("/{gameId:guid}/start-night", async (Guid gameId, GameService games, HttpContext http) =>
         {
