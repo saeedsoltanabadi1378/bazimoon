@@ -169,10 +169,57 @@ public sealed class GameService
 
     public async Task SubmitNightActionAsync(Guid gameId, Guid userId, Guid targetPlayerId, NightActionType actionType)
     {
+        using var held = await _mutationLock.EnterAsync(gameId);
         var game = await LoadOrThrowAsync(gameId);
         var actorId = PlayerIdentity.DeriveId(gameId, userId);
         game.SubmitNightAction(actorId, targetPlayerId, actionType);
+        game.AdvanceIfEveryoneActed(DateTimeOffset.UtcNow);
         await SaveAndNotifyAsync(game);
+    }
+
+    /// <summary>A private "who do you think is Mafia?" pick for the night.</summary>
+    public async Task SubmitSuspicionAsync(Guid gameId, Guid userId, Guid targetPlayerId)
+    {
+        using var held = await _mutationLock.EnterAsync(gameId);
+        var game = await LoadOrThrowAsync(gameId);
+        game.SubmitSuspicion(PlayerIdentity.DeriveId(gameId, userId), targetPlayerId);
+        game.AdvanceIfEveryoneActed(DateTimeOffset.UtcNow);
+        await SaveAndNotifyAsync(game);
+    }
+
+    public async Task PassNightAsync(Guid gameId, Guid userId)
+    {
+        using var held = await _mutationLock.EnterAsync(gameId);
+        var game = await LoadOrThrowAsync(gameId);
+        game.PassNight(PlayerIdentity.DeriveId(gameId, userId));
+        game.AdvanceIfEveryoneActed(DateTimeOffset.UtcNow);
+        await SaveAndNotifyAsync(game);
+    }
+
+    public async Task AddBotAsync(Guid gameId, Guid userId)
+    {
+        using var held = await _mutationLock.EnterAsync(gameId);
+        var game = await LoadOrThrowAsync(gameId);
+        game.AddBot(PlayerIdentity.DeriveId(gameId, userId));
+        await SaveAndNotifyAsync(game);
+    }
+
+    public async Task RemoveBotAsync(Guid gameId, Guid userId, Guid botId)
+    {
+        using var held = await _mutationLock.EnterAsync(gameId);
+        var game = await LoadOrThrowAsync(gameId);
+        game.RemoveBot(PlayerIdentity.DeriveId(gameId, userId), botId);
+        await SaveAndNotifyAsync(game);
+    }
+
+    /// <summary>An end-of-game accolade pick. The game is already in history, so only the live copy is refreshed.</summary>
+    public async Task SubmitAccoladeAsync(Guid gameId, Guid userId, AccoladeKind kind, Guid targetPlayerId)
+    {
+        using var held = await _mutationLock.EnterAsync(gameId);
+        var game = await LoadOrThrowAsync(gameId);
+        game.SubmitAccolade(PlayerIdentity.DeriveId(gameId, userId), kind, targetPlayerId);
+        await _sessionStore.SaveAsync(game);
+        await _notifier.NotifyGameUpdatedAsync(game);
     }
 
     public async Task<NightResult> ResolveNightAsync(Guid gameId, Guid userId)
@@ -189,9 +236,11 @@ public sealed class GameService
 
     public async Task SubmitVoteAsync(Guid gameId, Guid userId, Guid? targetPlayerId)
     {
+        using var held = await _mutationLock.EnterAsync(gameId);
         var game = await LoadOrThrowAsync(gameId);
         var voterId = PlayerIdentity.DeriveId(gameId, userId);
         game.SubmitVote(voterId, targetPlayerId);
+        game.AdvanceIfEveryoneActed(DateTimeOffset.UtcNow);
         await SaveAndNotifyAsync(game);
     }
 
@@ -419,10 +468,17 @@ public sealed class GameService
 
     /// <summary>The table's rules, with each timer the creator picked checked against the allowed choices.</summary>
     /// <paramref name="isOpen"/>: public tables allow spectators unless the creator turns it off; private ones don't unless turned on.
-    internal static GameConfig BuildConfig(int minPlayers, int maxPlayers, TableRules? rules, bool isOpen = false)
+    public static GameConfig BuildConfig(int minPlayers, int maxPlayers, TableRules? rules, bool isOpen = false)
     {
         var d = GameConfig.Default;
-        if (rules is null) return new GameConfig { MinPlayers = minPlayers, MaxPlayers = maxPlayers, AllowSpectators = isOpen };
+        // A public table runs on timers unless its creator turns them off: strangers should not wait on one person.
+        if (rules is null)
+            return new GameConfig
+            {
+                MinPlayers = minPlayers, MaxPlayers = maxPlayers, AllowSpectators = isOpen,
+                NightSeconds = isOpen ? GameConfig.OpenTableNightSeconds : null,
+                VotingSeconds = isOpen ? GameConfig.OpenTableVotingSeconds : null,
+            };
         return new GameConfig
         {
             MinPlayers = minPlayers,
@@ -431,8 +487,8 @@ public sealed class GameService
             ChallengeSeconds = Pick(rules.ChallengeSeconds, GameConfig.ChallengeChoices, d.ChallengeSeconds, "challenge"),
             DefenceSeconds = Pick(rules.DefenceSeconds, GameConfig.DefenceChoices, d.DefenceSeconds, "defence"),
             LastWordsSeconds = Pick(rules.LastWordsSeconds, GameConfig.LastWordsChoices, d.LastWordsSeconds, "last words"),
-            NightSeconds = PickOptional(rules.NightSeconds, GameConfig.NightChoices, "night"),
-            VotingSeconds = PickOptional(rules.VotingSeconds, GameConfig.VotingChoices, "voting"),
+            NightSeconds = PickOptional(rules.NightSeconds, GameConfig.NightChoices, "night", isOpen ? GameConfig.OpenTableNightSeconds : null),
+            VotingSeconds = PickOptional(rules.VotingSeconds, GameConfig.VotingChoices, "voting", isOpen ? GameConfig.OpenTableVotingSeconds : null),
             LastWordsForNightKills = rules.LastWordsForNightKills ?? false,
             Roles = BuildSetup(rules),
             // The Iranian preset turns "Godfather looks innocent" on unless the creator says otherwise.
@@ -465,9 +521,9 @@ public sealed class GameService
         : choices.Contains(v) ? v
         : throw new GameException($"The {name} timer must be one of {string.Join(", ", choices)} seconds.");
 
-    // 0 or null means off: the creator moves the phase on by hand.
-    private static int? PickOptional(int? value, IReadOnlyList<int> choices, string name) =>
-        value is null or 0 ? null : Pick(value, choices, 0, name);
+    // 0 means off: the creator moves the phase on by hand. Not saying (null) takes the table's default.
+    private static int? PickOptional(int? value, IReadOnlyList<int> choices, string name, int? fallback = null) =>
+        value is null ? fallback : value == 0 ? null : Pick(value, choices, 0, name);
 }
 
 /// <summary>How a table is set up when it is created from the app (or copied into a rematch).
@@ -494,7 +550,7 @@ public sealed record TableRules(
 {
     public static TableRules From(GameConfig config) => new(
         config.SpeakerSeconds, config.ChallengeSeconds, config.DefenceSeconds, config.LastWordsSeconds,
-        config.NightSeconds, config.VotingSeconds, config.LastWordsForNightKills,
+        config.NightSeconds ?? 0, config.VotingSeconds ?? 0, config.LastWordsForNightKills,
         config.Roles.Preset, config.Roles.MafiaCount, config.Roles.Optional,
         config.GodfatherAppearsInnocent, config.JokerWinEndsGame, config.RevealRolesOnDeath, config.AllowSpectators);
 }

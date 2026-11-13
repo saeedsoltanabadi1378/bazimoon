@@ -2,7 +2,7 @@ import type { HubConnection } from "@microsoft/signalr";
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { ApiError, type BazimoonApiClient } from "../api/client";
 import { connectToGameHub } from "../api/signalr";
-import type { GameView, GraveyardMessage, NightActionType, PlayerSafetyTarget } from "../api/types";
+import type { AccoladeKind, GameView, GraveyardMessage, NightActionType, PlayerSafetyTarget } from "../api/types";
 import { useSession } from "../app/session";
 import { useLanguage } from "../i18n/LanguageContext";
 import { haptic } from "../lib/haptics";
@@ -29,6 +29,11 @@ export interface GameContextValue {
   leaveGame(): Promise<boolean>;
   startGame(): Promise<boolean>;
   submitNightAction(targetPlayerId: string, actionType: NightActionType): Promise<boolean>;
+  submitSuspicion(targetPlayerId: string): Promise<boolean>;
+  passNight(): Promise<boolean>;
+  addBot(): Promise<boolean>;
+  removeBot(botId: string): Promise<boolean>;
+  submitAccolade(kind: AccoladeKind, targetPlayerId: string): Promise<boolean>;
   resolveNight(): Promise<boolean>;
   submitVote(targetPlayerId: string | null): Promise<boolean>;
   resolveVoting(): Promise<boolean>;
@@ -228,6 +233,11 @@ export function GameProvider({ gameId, children }: { gameId: string; children: R
     leaveGame: () => run(() => api.leaveGame(gameId)),
     startGame: () => run(() => api.startGame(gameId)),
     submitNightAction: (target, type) => run(() => api.submitNightAction(gameId, target, type)),
+    submitSuspicion: (target) => run(() => api.submitSuspicion(gameId, target)),
+    passNight: () => run(() => api.passNight(gameId)),
+    addBot: () => run(() => api.addBot(gameId)),
+    removeBot: (botId) => run(() => api.removeBot(gameId, botId)),
+    submitAccolade: (kind, target) => run(() => api.submitAccolade(gameId, kind, target)),
     resolveNight: () => run(() => api.resolveNight(gameId)),
     submitVote: (target) => run(() => api.submitVote(gameId, target)),
     resolveVoting: () => run(() => api.resolveVoting(gameId)),

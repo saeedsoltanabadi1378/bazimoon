@@ -36,7 +36,11 @@ public sealed record GameStateSnapshot(
     Guid? LastSilencedTarget = null,
     Guid? JokerWinnerId = null,
     IReadOnlyCollection<Guid>? InquiryRevealed = null,
-    IReadOnlyList<SpectatorSnapshot>? Spectators = null);
+    IReadOnlyList<SpectatorSnapshot>? Spectators = null,
+    IReadOnlyDictionary<Guid, Guid>? Suspicions = null,
+    IReadOnlyCollection<Guid>? NightPasses = null,
+    IReadOnlyDictionary<Guid, AccoladeBallot>? Accolades = null,
+    Guid? LastGuardedTarget = null);
 
 public sealed record SpectatorSnapshot(Guid Id, string Username, bool Muted = false);
 
@@ -51,6 +55,8 @@ public sealed record PlayerSnapshot(
     bool WasPromoted = false,
     bool Revealed = false,
     bool AbilityUsed = false,
-    bool InquiryUsed = false);
+    bool InquiryUsed = false,
+    bool IsBot = false,
+    bool WasRecruited = false);
 
 public sealed record NightActionSnapshot(Guid ActorId, Guid TargetId, NightActionType ActionType);

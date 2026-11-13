@@ -19,5 +19,9 @@ public enum Role
     /// <summary>On their own. Wins if voted out in the day.</summary>
     Joker,
     /// <summary>Town. Can reveal on their speaking turn; then their vote counts twice.</summary>
-    Mayor
+    Mayor,
+    /// <summary>Mafia. Once per game, instead of the night kill, tries to recruit a player: a plain Villager joins the Mafia.</summary>
+    Negotiator,
+    /// <summary>Town. Guards one other player each night; if the Mafia come for them, the Bodyguard dies in their place.</summary>
+    Bodyguard
 }

@@ -22,7 +22,7 @@ public sealed record RoleSetup(RolePreset Preset, int MafiaCount = 1, IReadOnlyL
     public static RoleSetup Iranian { get; } = new(RolePreset.Iranian);
 
     /// <summary>Roles that can be switched on in a custom setup.</summary>
-    public static readonly IReadOnlyList<Role> OptionalRoles = [Role.Silencer, Role.Detective, Role.Doctor, Role.Sniper, Role.DieHard, Role.Mayor, Role.Joker];
+    public static readonly IReadOnlyList<Role> OptionalRoles = [Role.Silencer, Role.Negotiator, Role.Detective, Role.Doctor, Role.Sniper, Role.DieHard, Role.Bodyguard, Role.Mayor, Role.Joker];
 
     /// <summary>The special roles for this many players, Mafia team first (Godfather, then Silencer, then Mafia);
     /// the rest of the seats are Villagers. Null when the setup doesn't fit, with the reason in <paramref name="problem"/>.</summary>
@@ -48,8 +48,9 @@ public sealed record RoleSetup(RolePreset Preset, int MafiaCount = 1, IReadOnlyL
                 int mafia = Math.Max(1, MafiaCount);
                 roles = [Role.Godfather];
                 if (on.Contains(Role.Silencer) && mafia > 1) roles.Add(Role.Silencer);
+                if (on.Contains(Role.Negotiator) && mafia > roles.Count) roles.Add(Role.Negotiator);
                 while (roles.Count < mafia) roles.Add(Role.Mafia);
-                roles.AddRange(OptionalRoles.Where(r => r != Role.Silencer && on.Contains(r)));
+                roles.AddRange(OptionalRoles.Where(r => r.TeamOf() != Team.Mafia && on.Contains(r)));
                 break;
             }
         }

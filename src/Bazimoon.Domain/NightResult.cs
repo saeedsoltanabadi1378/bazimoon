@@ -11,7 +11,12 @@ public sealed record NightResult(
     SniperOutcome? SniperOutcome = null,
     Guid? SilencedPlayer = null,
     /// <summary>The Die Hard survived the Mafia's kill (only they are told).</summary>
-    Guid? DieHardSurvived = null);
+    Guid? DieHardSurvived = null,
+    /// <summary>Who the Negotiator tried to recruit, and whether they joined the Mafia.</summary>
+    Guid? NegotiationTarget = null,
+    bool NegotiationSucceeded = false,
+    /// <summary>The Bodyguard who died in place of the player the Mafia came for.</summary>
+    Guid? BodyguardDied = null);
 
 [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter))]
 public enum SniperOutcome

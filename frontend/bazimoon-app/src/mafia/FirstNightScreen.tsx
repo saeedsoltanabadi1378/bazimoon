@@ -3,7 +3,7 @@ import { useVoice } from "./VoiceProvider";
 import { useLanguage } from "../i18n/LanguageContext";
 import { Bar, Body, IconDisc, PhaseHeader, Screen } from "../ui/components";
 import { findPlayer, isMafiaRole, playerColor } from "./roles";
-import { ActionError, CreatorBox, MicButton, ReconnectingBanner, RolePeek, useRoleName } from "./parts";
+import { ActionError, CreatorBox, MicButton, PhaseTimer, ReconnectingBanner, RolePeek, useRoleName } from "./parts";
 import { GraveyardBar, SpectatorBanner } from "./Graveyard";
 
 export function FirstNightScreen() {
@@ -23,6 +23,10 @@ export function FirstNightScreen() {
       <Body>
         <ReconnectingBanner />
         <SpectatorBanner />
+        <PhaseTimer
+          deadline={view.phaseDeadline} total={view.rules.nightSeconds} label={(seconds) => t("nightSecondsLeft", { seconds })}
+          accent="#9C8CFF" track="#262A44" bg="#151829" edge="#262A44"
+        />
         <div className="card" style={{ fontSize: 14, lineHeight: 1.5, color: "var(--text-2)", padding: "12px 14px", borderRadius: 14 }}>
           {t("firstNightInfo")}
         </div>

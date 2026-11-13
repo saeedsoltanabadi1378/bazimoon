@@ -17,7 +17,15 @@ public sealed record PlayerGameStats(
     int Points,
     bool IsMvp,
     bool Won = false,
-    bool ShotGodfather = false);
+    bool ShotGodfather = false,
+    int VotesSurvivedAsMafia = 0,
+    int PowerRolesSilenced = 0,
+    int DecidingMayorVotes = 0,
+    bool JokerWon = false,
+    int AttacksSurvived = 0,
+    int GuardSaves = 0,
+    int Recruits = 0,
+    int SuspicionsRight = 0);
 
 /// <summary>Turns a finished game's log into per-player stats and picks the MVP. No voting: the MVP
 /// is the player on the winning team with the most points; everyone tied on points is MVP.</summary>
@@ -29,6 +37,26 @@ public static class MafiaScoring
     public const int PointsKillMade = 2;
     public const int PointsVoteOnMafiaOut = 2;
     public const int PointsNightSurvived = 1;
+
+    // Points for the roles and play styles the list above misses, so the MVP is not always a Detective, Doctor or killer.
+    /// <summary>A Mafia member got votes in a round and was still standing after it: the bluff held.</summary>
+    public const int PointsVoteSurvivedAsMafia = 2;
+    /// <summary>The Silencer silenced a player with a power role.</summary>
+    public const int PointsPowerRoleSilenced = 2;
+    /// <summary>The revealed Mayor's second vote was what sent a Mafia member out.</summary>
+    public const int PointsDecidingMayorVote = 3;
+    /// <summary>The Joker got themselves voted out.</summary>
+    public const int PointsJokerWon = 5;
+    /// <summary>The Die Hard took the Mafia's kill and lived.</summary>
+    public const int PointsAttackSurvived = 2;
+    /// <summary>The Bodyguard died in place of the Mafia's target.</summary>
+    public const int PointsGuardSave = 3;
+    /// <summary>The Negotiator recruited a Villager.</summary>
+    public const int PointsRecruit = 3;
+    /// <summary>A Town player's private night suspicion was on a Mafia member.</summary>
+    public const int PointsSuspicionRight = 1;
+
+    private static readonly Role[] PowerRoles = [Role.Detective, Role.Doctor, Role.Sniper, Role.Mayor, Role.DieHard, Role.Bodyguard];
 
     public static IReadOnlyList<PlayerGameStats> Score(GameState game)
     {
@@ -59,10 +87,46 @@ public static class MafiaScoring
             bool revote = votes.Any(v => v.VoteRound == 2 && WasRunoffCandidate(votes, v, id) && v.VotedOut != id);
             int survived = nights.Count(n => SurvivedNight(p, n.Round));
             bool won = game.DidWin(p) == true;
+
+            // A recruited Villager only counts as Mafia from the night they joined.
+            int votesSurvived = p.IsMafiaAligned
+                ? votes.Count(v => v.VotedOut != id && v.Ballots?.Values.Contains(id) == true && StillIn(p, v.Round) && WasMafiaBy(id, v.Round))
+                : 0;
+            int powerSilenced = nights.Count(n => n.SilencerId == id && n.Silenced is { } quiet && players.FirstOrDefault(x => x.Id == quiet)?.Role is { } r && PowerRoles.Contains(r));
+            int deciding = votes.Count(v => MayorDecided(v, id));
+            bool jokerWon = game.JokerWinnerId == id;
+            int attacksSurvived = nights.Count(n => n.DieHardSurvived == id);
+            int guardSaves = nights.Count(n => n.BodyguardId == id && n.BodyguardDied == true);
+            int recruits = nights.Count(n => n.NegotiatorId == id && n.Negotiated == true);
+            int suspicionsRight = p.Team == Team.Town
+                ? nights.Count(n => n.Suspicions?.TryGetValue(id, out var suspect) == true && IsMafia(suspect) && WasMafiaBy(suspect, n.Round))
+                : 0;
+
             int points = (won ? PointsTeamWon : 0) + found * PointsMafiaFound + blocked * PointsKillBlocked
-                + kills * PointsKillMade + onMafiaOut * PointsVoteOnMafiaOut + survived * PointsNightSurvived;
-            return (Stats: new PlayerGameStats(id, checks, found, saves, blocked, kills, ballots.Count, onMafia, onMafiaOut, survived, revote, kingslayer, points, false, won, shotGodfather), Won: won);
+                + kills * PointsKillMade + onMafiaOut * PointsVoteOnMafiaOut + survived * PointsNightSurvived
+                + votesSurvived * PointsVoteSurvivedAsMafia + powerSilenced * PointsPowerRoleSilenced + deciding * PointsDecidingMayorVote
+                + (jokerWon ? PointsJokerWon : 0) + attacksSurvived * PointsAttackSurvived + guardSaves * PointsGuardSave
+                + recruits * PointsRecruit + suspicionsRight * PointsSuspicionRight;
+            return (Stats: new PlayerGameStats(id, checks, found, saves, blocked, kills, ballots.Count, onMafia, onMafiaOut, survived, revote, kingslayer, points, false, won, shotGodfather,
+                votesSurvived, powerSilenced, deciding, jokerWon, attacksSurvived, guardSaves, recruits, suspicionsRight), Won: won);
         }).ToList();
+
+        bool WasMafiaBy(Guid id, int round) =>
+            !nights.Any(n => n.NegotiationTarget == id && n.Negotiated == true && n.Round > round);
+        bool StillIn(Player p, int round) => p.EliminatedRound is not { } outRound || outRound > round;
+
+        // The Mayor's vote counted twice once they revealed. It decided the vote when, counted once,
+        // the Mafia member who went out would only have tied or lost.
+        bool MayorDecided(GameEvent vote, Guid mayorId)
+        {
+            if (vote.VotedOut is not { } outId || !IsMafia(outId) || vote.Ballots is null) return false;
+            if (!vote.Ballots.TryGetValue(mayorId, out var pick) || pick != outId) return false;
+            if (!events.Any(e => e.Kind == GameEventKind.MayorRevealed && e.PlayerId == mayorId && e.Round <= vote.Round)) return false;
+            var counts = vote.Ballots.Where(b => b.Value.HasValue).GroupBy(b => b.Value!.Value)
+                .ToDictionary(g => g.Key, g => g.Sum(b => b.Key == mayorId ? 2 : 1));
+            int rest = counts.Where(c => c.Key != outId).Select(c => c.Value).DefaultIfEmpty(0).Max();
+            return counts[outId] - 1 <= rest;
+        }
 
         var winners = raw.Where(r => r.Won).ToList();
         int best = winners.Count == 0 ? -1 : winners.Max(r => r.Stats.Points);

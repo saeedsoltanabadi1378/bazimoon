@@ -9,5 +9,9 @@ public enum NightActionType
     Heal,
     Kill,
     Shoot,
-    Silence
+    Silence,
+    /// <summary>Negotiator: try to recruit this player instead of tonight's kill.</summary>
+    Negotiate,
+    /// <summary>Bodyguard: stand in front of this player tonight.</summary>
+    Guard
 }

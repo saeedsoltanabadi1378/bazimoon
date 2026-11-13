@@ -19,7 +19,13 @@ public sealed class Player
     /// <summary>True once a Mafia member has been promoted to Godfather after the original fell.</summary>
     public bool WasPromoted { get; private set; }
 
-    public Player(Guid id, string displayName)
+    /// <summary>A seat filled by the game rather than a person.</summary>
+    public bool IsBot { get; }
+
+    /// <summary>A Villager the Negotiator recruited into the Mafia.</summary>
+    public bool WasRecruited { get; private set; }
+
+    public Player(Guid id, string displayName, bool isBot = false)
     {
         if (id == Guid.Empty)
             throw new ArgumentException("Player id must not be empty.", nameof(id));
@@ -28,6 +34,7 @@ public sealed class Player
 
         Id = id;
         DisplayName = displayName;
+        IsBot = isBot;
     }
 
     public bool IsMafiaAligned => Team == Bazimoon.Domain.Team.Mafia;
@@ -63,6 +70,15 @@ public sealed class Player
     }
 
     internal void RestorePromotion(bool wasPromoted) => WasPromoted = wasPromoted;
+
+    internal void Recruit(int rank)
+    {
+        Role = Bazimoon.Domain.Role.Mafia;
+        GodfatherRank = rank;
+        WasRecruited = true;
+    }
+
+    internal void RestoreRecruited(bool wasRecruited) => WasRecruited = wasRecruited;
 
     internal void SetGodfatherRank(int? rank) => GodfatherRank = rank;
 

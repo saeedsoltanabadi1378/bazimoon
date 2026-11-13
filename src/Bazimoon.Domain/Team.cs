@@ -15,7 +15,7 @@ public static class RoleTeams
 {
     public static Team TeamOf(this Role role) => role switch
     {
-        Role.Mafia or Role.Godfather or Role.Silencer => Team.Mafia,
+        Role.Mafia or Role.Godfather or Role.Silencer or Role.Negotiator => Team.Mafia,
         Role.Joker => Team.Independent,
         _ => Team.Town
     };

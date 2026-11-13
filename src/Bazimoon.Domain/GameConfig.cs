@@ -45,6 +45,10 @@ public sealed class GameConfig
 
     public static GameConfig Default { get; } = new();
 
+    /// <summary>The night and voting timers a public table gets unless its creator turns them off.</summary>
+    public const int OpenTableNightSeconds = 60;
+    public const int OpenTableVotingSeconds = 45;
+
     public static readonly IReadOnlyList<int> SpeakerChoices = [30, 45, 60, 90];
     public static readonly IReadOnlyList<int> ChallengeChoices = [20, 30, 40];
     public static readonly IReadOnlyList<int> DefenceChoices = [20, 30, 45];

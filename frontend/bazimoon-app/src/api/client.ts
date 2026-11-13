@@ -4,6 +4,7 @@ import type {
   GameView,
   MyGameResult,
   NightActionType,
+  AccoladeKind,
   NightResult,
   AuthSession,
   VoiceTokenResponse,
@@ -187,6 +188,18 @@ export class BazimoonApiClient {
 
   submitNightAction(gameId: string, targetPlayerId: string, actionType: NightActionType) {
     return this.request<void>("POST", `/api/games/${gameId}/night-actions`, { targetPlayerId, actionType });
+  }
+
+  submitSuspicion(gameId: string, targetPlayerId: string) {
+    return this.request<void>("POST", `/api/games/${gameId}/suspicions`, { targetPlayerId });
+  }
+
+  passNight(gameId: string) { return this.request<void>("POST", `/api/games/${gameId}/night-pass`); }
+  addBot(gameId: string) { return this.request<void>("POST", `/api/games/${gameId}/bots`); }
+  removeBot(gameId: string, botId: string) { return this.request<void>("DELETE", `/api/games/${gameId}/bots/${botId}`); }
+
+  submitAccolade(gameId: string, kind: AccoladeKind, targetPlayerId: string) {
+    return this.request<void>("POST", `/api/games/${gameId}/accolades`, { kind, targetPlayerId });
   }
 
   resolveNight(gameId: string) {

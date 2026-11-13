@@ -63,7 +63,12 @@ export function DefenceScreen() {
             </div>
             <div style={{ textAlign: "center" }}>
               <div style={{ fontSize: 20, fontWeight: 700 }}>{name(active.playerId)}</div>
-              <div style={{ fontSize: 14, color: "var(--muted)" }}>{youActive ? t("yourDefence") : t("defendingNow")}</div>
+              <div style={{ fontSize: 14, color: "var(--muted)" }}>
+                {youActive ? t("yourDefence")
+                  : !active.isBot ? t("defendingNow")
+                  : discussion.botSuspectId ? t("botSays", { name: active.displayName, target: name(discussion.botSuspectId) })
+                  : t("botSaysNothing", { name: active.displayName })}
+              </div>
             </div>
             <div className="display num" style={{ fontSize: 34 }} aria-label={t("secondsLeft", { seconds })}>{clock(seconds)}</div>
           </section>

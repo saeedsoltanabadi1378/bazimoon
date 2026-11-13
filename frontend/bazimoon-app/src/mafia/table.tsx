@@ -1,13 +1,14 @@
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { createPortal } from "react-dom";
-import type { GameView } from "../api/types";
+import type { GameView, PlayerView, Role } from "../api/types";
 import { useLanguage } from "../i18n/LanguageContext";
 import { Icon, type IconName } from "../ui/Icon";
 import { IconButton } from "../ui/components";
 import { useGame } from "./GameProvider";
 import { useVoice } from "./VoiceProvider";
-import { findPlayer, nightLabelNumber, playerColor } from "./roles";
-import { LeaveGameButton } from "./parts";
+import { OPTIONAL_ROLES, findPlayer, nightLabelNumber, playerColor } from "./roles";
+import { LeaveGameButton, useRoleName } from "./parts";
+import { usePlayerNotes, type PlayerNote } from "./notes";
 import { PlayerSafetyButton } from "./PlayerSafety";
 import { SpectatorList } from "./Graveyard";
 import "./table.css";
@@ -22,8 +23,11 @@ export function PlayerAvatar({ view, playerId, size = 40, seat = true, className
   style?: CSSProperties;
 }) {
   const { n } = useLanguage();
+  const { notes } = usePlayerNotes(view.gameId);
   const index = view.players.findIndex((p) => p.playerId === playerId);
   const player = view.players[index];
+  // Your own private mark on this player, wherever their avatar shows.
+  const mark = view.phase === "Ended" ? undefined : notes[playerId]?.mark;
   return (
     <span
       className={`avatar seat-avatar seat-avatar--p${Math.max(0, index) % 4} ${className}`}
@@ -32,6 +36,7 @@ export function PlayerAvatar({ view, playerId, size = 40, seat = true, className
     >
       {Array.from(player?.displayName ?? "?")[0]?.toUpperCase()}
       {seat && index >= 0 && <span className="seat-avatar__no">{n(index + 1)}</span>}
+      {mark && <span className={`seat-avatar__mark seat-avatar__mark--${mark}`} />}
     </span>
   );
 }
@@ -67,7 +72,12 @@ export function TableRoster({ heading, note, order, nowId, doneIds }: {
 }) {
   const { view } = useGame();
   const { t } = useLanguage();
+  const roleName = useRoleName();
+  const { notes } = usePlayerNotes(view?.gameId ?? "");
+  const [noting, setNoting] = useState<{ player: PlayerView; host: Element } | null>(null);
   if (!view) return null;
+  // Notes are a player's tool; someone watching has no use for them.
+  const canNote = !view.youAreSpectator && view.phase !== "Ended";
   const first = (order ?? []).filter((id) => findPlayer(view, id));
   const ids = [...first, ...view.players.map((p) => p.playerId).filter((id) => !first.includes(id))];
   return (
@@ -85,17 +95,72 @@ export function TableRoster({ heading, note, order, nowId, doneIds }: {
           const mayor = p.isAlive && p.revealed;
           const done = p.isAlive && !now && (doneIds?.has(id) ?? false);
           const state = !p.isAlive ? "out" : now ? "now" : silenced ? "silenced" : mayor ? "mayor" : done ? "done" : "";
-          const tag = !p.isAlive ? t("outTag") : now ? t("now") : silenced ? t("silencedTag") : mayor ? t("roleMayor") : done ? t("done") : "";
-          return (
-            <li key={id} className={`roster__seat${state ? ` roster__seat--${state}` : ""}`}>
+          const claim = canNote ? notes[id]?.claim : undefined;
+          const tag = !p.isAlive ? t("outTag") : now ? t("now") : silenced ? t("silencedTag") : mayor ? t("roleMayor") : done ? t("done")
+            : claim ? roleName(claim) : p.isBot ? t("botTag") : "";
+          const seat = (
+            <>
               <PlayerAvatar view={view} playerId={id} />
               <span className="roster__name" dir="auto">{you ? t("you") : p.displayName}</span>
               <span className="roster__tag">{tag}</span>
+            </>
+          );
+          return (
+            <li key={id} className={`roster__seat${state ? ` roster__seat--${state}` : ""}`}>
+              {canNote && !you ? (
+                <button type="button" className="roster__button" aria-label={t("noteOpen", { name: p.displayName })} onClick={(e) => setNoting({ player: p, host: e.currentTarget.closest(".screen") ?? document.body })}>
+                  {seat}
+                </button>
+              ) : seat}
             </li>
           );
         })}
       </ol>
+      {canNote && <span className="tiny muted">{t("notesHint")}</span>}
+      {noting && createPortal(<NoteSheet gameId={view.gameId} player={noting.player} onClose={() => setNoting(null)} />, noting.host)}
     </section>
+  );
+}
+
+/** Your private read on one player: trust or suspect, and the role they claimed. Kept on this device only. */
+function NoteSheet({ gameId, player, onClose }: { gameId: string; player: PlayerView; onClose: () => void }) {
+  const { t } = useLanguage();
+  const roleName = useRoleName();
+  const { notes, setNote } = usePlayerNotes(gameId);
+  const note: PlayerNote = notes[player.playerId] ?? {};
+  const marks: { value: PlayerNote["mark"]; label: string; color: string }[] = [
+    { value: "trust", label: t("noteTrust"), color: "#5FD0BE" },
+    { value: "suspect", label: t("noteSuspect"), color: "#F08A7A" },
+    { value: undefined, label: t("noteNone"), color: "var(--text-2)" },
+  ];
+  const claims: (Role | undefined)[] = [undefined, "Villager", ...OPTIONAL_ROLES.filter((r) => r !== "Silencer" && r !== "Negotiator" && r !== "Joker")];
+  const chip = (on: boolean, color: string) => ({
+    minHeight: 40, padding: "0 14px", borderRadius: 999, border: `1.5px solid ${on ? color : "var(--edge)"}`,
+    background: on ? "var(--surface-2)" : "transparent", color: on ? color : "var(--text)", font: "inherit", fontSize: 14, fontWeight: 600, cursor: "pointer",
+  }) as const;
+  return (
+    <div className="table-menu" onClick={onClose}>
+      <div role="dialog" aria-modal="true" aria-labelledby="note-h" className="table-menu__sheet stack" onClick={(e) => e.stopPropagation()}>
+        <h2 id="note-h" style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>{t("notesFor", { name: player.displayName })}</h2>
+        <p className="small muted" style={{ margin: 0 }}>{t("notesPrivate")}</p>
+        <div role="radiogroup" aria-label={t("noteMark")} className="row row--wrap" style={{ gap: 8 }}>
+          {marks.map((m) => (
+            <button key={m.label} type="button" role="radio" aria-checked={note.mark === m.value} style={chip(note.mark === m.value, m.color)} onClick={() => setNote(player.playerId, { ...note, mark: m.value })}>
+              {m.label}
+            </button>
+          ))}
+        </div>
+        <strong style={{ fontSize: 14 }}>{t("noteClaim")}</strong>
+        <div role="radiogroup" aria-label={t("noteClaim")} className="row row--wrap" style={{ gap: 8 }}>
+          {claims.map((c) => (
+            <button key={c ?? "none"} type="button" role="radio" aria-checked={note.claim === c} style={chip(note.claim === c, "#F0A83A")} onClick={() => setNote(player.playerId, { ...note, claim: c })}>
+              {c ? roleName(c) : t("noteNoClaim")}
+            </button>
+          ))}
+        </div>
+        <button type="button" className="btn btn--outline" style={{ justifyContent: "center" }} autoFocus onClick={onClose}>{t("close")}</button>
+      </div>
+    </div>
   );
 }
 

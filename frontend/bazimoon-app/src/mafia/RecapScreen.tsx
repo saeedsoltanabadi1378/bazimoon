@@ -141,7 +141,9 @@ function Timeline({ recap }: { recap: GameRecap }) {
       switch (e.kind) {
         case "Night": {
           const lines: Line[] = [];
-          if (e.killTarget) lines.push({ dot: MAFIA, text: t(e.killed ? "recapMafiaKilled" : "recapMafiaBlocked", { name: name(e.killTarget) }) });
+          if (e.negotiationTarget) lines.push({ dot: MAFIA, text: t(e.negotiated ? "recapNegotiated" : "recapNegotiationFailed", { name: name(e.negotiationTarget) }) });
+          else if (e.killTarget && e.bodyguardDied) lines.push({ dot: MAFIA, text: t("recapBodyguard", { name: name(e.killTarget) }) });
+          else if (e.killTarget) lines.push({ dot: MAFIA, text: t(e.killed ? "recapMafiaKilled" : "recapMafiaBlocked", { name: name(e.killTarget) }) });
           else lines.push({ dot: MAFIA, text: t("recapMafiaNobody") });
           if (e.saved) lines.push({ dot: SAVE, text: t("recapDoctorSaved", { name: name(e.saved) }) });
           if (e.dieHardSurvived) lines.push({ dot: SAVE, text: t("recapDieHard", { name: name(e.dieHardSurvived) }) });
@@ -151,6 +153,10 @@ function Timeline({ recap }: { recap: GameRecap }) {
           }
           if (e.silenced) lines.push({ dot: MAFIA, text: t("recapSilenced", { name: name(e.silenced) }) });
           if (e.checked) lines.push({ dot: CHECK, text: t(e.checkedIsMafia ? "recapDetectiveMafia" : "recapDetectiveTown", { name: name(e.checked) }) });
+          const guesses = Object.entries(e.suspicions ?? {});
+          if (guesses.length > 0) {
+            lines.push({ dot: "#4A4E6A", text: t("recapSuspicions", { list: guesses.map(([who, suspect]) => t("recapSuspicionPair", { name: name(who), target: name(suspect) })).join(language === "fa" ? "، " : ", ") }) });
+          }
           out.push({ key: `night-${e.round}`, title: t("nightN", { number: e.round }), icon: "moon", tone: "night", lines });
           break;
         }

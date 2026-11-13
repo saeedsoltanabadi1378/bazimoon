@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { VoiceSession } from "../lib/voiceSession";
 import { useGame } from "./GameProvider";
+import { isMafiaRole } from "./roles";
 
 export type VoiceChannel = "main" | "mafia" | "graveyard";
 
@@ -55,7 +56,7 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
   const speaker = view?.discussion?.activePlayerId;
   const alive = view?.youAreAlive;
   const isNight = phase === "NightZero" || phase === "Night";
-  const mafia = Boolean(isNight && alive && (view?.yourRole === "Mafia" || view?.yourRole === "Godfather"));
+  const mafia = Boolean(isNight && alive && isMafiaRole(view?.yourRole));
   const inVoicePhase = phase ? voicePhases.has(phase) : false;
   // Your own last words always go to the room.
   const graveyard = Boolean(graveyardChosen && view?.youCanUseGraveyard && !view?.lastWords?.youAreSpeaking);

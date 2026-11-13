@@ -61,6 +61,10 @@ internal static class GameErrorCode
         if (message.Contains("cannot shoot themselves", StringComparison.Ordinal)) return "cannot_target_self";
         if (message.Contains("cannot silence themselves", StringComparison.Ordinal)) return "cannot_target_self";
         if (message.Contains("silenced two nights", StringComparison.Ordinal)) return "silencer_repeat_target";
+        if (message.Contains("cannot guard themselves", StringComparison.Ordinal)) return "cannot_target_self";
+        if (message.Contains("cannot suspect yourself", StringComparison.Ordinal)) return "cannot_target_self";
+        if (message.Contains("cannot pick yourself", StringComparison.Ordinal)) return "cannot_target_self";
+        if (message.Contains("can add bots", StringComparison.Ordinal) || message.Contains("can remove bots", StringComparison.Ordinal)) return "creator_only";
         if (message.Contains("can only be submitted during Voting", StringComparison.Ordinal)) return "voting_closed";
         if (message.Contains("only vote for one of the tied", StringComparison.Ordinal)) return "revote_target_invalid";
         if (message.Contains("already requested a challenge", StringComparison.Ordinal)) return "challenge_already_requested";

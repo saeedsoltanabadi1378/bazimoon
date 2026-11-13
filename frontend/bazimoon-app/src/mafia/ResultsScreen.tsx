@@ -3,7 +3,7 @@ import { useLanguage } from "../i18n/LanguageContext";
 import { Bar, Body, IconDisc, PhaseHeader, RoleTag, Screen } from "../ui/components";
 import { Icon } from "../ui/Icon";
 import { findPlayer, isMafiaRole, playerColor, roleMeta, voteWeight } from "./roles";
-import { ActionError, ReconnectingBanner, useRoleName, TableNotices } from "./parts";
+import { ActionError, PhaseTimer, ReconnectingBanner, useRoleName, TableNotices } from "./parts";
 import { GraveyardBar, SpectatorBanner } from "./Graveyard";
 import { HeaderTools, TableRoster } from "./table";
 import { BallotRows } from "./VotingScreen";
@@ -55,6 +55,8 @@ export function ResultsScreen({ onSeeFinal }: { onSeeFinal?: () => void }) {
         <ReconnectingBanner />
         <SpectatorBanner />
         <TableNotices />
+        {/* At a timed table the night starts by itself (GameState.ResultsSeconds on the server). */}
+        {view.phase === "Results" && <PhaseTimer deadline={view.phaseDeadline} total={12} label={(seconds) => t("resultsSecondsLeft", { seconds })} />}
         {out ? (
           <section className="stack center" style={{ gap: 12, padding: "24px 16px", borderRadius: 24, background: "var(--surface)", textAlign: "center" }}>
             {out.revealedRole ? (

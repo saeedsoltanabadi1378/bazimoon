@@ -10,27 +10,36 @@ import { GraveyardBar, SpectatorBanner } from "./Graveyard";
 import { CreatorBar, HeaderTools, PlayerAvatar, TableRoster } from "./table";
 import { haptic } from "../lib/haptics";
 
-const actions: Partial<Record<Role, { type: NightActionType; verb: TranslationKey; prompt: TranslationKey; includeSelf: boolean }>> = {
+interface NightAction {
+  type: NightActionType;
+  verb: TranslationKey;
+  prompt: TranslationKey;
+  includeSelf: boolean;
+  /** What the "do nothing tonight" button says, for the roles that may. */
+  pass?: TranslationKey;
+}
+
+const actions: Partial<Record<Role, NightAction>> = {
   Detective: { type: "Investigate", verb: "investigate", prompt: "promptInvestigate", includeSelf: false },
   Doctor: { type: "Heal", verb: "heal", prompt: "promptHeal", includeSelf: true },
   Godfather: { type: "Kill", verb: "kill", prompt: "promptKill", includeSelf: false },
   Mafia: { type: "Kill", verb: "suggestKill", prompt: "promptSuggest", includeSelf: false },
-  Sniper: { type: "Shoot", verb: "shoot", prompt: "sniperTitle", includeSelf: false },
+  Sniper: { type: "Shoot", verb: "shoot", prompt: "sniperTitle", includeSelf: false, pass: "holdFire" },
   Silencer: { type: "Silence", verb: "silence", prompt: "silenceTitle", includeSelf: false },
+  Negotiator: { type: "Negotiate", verb: "negotiate", prompt: "negotiateTitle", includeSelf: false, pass: "notTonight" },
+  Bodyguard: { type: "Guard", verb: "guard", prompt: "guardTitle", includeSelf: false },
 };
 
 export function NightScreen() {
-  const { view, busy, submitNightAction, resolveNight } = useGame();
+  const { view, busy, submitNightAction, submitSuspicion, passNight, resolveNight } = useGame();
   const { t } = useLanguage();
   const [picked, setPicked] = useState<string | null>(null);
   const [confirmShot, setConfirmShot] = useState(false);
-  const [holding, setHolding] = useState(false);
   const nightKey = `${view?.gameId}-${view?.nightNumber}`;
 
   // A new night starts with a clean pick.
   useEffect(() => {
     setPicked(null);
-    setHolding(false);
     setConfirmShot(false);
   }, [nightKey]);
 
@@ -38,13 +47,21 @@ export function NightScreen() {
 
   const role = view.yourRole;
   const alive = view.youAreAlive;
-  // The Sniper has one shot for the whole game.
+  // The Sniper has one shot and the Negotiator one try for the whole game.
   const shotUsed = role === "Sniper" && view.yourAbilityUsed;
-  const action = alive && role && !shotUsed ? actions[role] : undefined;
+  // A Negotiator who has had their try plans the kill with the rest of the Mafia.
+  const action = !alive || !role || shotUsed ? undefined : role === "Negotiator" && view.yourAbilityUsed ? actions.Mafia : actions[role];
   const meta = role ? roleMeta[role] : roleMeta.Villager;
   const lockedTarget = view.yourNightActionTargetId;
   const submitted = Boolean(lockedTarget);
-  const canAct = Boolean(action) && !submitted && !holding;
+  const passed = view.youPassedTonight;
+  const canAct = Boolean(action) && !submitted && !passed;
+  // Everyone without a night action makes a private guess instead, so the whole table is busy at night.
+  const suspecting = alive && !action;
+  const suspected = view.yourSuspicionTargetId;
+  const canSuspect = suspecting && !suspected && !passed;
+  const picking = canAct || canSuspect;
+  const accent = canSuspect ? "#9C8CFF" : meta.fg;
   const mafiaSide = isMafiaRole(role);
   const teamIds = new Set((view.mafiaTeam ?? []).map((m) => m.playerId));
   const checked = new Map((view.yourInvestigations ?? []).map((r) => [r.targetPlayerId, r.isMafiaAligned]));
@@ -57,7 +74,10 @@ export function NightScreen() {
   // Info line above the targets, per role.
   let info: string | null = null;
   let infoBg = "var(--surface)";
-  if (role === "Detective" && view.yourLastInvestigationResult) {
+  if (canSuspect) {
+    info = t("suspectPrompt");
+    infoBg = "#151829";
+  } else if (role === "Detective" && view.yourLastInvestigationResult) {
     info = t(view.yourLastInvestigationResult.isMafiaAligned ? "lastNightMafia" : "lastNightTown", { name: name(view.yourLastInvestigationResult.targetPlayerId) });
     infoBg = "#141F33";
   } else if (role === "Sniper" && view.yourShot?.outcome === "Saved") {
@@ -66,6 +86,12 @@ export function NightScreen() {
   } else if (role === "Silencer") {
     info = t("silencePrompt");
     infoBg = "#2A1418";
+  } else if (action?.type === "Negotiate") {
+    info = t("negotiatePrompt");
+    infoBg = "#2A1418";
+  } else if (role === "Bodyguard") {
+    info = t("guardPrompt");
+    infoBg = "#141F33";
   } else if (role === "Sniper") {
     info = t("sniperPrompt");
     infoBg = "#141F33";
@@ -92,7 +118,7 @@ export function NightScreen() {
     suggestedBy.set(s.targetPlayerId, [...(suggestedBy.get(s.targetPlayerId) ?? []), name(s.actorPlayerId)]);
   }
 
-  const targets = view.players.filter((p) => action?.includeSelf || p.playerId !== view.yourPlayerId).map((p) => {
+  const targets = view.players.filter((p) => (canAct && action?.includeSelf) || p.playerId !== view.yourPlayerId).map((p) => {
     const you = p.playerId === view.yourPlayerId;
     let note = "";
     let noteColor = "var(--muted)";
@@ -100,12 +126,17 @@ export function NightScreen() {
     if (!p.isAlive) {
       note = t("eliminated");
       disabled = true;
+    } else if (canSuspect) {
+      // A guess can land on anyone.
     } else if (role === "Detective" && checked.has(p.playerId)) {
       note = checked.get(p.playerId) ? t("checkedMafia") : t("checkedTown");
       noteColor = checked.get(p.playerId) ? "#F08A7A" : "#5FD0BE";
       disabled = true;
     } else if (role === "Doctor" && you && view.youCannotHealSelf) {
       note = t("healedLastNight");
+      disabled = true;
+    } else if (role === "Bodyguard" && p.playerId === view.yourLastGuardedId) {
+      note = t("guardedLastNight");
       disabled = true;
     } else if (mafiaSide && teamIds.has(p.playerId)) {
       note = t("yourTeam");
@@ -122,6 +153,8 @@ export function NightScreen() {
 
   const progress = view.nightProgress;
   const allIn = view.requiredNightActionsComplete;
+  const prompt = canSuspect ? t("suspectTitle") : action ? t(action.prompt) : "";
+  const passLabel = canSuspect ? t("skipTonight") : canAct && action?.pass ? t(action.pass) : null;
 
   let waitTitle: string;
   let waitText: string;
@@ -131,14 +164,14 @@ export function NightScreen() {
   } else if (!alive) {
     waitTitle = t("outOfGame");
     waitText = t("outOfGameText");
-  } else if (shotUsed) {
-    waitTitle = t("shotUsedTitle");
-    waitText = t("shotUsedText");
-  } else if (holding && !submitted) {
-    waitTitle = t("holdingFire");
+  } else if (suspected) {
+    waitTitle = t("suspicionNoted");
+    waitText = t("suspicionWaiting", { name: name(suspected) });
+  } else if (passed) {
+    waitTitle = role === "Sniper" && !shotUsed ? t("holdingFire") : t("passedTonight");
     waitText = t("noActionText");
   } else if (action) {
-    waitTitle = role === "Mafia" ? t("suggestionSent") : t("lockedIn", { action: t(action.verb) });
+    waitTitle = action.verb === "suggestKill" ? t("suggestionSent") : t("lockedIn", { action: t(action.verb) });
     waitText = t("youChoseWaiting", { name: name(lockedTarget) });
   } else {
     waitTitle = t("noActionTonight");
@@ -146,7 +179,12 @@ export function NightScreen() {
   }
 
   async function submit() {
-    if (!action || !picked) return;
+    if (!picked) return;
+    if (canSuspect) {
+      if (await submitSuspicion(picked)) haptic.success();
+      return;
+    }
+    if (!action) return;
     if (action.type === "Shoot" && !confirmShot) {
       setConfirmShot(true);
       return;
@@ -155,6 +193,14 @@ export function NightScreen() {
     const ok = await submitNightAction(picked, action.type);
     if (ok) haptic.success();
   }
+
+  const submitLabel = !picked ? t("pickAPlayer")
+    : canSuspect ? t("suspectName", { name: name(picked) })
+    : action?.type === "Shoot" ? t("shootName", { name: name(picked) })
+    : action?.type === "Silence" ? t("silenceName", { name: name(picked) })
+    : action?.type === "Negotiate" ? t("negotiateName", { name: name(picked) })
+    : action?.type === "Guard" ? t("guardName", { name: name(picked) })
+    : t("actOn", { action: action ? t(action.verb) : "", name: name(picked) });
 
   return (
     <Screen theme="night">
@@ -169,12 +215,12 @@ export function NightScreen() {
           deadline={view.phaseDeadline} total={view.rules.nightSeconds} label={(seconds) => t("nightSecondsLeft", { seconds })}
           accent="#9C8CFF" track="#262A44" bg="#151829" edge="#262A44"
         />
-        {info && canAct && <Banner icon="info" iconColor={meta.fg} background={infoBg}><span style={{ color: "var(--text-soft)" }}>{info}</span></Banner>}
+        {info && picking && <Banner icon="info" iconColor={accent} background={infoBg}><span style={{ color: "var(--text-soft)" }}>{info}</span></Banner>}
 
-        {canAct && action ? (
+        {picking ? (
           <section className="stack">
-            <h2 style={{ fontSize: 16, fontWeight: 600 }}>{t(action.prompt)}</h2>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 8 }} role="radiogroup" aria-label={t(action.prompt)}>
+            <h2 style={{ fontSize: 16, fontWeight: 600 }}>{prompt}</h2>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 8 }} role="radiogroup" aria-label={prompt}>
               {targets.map(({ p, you, note, noteColor, disabled }) => {
                 const on = picked === p.playerId;
                 return (
@@ -191,7 +237,7 @@ export function NightScreen() {
                     }}
                     style={{
                       display: "flex", alignItems: "center", gap: 10, minHeight: 60, padding: "10px 12px", borderRadius: 16,
-                      border: `2px solid ${on ? meta.fg : "var(--edge-soft)"}`, background: on ? "#1A1D36" : "var(--surface)",
+                      border: `2px solid ${on ? accent : "var(--edge-soft)"}`, background: on ? "#1A1D36" : "var(--surface)",
                       color: "var(--text)", textAlign: "start", opacity: disabled ? 0.4 : 1, cursor: disabled ? "default" : "pointer",
                     }}
                   >
@@ -207,13 +253,13 @@ export function NightScreen() {
           </section>
         ) : (
           <section className="stack center" style={{ gap: 12, padding: "36px 18px", borderRadius: 22, background: "var(--surface-3)", textAlign: "center" }}>
-            <IconDisc icon={view.youAreSpectator ? "moon" : !alive ? "eliminated" : action ? "check" : "moon"} size={80} iconSize={36} bg="#1E2138" fg="#9C8CFF" />
+            <IconDisc icon={view.youAreSpectator ? "moon" : !alive ? "eliminated" : action || suspected ? "check" : "moon"} size={80} iconSize={36} bg="#1E2138" fg="#9C8CFF" />
             <h2 className="display" style={{ fontSize: 21, fontWeight: 700 }}>{waitTitle}</h2>
             <p style={{ fontSize: 14, lineHeight: 1.5, color: "var(--text-2)", maxWidth: 280 }}>{waitText}</p>
           </section>
         )}
 
-        {!(canAct && action) && <TableRoster />}
+        {!picking && <TableRoster />}
         <ActionError />
       </Body>
 
@@ -226,22 +272,19 @@ export function NightScreen() {
           </CreatorBar>
         )}
         <GraveyardBar />
-        {canAct && action && (
+        {picking && (
           <button
             type="button"
             className="btn"
             disabled={!picked || busy}
             onClick={() => void submit()}
-            style={{ background: picked ? meta.fg : "var(--surface-2)", color: picked ? "#0B0D1A" : "var(--faint)" }}
+            style={{ background: picked ? accent : "var(--surface-2)", color: picked ? "#0B0D1A" : "var(--faint)" }}
           >
-            {!picked ? t("pickAPlayer")
-              : action.type === "Shoot" ? t("shootName", { name: name(picked) })
-              : action.type === "Silence" ? t("silenceName", { name: name(picked) })
-              : t("actOn", { action: t(action.verb), name: name(picked) })}
+            {submitLabel}
           </button>
         )}
-        {canAct && action?.type === "Shoot" && (
-          <button type="button" className="btn btn--outline" onClick={() => setHolding(true)}>{t("holdFire")}</button>
+        {passLabel && (
+          <button type="button" className="btn btn--outline" disabled={busy} onClick={() => void passNight()}>{passLabel}</button>
         )}
         <VoiceStatusLine />
       </Bar>

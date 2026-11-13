@@ -53,7 +53,14 @@ public sealed record GameView(
     int SpectatorCount = 0,
     IReadOnlyList<SpectatorView>? Spectators = null,
     bool YouCanUseGraveyard = false,
-    bool YouAreMutedInGraveyard = false)
+    bool YouAreMutedInGraveyard = false,
+    Guid? YourSuspicionTargetId = null,
+    bool YouPassedTonight = false,
+    bool YouWereRecruited = false,
+    NegotiationView? YourNegotiation = null,
+    Guid? YourLastGuardedId = null,
+    Guid? BodyguardDiedId = null,
+    AccoladesView? Accolades = null)
 {
     public static GameView For(GameState game, Guid viewerId)
     {
@@ -80,7 +87,8 @@ public sealed record GameView(
                 EliminatedRound: p.EliminatedRound,
                 // Who took over as Godfather is Mafia-only knowledge until the game ends.
                 WasPromoted: p.WasPromoted && (revealAll || viewerIsMafia),
-                Revealed: p.Revealed))
+                Revealed: p.Revealed,
+                IsBot: p.IsBot))
             .ToList();
 
         bool RoleShown(Player p)
@@ -100,11 +108,11 @@ public sealed record GameView(
 
         // Alignment never changes during a game (a promoted Mafia stays Mafia-aligned), so the full
         // history can be derived from the investigated set rather than stored separately.
+        // Read from the log, not from today's roles: a Villager recruited later was still Town when checked.
         IReadOnlyList<DetectiveResultView>? investigations = viewer?.Role == Role.Detective
-            ? game.InvestigatedTargets
-                .Select(id => game.GetPlayer(id))
-                .Where(p => p is not null)
-                .Select(p => new DetectiveResultView(p!.Id, game.LooksMafia(p)))
+            ? game.Events
+                .Where(e => e.Kind == GameEventKind.Night && e.DetectiveId == viewerId && e.Checked.HasValue)
+                .Select(e => new DetectiveResultView(e.Checked!.Value, e.CheckedIsMafia == true))
                 .ToList()
             : null;
 
@@ -207,7 +215,33 @@ public sealed record GameView(
             // The creator manages who is watching, even while still alive and unable to read the graveyard.
             isController ? game.Spectators.Select(x => new SpectatorView(x.Id, x.Username, x.Muted)).ToList() : null,
             game.CanUseGraveyard(viewerId),
-            spectator?.Muted ?? false);
+            spectator?.Muted ?? false,
+            game.CurrentPhase == GamePhase.Night && game.Suspicions.TryGetValue(viewerId, out var suspect) ? suspect : null,
+            game.CurrentPhase == GamePhase.Night && game.NightPasses.Contains(viewerId),
+            // Told to the recruit only, the morning after; their role and team change with it.
+            viewer is { WasRecruited: true } && game.LastNightResult is { NegotiationSucceeded: true, NegotiationTarget: { } recruit } && recruit == viewerId && game.CurrentPhase != GamePhase.Night,
+            viewerIsMafia && game.LastNightResult is { NegotiationTarget: { } asked } last && game.CurrentPhase is not (GamePhase.Night or GamePhase.Ended)
+                ? new NegotiationView(asked, last.NegotiationSucceeded) : null,
+            viewer?.Role == Role.Bodyguard ? game.LastGuardedTarget : null,
+            game.LastNightResult?.BodyguardDied,
+            game.CurrentPhase == GamePhase.Ended ? AccoladesView.For(game, viewerId) : null);
+    }
+}
+
+/// <summary>What last night's negotiation did, as the Mafia see it.</summary>
+public sealed record NegotiationView(Guid TargetPlayerId, bool Succeeded);
+
+public sealed record AccoladeCountView(Guid PlayerId, int Count);
+
+/// <summary>End-of-game accolades: the picks so far for each one, and the viewer's own picks.</summary>
+public sealed record AccoladesView(IReadOnlyList<AccoladeCountView> Bluff, IReadOnlyList<AccoladeCountView> Read, Guid? YourBluff, Guid? YourRead, int Voters)
+{
+    public static AccoladesView For(GameState game, Guid viewerId)
+    {
+        static List<AccoladeCountView> Count(IEnumerable<Guid?> picks) =>
+            picks.Where(p => p.HasValue).GroupBy(p => p!.Value).Select(g => new AccoladeCountView(g.Key, g.Count())).OrderByDescending(c => c.Count).ToList();
+        var mine = game.Accolades.GetValueOrDefault(viewerId);
+        return new AccoladesView(Count(game.Accolades.Values.Select(b => b.Bluff)), Count(game.Accolades.Values.Select(b => b.Read)), mine?.Bluff, mine?.Read, game.Accolades.Count);
     }
 }
 
@@ -226,6 +260,14 @@ public sealed record MvpView(Guid PlayerId, int Points, IReadOnlyList<MvpPointsV
             new("killMade", s.KillsMade, s.KillsMade * MafiaScoring.PointsKillMade),
             new("voteOnMafiaOut", s.VotesOnMafiaOut, s.VotesOnMafiaOut * MafiaScoring.PointsVoteOnMafiaOut),
             new("nightSurvived", s.NightsSurvived, s.NightsSurvived * MafiaScoring.PointsNightSurvived),
+            new("voteSurvivedAsMafia", s.VotesSurvivedAsMafia, s.VotesSurvivedAsMafia * MafiaScoring.PointsVoteSurvivedAsMafia),
+            new("powerRoleSilenced", s.PowerRolesSilenced, s.PowerRolesSilenced * MafiaScoring.PointsPowerRoleSilenced),
+            new("decidingMayorVote", s.DecidingMayorVotes, s.DecidingMayorVotes * MafiaScoring.PointsDecidingMayorVote),
+            new("jokerWon", s.JokerWon ? 1 : 0, s.JokerWon ? MafiaScoring.PointsJokerWon : 0),
+            new("attackSurvived", s.AttacksSurvived, s.AttacksSurvived * MafiaScoring.PointsAttackSurvived),
+            new("guardSave", s.GuardSaves, s.GuardSaves * MafiaScoring.PointsGuardSave),
+            new("recruit", s.Recruits, s.Recruits * MafiaScoring.PointsRecruit),
+            new("suspicionRight", s.SuspicionsRight, s.SuspicionsRight * MafiaScoring.PointsSuspicionRight),
         }.Where(l => l.Count > 0).ToList())).ToList();
 }
 
@@ -237,7 +279,8 @@ public sealed record PlayerView(
     EliminationCause? EliminatedBy = null,
     int? EliminatedRound = null,
     bool WasPromoted = false,
-    bool Revealed = false);
+    bool Revealed = false,
+    bool IsBot = false);
 
 /// <summary>Someone watching the table, as the creator sees them.</summary>
 public sealed record SpectatorView(Guid Id, string Username, bool Muted);
@@ -303,7 +346,9 @@ public sealed record DiscussionView(
     bool YouCanRequestChallenge,
     bool YouCanFinish,
     IReadOnlyList<Guid>? SpeakerOrder = null,
-    IReadOnlyList<Guid>? CompletedSpeakerIds = null)
+    IReadOnlyList<Guid>? CompletedSpeakerIds = null,
+    // A bot has no voice: on its turn everyone is shown who it suspects instead.
+    Guid? BotSuspectId = null)
 {
     public static DiscussionView? For(GameState game, Guid viewerId)
     {
@@ -317,6 +362,7 @@ public sealed record DiscussionView(
             discussion.SegmentType == DiscussionSegmentType.Speaker && viewer?.IsAlive == true && viewerId != discussion.ActivePlayerId && !pending,
             viewerId == discussion.ActivePlayerId,
             discussion.SpeakerOrder.Where(id => game.GetPlayer(id)?.IsAlive == true).ToList(),
-            discussion.CompletedSpeakers.ToList());
+            discussion.CompletedSpeakers.ToList(),
+            game.GetPlayer(discussion.ActivePlayerId) is { IsBot: true } bot ? game.BotSuspect(bot) : null);
     }
 }

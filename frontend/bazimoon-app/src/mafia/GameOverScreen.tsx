@@ -13,6 +13,7 @@ import { shareLink } from "../lib/platform";
 import { appLink } from "../lib/links";
 import { haptic } from "../lib/haptics";
 import { RolePortrait } from "./RolePortrait";
+import { PlayerAvatar } from "./table";
 
 /** Bonus XP for the MVP (Progression.MvpBonusXp on the server). */
 const MVP_XP = 50;
@@ -24,10 +25,18 @@ const pointsLabel: Record<MvpPointsKind, TranslationKey> = {
   killMade: "mvpKillMade",
   voteOnMafiaOut: "mvpVoteOnMafiaOut",
   nightSurvived: "mvpNightSurvived",
+  voteSurvivedAsMafia: "mvpVoteSurvivedAsMafia",
+  powerRoleSilenced: "mvpPowerRoleSilenced",
+  decidingMayorVote: "mvpDecidingMayorVote",
+  jokerWon: "mvpJokerWon",
+  attackSurvived: "mvpAttackSurvived",
+  guardSave: "mvpGuardSave",
+  recruit: "mvpRecruit",
+  suspicionRight: "mvpSuspicionRight",
 };
 
 export function GameOverScreen() {
-  const { view, apiClient, gameId } = useGame();
+  const { view, apiClient, gameId, submitAccolade, busy: acting } = useGame();
   const { t, n } = useLanguage();
   const roleName = useRoleName();
   const { reset, replace, push } = useNavigation();
@@ -134,6 +143,38 @@ export function GameOverScreen() {
               </ul>
             )}
             <div className="small" style={{ color: "var(--text-2)" }}>{tie ? t("mvpNoteTie", { xp: MVP_XP }) : t("mvpNote", { xp: MVP_XP })}</div>
+          </section>
+        )}
+
+        {view.accolades && (
+          <section className="stack" style={{ gap: 12, padding: 16, borderRadius: 22, background: "var(--surface)" }} aria-labelledby="accolades-h">
+            <div>
+              <h2 id="accolades-h" style={{ fontSize: 16, fontWeight: 700 }}>{t("accoladesTitle")}</h2>
+              {view.yourRole && <p className="tiny muted" style={{ margin: "2px 0 0" }}>{t("accoladesHint")}</p>}
+            </div>
+            {([["Bluff", "accoladeBluff", view.accolades.bluff, view.accolades.yourBluff], ["Read", "accoladeRead", view.accolades.read, view.accolades.yourRead]] as const).map(([kind, label, counts, yours]) => (
+              <div key={kind} className="accolade">
+                <strong style={{ fontSize: 14 }}>{t(label)}</strong>
+                <div className="accolade__picks" role="radiogroup" aria-label={t(label)}>
+                  {view.players.filter((p) => p.playerId !== view.yourPlayerId).map((p) => {
+                    const count = counts.find((c) => c.playerId === p.playerId)?.count ?? 0;
+                    return (
+                      <button
+                        key={p.playerId} type="button" role="radio" aria-checked={yours === p.playerId}
+                        aria-label={t("accoladePick", { accolade: t(label), name: p.displayName })}
+                        className={`accolade__pick${yours === p.playerId ? " accolade__pick--on" : ""}`}
+                        disabled={acting || !view.yourRole}
+                        onClick={() => void submitAccolade(kind, p.playerId)}
+                      >
+                        <PlayerAvatar view={view} playerId={p.playerId} size={32} seat={false} />
+                        <span dir="auto">{p.displayName}</span>
+                        {count > 0 && <span className="accolade__count num">{n(count)}</span>}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
           </section>
         )}
 

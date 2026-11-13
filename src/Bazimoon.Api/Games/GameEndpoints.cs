@@ -55,6 +55,36 @@ public static class GameEndpoints
             return Results.Ok();
         }).WithName("SubmitNightAction");
 
+        group.MapPost("/{gameId:guid}/suspicions", async (Guid gameId, SubmitSuspicionRequest request, GameService games, HttpContext http) =>
+        {
+            await games.SubmitSuspicionAsync(gameId, http.User.GetUserId(), request.TargetPlayerId);
+            return Results.Ok();
+        }).WithName("SubmitSuspicion");
+
+        group.MapPost("/{gameId:guid}/night-pass", async (Guid gameId, GameService games, HttpContext http) =>
+        {
+            await games.PassNightAsync(gameId, http.User.GetUserId());
+            return Results.Ok();
+        }).WithName("PassNight");
+
+        group.MapPost("/{gameId:guid}/bots", async (Guid gameId, GameService games, HttpContext http) =>
+        {
+            await games.AddBotAsync(gameId, http.User.GetUserId());
+            return Results.Ok();
+        }).WithName("AddBot");
+
+        group.MapDelete("/{gameId:guid}/bots/{botId:guid}", async (Guid gameId, Guid botId, GameService games, HttpContext http) =>
+        {
+            await games.RemoveBotAsync(gameId, http.User.GetUserId(), botId);
+            return Results.Ok();
+        }).WithName("RemoveBot");
+
+        group.MapPost("/{gameId:guid}/accolades", async (Guid gameId, SubmitAccoladeRequest request, GameService games, HttpContext http) =>
+        {
+            await games.SubmitAccoladeAsync(gameId, http.User.GetUserId(), request.Kind, request.TargetPlayerId);
+            return Results.Ok();
+        }).WithName("SubmitAccolade");
+
         group.MapPost("/{gameId:guid}/resolve-night", async (Guid gameId, GameService games, HttpContext http) =>
         {
             var result = await games.ResolveNightAsync(gameId, http.User.GetUserId());
@@ -243,6 +273,10 @@ public sealed record CreateGameResponse(Guid GameId);
 public sealed record SubmitNightActionRequest(Guid TargetPlayerId, NightActionType ActionType);
 
 public sealed record SubmitVoteRequest(Guid? TargetPlayerId);
+
+public sealed record SubmitSuspicionRequest(Guid TargetPlayerId);
+
+public sealed record SubmitAccoladeRequest(AccoladeKind Kind, Guid TargetPlayerId);
 
 public sealed record VoiceTokenResponse(string Token, string Channel, uint Uid, string Role);
 

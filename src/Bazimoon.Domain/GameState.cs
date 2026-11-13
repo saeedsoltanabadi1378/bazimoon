@@ -1,6 +1,6 @@
 namespace Bazimoon.Domain;
 
-public sealed class GameState
+public sealed partial class GameState
 {
     private readonly List<Player> _players = new();
     private readonly Dictionary<Guid, NightAction> _nightActions = new();
@@ -90,7 +90,7 @@ public sealed class GameState
 
     /// <summary>Who runs the game: the longest-seated player who has not left. Being killed or voted
     /// out does not hand it over; leaving or being removed for inactivity does.</summary>
-    public Player? Controller => _players.FirstOrDefault(p => p.EliminatedBy != EliminationCause.Left);
+    public Player? Controller => _players.FirstOrDefault(p => !p.IsBot && p.EliminatedBy != EliminationCause.Left);
 
     /// <summary>The phase LastWords leads to: Results after a vote, Day after a night kill (or Ended if the game is won).</summary>
     public GamePhase AfterLastWords => _afterLastWords;
@@ -111,7 +111,7 @@ public sealed class GameState
         CurrentPhase,
         NightNumber,
         Config,
-        _players.Select(p => new PlayerSnapshot(p.Id, p.DisplayName, p.Role, p.IsAlive, p.GodfatherRank, p.EliminatedBy, p.EliminatedRound, p.WasPromoted, p.Revealed, p.AbilityUsed, p.InquiryUsed)).ToList(),
+        _players.Select(p => new PlayerSnapshot(p.Id, p.DisplayName, p.Role, p.IsAlive, p.GodfatherRank, p.EliminatedBy, p.EliminatedRound, p.WasPromoted, p.Revealed, p.AbilityUsed, p.InquiryUsed, p.IsBot, p.WasRecruited)).ToList(),
         _nightActions.Values.Select(a => new NightActionSnapshot(a.ActorId, a.TargetId, a.ActionType)).ToList(),
         new Dictionary<Guid, Guid?>(_votes),
         _investigatedTargets.ToList(),
@@ -134,7 +134,11 @@ public sealed class GameState
         _lastSilencedTarget,
         JokerWinnerId,
         _inquiryRevealed.ToList(),
-        _spectators.Select(x => new SpectatorSnapshot(x.Id, x.Username, x.Muted)).ToList());
+        _spectators.Select(x => new SpectatorSnapshot(x.Id, x.Username, x.Muted)).ToList(),
+        new Dictionary<Guid, Guid>(_suspicions),
+        _nightPasses.ToList(),
+        new Dictionary<Guid, AccoladeBallot>(_accolades),
+        _lastGuardedTarget);
 
     /// <summary>Reconstructs a GameState (including in-flight submissions) from a snapshot, bypassing normal transition guards.</summary>
     public static GameState FromSnapshot(GameStateSnapshot snapshot)
@@ -154,8 +158,12 @@ public sealed class GameState
             AutoStartAt = snapshot.AutoStartAt,
             SilencedPlayerId = snapshot.SilencedPlayerId,
             JokerWinnerId = snapshot.JokerWinnerId,
-            _lastSilencedTarget = snapshot.LastSilencedTarget
+            _lastSilencedTarget = snapshot.LastSilencedTarget,
+            _lastGuardedTarget = snapshot.LastGuardedTarget
         };
+        if (snapshot.Suspicions is { } suspicions) foreach (var (id, target) in suspicions) game._suspicions[id] = target;
+        if (snapshot.NightPasses is { } passes) game._nightPasses.UnionWith(passes);
+        if (snapshot.Accolades is { } accolades) foreach (var (id, ballot) in accolades) game._accolades[id] = ballot;
         if (snapshot.Spectators is { } spectators)
             game._spectators.AddRange(spectators.Select(x => new Spectator(x.Id, x.Username) { Muted = x.Muted }));
         if (snapshot.InquiryRevealed is { } inquiry) game._inquiryRevealed.UnionWith(inquiry);
@@ -168,7 +176,7 @@ public sealed class GameState
 
         foreach (var ps in snapshot.Players)
         {
-            var player = new Player(ps.Id, ps.DisplayName);
+            var player = new Player(ps.Id, ps.DisplayName, ps.IsBot);
             if (ps.Role.HasValue)
                 player.AssignRole(ps.Role.Value);
             if (ps.GodfatherRank.HasValue)
@@ -177,6 +185,7 @@ public sealed class GameState
                 player.Eliminate();
             player.RestoreElimination(ps.EliminatedBy, ps.EliminatedRound);
             player.RestorePromotion(ps.WasPromoted);
+            player.RestoreRecruited(ps.WasRecruited);
             player.RestoreAbilities(ps.Revealed, ps.AbilityUsed, ps.InquiryUsed);
             game._players.Add(player);
         }
@@ -254,6 +263,12 @@ public sealed class GameState
         var player = GetPlayer(playerId) ?? throw new GameException("You are not in this lobby.");
         _players.Remove(player);
         _ready.Remove(playerId);
+        // A lobby with only bots left is empty.
+        if (_players.All(p => p.IsBot))
+        {
+            _players.Clear();
+            _ready.Clear();
+        }
         ResetAutoStart();
     }
 
@@ -273,7 +288,7 @@ public sealed class GameState
 
     /// <summary>How many of the required night actions are already in.</summary>
     public int SubmittedRequiredNightActionCount => CurrentPhase == GamePhase.Night
-        ? _players.Count(p => p.IsAlive && p.Role is Role.Godfather or Role.Detective or Role.Doctor && _nightActions.ContainsKey(p.Id))
+        ? _players.Count(p => p.IsAlive && p.Role is Role.Godfather or Role.Detective or Role.Doctor && (_nightActions.ContainsKey(p.Id) || _nightPasses.Contains(p.Id)))
         : 0;
 
     /// <summary>Randomly assigns roles to all lobby players.</summary>
@@ -318,7 +333,7 @@ public sealed class GameState
 
         // Mafia team first (Godfather rank 1, then Mafia, then the Silencer), then the Town roles, then Villagers.
         var roles = Config.Roles.RolesFor(ordered.Count, out _)!
-            .OrderBy(r => r switch { Role.Godfather => 0, Role.Mafia => 1, Role.Silencer => 2, _ => 3 }).ToList();
+            .OrderBy(r => r switch { Role.Godfather => 0, Role.Mafia => 1, Role.Silencer or Role.Negotiator => 2, _ => 3 }).ToList();
         int rank = 1;
         for (int i = 0; i < ordered.Count; i++)
         {
@@ -383,11 +398,31 @@ public sealed class GameState
                     throw new GameException("The same player cannot be silenced two nights in a row.");
                 break;
 
+            case NightActionType.Negotiate:
+                if (actor.Role != Role.Negotiator)
+                    throw new GameException("Only the Negotiator can negotiate.");
+                if (actor.AbilityUsed)
+                    throw new GameException("The Negotiator has already negotiated.");
+                if (GetPlayer(targetId)!.IsMafiaAligned)
+                    throw new GameException("The Mafia cannot target its own team.");
+                break;
+
+            case NightActionType.Guard:
+                if (actor.Role != Role.Bodyguard)
+                    throw new GameException("Only the Bodyguard can guard.");
+                if (targetId == playerId)
+                    throw new GameException("The Bodyguard cannot guard themselves.");
+                if (targetId == _lastGuardedTarget)
+                    throw new GameException("The same player cannot be guarded two nights in a row.");
+                break;
+
             default:
                 throw new ArgumentOutOfRangeException(nameof(actionType));
         }
 
         _nightActions[playerId] = new NightAction(playerId, targetId, actionType);
+        _suspicions.Remove(playerId);
+        _nightPasses.Remove(playerId);
     }
 
     public NightResult ResolveNight(DateTimeOffset? now = null)
@@ -401,7 +436,7 @@ public sealed class GameState
         if (CurrentPhase == GamePhase.Night && timedOut)
         {
             var required = _players.Where(p => p.IsAlive && p.Role is Role.Godfather or Role.Detective or Role.Doctor).Select(p => p.Id);
-            RemoveInactive(required, id => _nightActions.ContainsKey(id));
+            RemoveInactive(required, id => _nightActions.ContainsKey(id) || _nightPasses.Contains(id));
         }
 
         NightNumber++;
@@ -409,9 +444,33 @@ public sealed class GameState
         bool isNight = CurrentPhase == GamePhase.Night;
         // Resolution order: Silence → Heal → Kill and Shot → Check. Everyone acts on the state at the start of
         // the night, so a Silencer or Detective killed tonight still has their action count.
+        Guid? silencerId = _players.FirstOrDefault(p => p.IsAlive && p.Role == Role.Silencer)?.Id;
         Guid? silenced = ResolveSilence();
+        if (silenced is null) silencerId = null;
         Guid? healTarget = ResolveDoctorHealTarget();
         var (killTarget, killerId) = ResolveGodfatherKillTarget();
+
+        // A negotiation takes the place of tonight's kill. A plain Villager joins the Mafia; anyone else refuses.
+        var negotiation = _players.Where(p => p.IsAlive && p.Role == Role.Negotiator && !p.AbilityUsed)
+            .Select(p => _nightActions.TryGetValue(p.Id, out var a) && a.ActionType == NightActionType.Negotiate ? a : null)
+            .FirstOrDefault(a => a is not null);
+        bool recruited = false;
+        if (negotiation is not null)
+        {
+            (killTarget, killerId) = (null, null);
+            GetPlayer(negotiation.ActorId)!.UseAbility();
+            var asked = GetPlayer(negotiation.TargetId)!;
+            if (asked.IsAlive && asked.Role == Role.Villager)
+            {
+                asked.Recruit(_players.Max(p => p.GodfatherRank ?? 0) + 1);
+                recruited = true;
+            }
+        }
+
+        var guard = _players.Where(p => p.IsAlive && p.Role == Role.Bodyguard)
+            .Select(p => _nightActions.TryGetValue(p.Id, out var a) && a.ActionType == NightActionType.Guard ? a : null)
+            .FirstOrDefault(a => a is not null);
+        _lastGuardedTarget = guard?.TargetId;
         var (investigateTarget, investigateResult) = ResolveDetectiveInvestigation();
         var shot = _players.Where(p => p.IsAlive && p.Role == Role.Sniper)
             .Select(p => _nightActions.TryGetValue(p.Id, out var a) && a.ActionType == NightActionType.Shoot ? a : null)
@@ -422,10 +481,19 @@ public sealed class GameState
         bool wasSaved = killTarget.HasValue && killTarget == healTarget;
         Guid? eliminated = null;
         Guid? dieHardSurvived = null;
+        bool bodyguardDied = false;
         if (killTarget.HasValue && !wasSaved && GetPlayer(killTarget.Value)!.IsAlive)
         {
             var victim = GetPlayer(killTarget.Value)!;
-            if (victim.Role == Role.DieHard && !victim.AbilityUsed)
+            if (guard is not null && guard.TargetId == victim.Id)
+            {
+                // The Bodyguard takes the hit for the player they guarded.
+                var bodyguard = GetPlayer(guard.ActorId)!;
+                bodyguard.Eliminate(EliminationCause.Night, NightNumber);
+                eliminated = bodyguard.Id;
+                bodyguardDied = true;
+            }
+            else if (victim.Role == Role.DieHard && !victim.AbilityUsed)
             {
                 victim.UseAbility();
                 dieHardSurvived = victim.Id;
@@ -464,11 +532,16 @@ public sealed class GameState
             }
         }
 
+        var suspicions = _suspicions.Count > 0 ? new Dictionary<Guid, Guid>(_suspicions) : null;
         _nightActions.Clear();
+        _suspicions.Clear();
+        _nightPasses.Clear();
         if (isNight)
             _events.Add(new GameEvent(GameEventKind.Night, NightNumber, KillerId: killerId, KillTarget: killTarget, Killed: eliminated,
                 DoctorId: doctorId, Saved: healTarget, DetectiveId: detectiveId, Checked: investigateTarget, CheckedIsMafia: investigateResult,
-                SniperId: shot?.ActorId, ShotTarget: shot?.TargetId, ShotOutcome: shotOutcome, Silenced: silenced, DieHardSurvived: dieHardSurvived));
+                SniperId: shot?.ActorId, ShotTarget: shot?.TargetId, ShotOutcome: shotOutcome, Silenced: silenced, DieHardSurvived: dieHardSurvived,
+                SilencerId: silencerId, NegotiatorId: negotiation?.ActorId, NegotiationTarget: negotiation?.TargetId, Negotiated: negotiation is null ? null : recruited,
+                BodyguardId: guard?.ActorId, Guarded: guard?.TargetId, BodyguardDied: guard is null ? null : bodyguardDied, Suspicions: suspicions));
 
         Guid? promotedId = eliminated.HasValue ? HandlePotentialGodfatherDeath(eliminated.Value) : null;
         if (shotDeath.HasValue)
@@ -486,7 +559,8 @@ public sealed class GameState
         }
 
         var result = new NightResult(NightNumber, eliminated, wasSaved, investigateTarget, investigateResult, promotedId,
-            shot?.TargetId, shotOutcome, silenced, dieHardSurvived);
+            shot?.TargetId, shotOutcome, silenced, dieHardSurvived,
+            negotiation?.TargetId, recruited, bodyguardDied ? eliminated : null);
         LastNightResult = result;
         return result;
     }
@@ -500,7 +574,7 @@ public sealed class GameState
 
         return _players
             .Where(player => player.IsAlive && player.Role is Role.Godfather or Role.Detective or Role.Doctor)
-            .All(player => _nightActions.ContainsKey(player.Id));
+            .All(player => _nightActions.ContainsKey(player.Id) || _nightPasses.Contains(player.Id));
     }
 
     /// <summary>Who the Mafia kill tonight, and the Mafia member whose pick decided it.</summary>
@@ -766,6 +840,8 @@ public sealed class GameState
         _events.Add(new GameEvent(GameEventKind.Left, NightNumber, PlayerId: playerId));
         _votes.Remove(playerId);
         _nightActions.Remove(playerId);
+        _suspicions.Remove(playerId);
+        _nightPasses.Remove(playerId);
         _strikes.Remove(playerId);
         HandlePotentialGodfatherDeath(playerId);
 
@@ -840,8 +916,15 @@ public sealed class GameState
     /// <summary>Moves on any phase whose timer has run out: a day or defence turn, last words, a timed
     /// night (night roles that have not acted do nothing) or a timed vote (missing votes abstain).
     /// Returns true when something changed.</summary>
-    public bool AdvanceExpiredPhase(DateTimeOffset now)
+    public bool AdvanceExpiredPhase(DateTimeOffset now, Random? random = null)
     {
+        bool botsMoved = RunBots(now, random ?? Random.Shared);
+        return AdvanceExpiredPhaseCore(now) || botsMoved;
+    }
+
+    private bool AdvanceExpiredPhaseCore(DateTimeOffset now)
+    {
+        if (AdvanceUnattendedPhase(now)) return true;
         switch (CurrentPhase)
         {
             case GamePhase.Day:
@@ -1017,8 +1100,8 @@ public sealed class GameState
     {
         // A plain Mafia member takes over first; the Silencer only when no one else is left.
         var successor = _players
-            .Where(p => p.IsAlive && p.Role is Role.Mafia or Role.Silencer && p.GodfatherRank.HasValue)
-            .OrderBy(p => p.Role == Role.Silencer)
+            .Where(p => p.IsAlive && p.Role is Role.Mafia or Role.Silencer or Role.Negotiator && p.GodfatherRank.HasValue)
+            .OrderBy(p => p.Role != Role.Mafia)
             .ThenBy(p => p.GodfatherRank)
             .FirstOrDefault();
 

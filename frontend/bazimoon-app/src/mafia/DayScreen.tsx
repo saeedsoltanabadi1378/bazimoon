@@ -43,7 +43,8 @@ export function DayScreen() {
   if (dead) {
     report = {
       title: t("foundDead", { name: name(dead.playerId) }),
-      text: dead.revealedRole ? t("theyWereThe", { role: roleName(dead.revealedRole) }) : view.rules.revealRolesOnDeath ? "" : t("roleHidden"),
+      text: (dead.revealedRole ? t("theyWereThe", { role: roleName(dead.revealedRole) }) : view.rules.revealRolesOnDeath ? "" : t("roleHidden"))
+        + (dead.revealedRole === "Bodyguard" && view.bodyguardDiedId === dead.playerId ? ` ${t("bodyguardDiedText")}` : ""),
       icon: "coffin", bg: "#2A1612", edge: "#4A2620", fg: "#F08A7A", ibg: "#3A1C1A",
     };
   } else if (night?.wasSaved) {
@@ -62,6 +63,11 @@ export function DayScreen() {
     notices.push({ key: "shot", title: t("shotDead", { name: name(shot.playerId) }),
       text: shot.revealedRole ? t("theyWereThe", { role: roleName(shot.revealedRole) }) : view.rules.revealRolesOnDeath ? "" : t("roleHidden"),
       icon: "target", bg: "#2A1612", edge: "#4A2620", fg: "#F08A7A", ibg: "#3A1C1A" });
+  }
+  if (view.youWereRecruited) {
+    personal.push({ key: "recruited", title: t("recruitedTitle"), text: t("recruitedText"), icon: "link", bg: "#2A1612", edge: "#4A2620", fg: "#F08A7A", ibg: "#3A1C1A" });
+  } else if (view.yourNegotiation) {
+    personal.push({ key: "negotiation", title: t(view.yourNegotiation.succeeded ? "negotiationWorked" : "negotiationFailed", { name: name(view.yourNegotiation.targetPlayerId) }), text: t("onlyMafiaSees"), icon: "link", bg: "#2A1612", edge: "#4A2620", fg: "#F08A7A", ibg: "#3A1C1A" });
   }
   if (view.youSurvivedTheNight) {
     personal.push({ key: "diehard", title: t("dieHardSurvivedTitle"), text: t("dieHardSurvivedText"), icon: "shield", bg: "#10251F", edge: "#1E4A40", fg: "#5FD0BE", ibg: "#13302C" });
@@ -98,6 +104,8 @@ export function DayScreen() {
   let speakerSub = t("speakingNow");
   if (challenge) speakerSub = t("challengingName", { name: name(discussion?.originalSpeakerId) });
   else if (youSpeaker) speakerSub = t("yourTurnRoom");
+  // A bot has no voice: its turn shows who it suspects, which is also who it will vote for.
+  else if (active?.isBot) speakerSub = discussion?.botSuspectId ? t("botSays", { name: active.displayName, target: name(discussion.botSuspectId) }) : t("botSaysNothing", { name: active.displayName });
 
   const pending = discussion?.yourChallengeIsPending ?? false;
   const canChallenge = discussion?.youCanRequestChallenge ?? false;
@@ -151,7 +159,7 @@ export function DayScreen() {
             </div>
             <div style={{ textAlign: "center" }}>
               <div style={{ fontSize: 20, fontWeight: 700 }}>{name(active.playerId)}</div>
-              <div style={{ fontSize: 14, color: "var(--muted)" }}>{speakerSub}</div>
+              <div style={{ fontSize: 14, color: active.isBot ? "var(--text-soft)" : "var(--muted)" }}>{speakerSub}</div>
             </div>
             <div className="display num" style={{ fontSize: 34 }} aria-label={t("secondsLeft", { seconds })}>{clock}</div>
           </section>

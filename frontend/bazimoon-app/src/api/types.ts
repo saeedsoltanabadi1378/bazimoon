@@ -15,12 +15,14 @@ export type GamePhase =
   | "Defence"
   | "LastWords";
 
-export type Role = "Villager" | "Detective" | "Doctor" | "Mafia" | "Godfather" | "Sniper" | "DieHard" | "Silencer" | "Joker" | "Mayor";
+export type Role = "Villager" | "Detective" | "Doctor" | "Mafia" | "Godfather" | "Sniper" | "DieHard" | "Silencer" | "Joker" | "Mayor" | "Negotiator" | "Bodyguard";
 
 export type RolePreset = "Classic" | "Iranian" | "Custom";
 export type SniperOutcome = "Hit" | "Saved" | "Backfired";
 
-export type NightActionType = "Investigate" | "Heal" | "Kill" | "Shoot" | "Silence";
+export type NightActionType = "Investigate" | "Heal" | "Kill" | "Shoot" | "Silence" | "Negotiate" | "Guard";
+
+export type AccoladeKind = "Bluff" | "Read";
 
 export type WinCondition = "None" | "VillagersWin" | "MafiaWin" | "JokerWins";
 export type DiscussionSegmentType = "Speaker" | "Challenge";
@@ -38,6 +40,8 @@ export interface PlayerView {
   wasPromoted: boolean;
   /** A Mayor who revealed: everyone knows, and their vote counts twice. */
   revealed: boolean;
+  /** A seat filled by the game: it acts and votes, but has no voice. */
+  isBot: boolean;
 }
 
 export interface DetectiveResultView {
@@ -167,6 +171,33 @@ export interface GameView {
   /** You're out (or watching), so you can use the graveyard voice and chat. */
   youCanUseGraveyard: boolean;
   youAreMutedInGraveyard: boolean;
+  /** Tonight's private "who is Mafia?" pick, if you made one. */
+  yourSuspicionTargetId: string | null;
+  /** You chose to do nothing tonight. */
+  youPassedTonight: boolean;
+  /** The Negotiator brought you into the Mafia last night (only you are told). */
+  youWereRecruited: boolean;
+  /** Mafia only: who the Negotiator tried last night, and whether they joined. */
+  yourNegotiation: { targetPlayerId: string; succeeded: boolean } | null;
+  /** Bodyguard: who you guarded last night (not allowed again tonight). */
+  yourLastGuardedId: string | null;
+  /** The Bodyguard who died last night in place of the Mafia's target. */
+  bodyguardDiedId: string | null;
+  /** Once the game has ended: the accolade picks so far, and your own. */
+  accolades: AccoladesView | null;
+}
+
+export interface AccoladeCount {
+  playerId: string;
+  count: number;
+}
+
+export interface AccoladesView {
+  bluff: AccoladeCount[];
+  read: AccoladeCount[];
+  yourBluff: string | null;
+  yourRead: string | null;
+  voters: number;
 }
 
 export interface SpectatorView {
@@ -194,7 +225,8 @@ export interface PlayerSafety {
   blockedPlayerIds: string[];
 }
 
-export type MvpPointsKind = "teamWon" | "mafiaFound" | "killBlocked" | "killMade" | "voteOnMafiaOut" | "nightSurvived";
+export type MvpPointsKind = "teamWon" | "mafiaFound" | "killBlocked" | "killMade" | "voteOnMafiaOut" | "nightSurvived"
+  | "voteSurvivedAsMafia" | "powerRoleSilenced" | "decidingMayorVote" | "jokerWon" | "attackSurvived" | "guardSave" | "recruit" | "suspicionRight";
 
 export interface MvpView {
   playerId: string;
@@ -223,6 +255,8 @@ export interface DiscussionView {
   youCanFinish: boolean;
   speakerOrder: string[] | null;
   completedSpeakerIds: string[] | null;
+  /** When a bot holds the floor: who it suspects, shown in place of its voice. */
+  botSuspectId: string | null;
 }
 
 export interface VoteView {

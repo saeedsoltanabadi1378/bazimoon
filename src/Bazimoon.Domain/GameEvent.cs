@@ -54,6 +54,14 @@ public enum GameEventKind
 /// <param name="ShotOutcome">Night: what the shot did.</param>
 /// <param name="Silenced">Night: who the Silencer silenced for the next day.</param>
 /// <param name="DieHardSurvived">Night: the Die Hard who survived the Mafia's kill.</param>
+/// <param name="SilencerId">Night: the Silencer who acted.</param>
+/// <param name="NegotiatorId">Night: the Negotiator who negotiated (there was no kill that night).</param>
+/// <param name="NegotiationTarget">Night: who the Negotiator tried to recruit.</param>
+/// <param name="Negotiated">Night: whether the target joined the Mafia.</param>
+/// <param name="BodyguardId">Night: the Bodyguard who acted.</param>
+/// <param name="Guarded">Night: who the Bodyguard guarded.</param>
+/// <param name="BodyguardDied">Night: the Bodyguard died in place of the Mafia's target.</param>
+/// <param name="Suspicions">Night: each player's private guess at who is Mafia (player → suspect).</param>
 public sealed record GameEvent(
     GameEventKind Kind,
     int Round,
@@ -74,4 +82,12 @@ public sealed record GameEvent(
     Guid? ShotTarget = null,
     SniperOutcome? ShotOutcome = null,
     Guid? Silenced = null,
-    Guid? DieHardSurvived = null);
+    Guid? DieHardSurvived = null,
+    Guid? SilencerId = null,
+    Guid? NegotiatorId = null,
+    Guid? NegotiationTarget = null,
+    bool? Negotiated = null,
+    Guid? BodyguardId = null,
+    Guid? Guarded = null,
+    bool? BodyguardDied = null,
+    IReadOnlyDictionary<Guid, Guid>? Suspicions = null);

@@ -20,6 +20,9 @@ export const roleMeta: Record<Role, RoleMeta> = {
   Silencer: { icon: "mute", image: "/images/mafia-roles/silencer.png", bg: "#3A1C1A", fg: "#F08A7A", team: "mafia" },
   Joker: { icon: "star", image: "/images/mafia-roles/joker.png", bg: "#2A1F33", fg: "#B79CF2", team: "independent" },
   Mayor: { icon: "townHall", image: "/images/mafia-roles/mayor.png", bg: "#2A2113", fg: "#F0A83A", team: "town" },
+  // No artwork of their own yet: they borrow the closest portrait.
+  Negotiator: { icon: "link", image: "/images/mafia-roles/mafia.png", bg: "#3A1C1A", fg: "#F08A7A", team: "mafia" },
+  Bodyguard: { icon: "shield", image: "/images/mafia-roles/die-hard.png", bg: "#1B2A44", fg: "#8FA8FF", team: "town" },
 };
 
 export const eliminatedMeta: Omit<RoleMeta, "image"> = { icon: "eliminated", bg: "#1E2138", fg: "#9A9CB8", team: "town" };
@@ -45,7 +48,7 @@ export function findPlayer(view: GameView, playerId: string | null | undefined):
 }
 
 /** Roles a custom setup can switch on. */
-export const OPTIONAL_ROLES: Role[] = ["Silencer", "Detective", "Doctor", "Sniper", "DieHard", "Mayor", "Joker"];
+export const OPTIONAL_ROLES: Role[] = ["Silencer", "Negotiator", "Detective", "Doctor", "Sniper", "DieHard", "Bodyguard", "Mayor", "Joker"];
 
 /** Mirrors the Domain's RoleSetup.RolesFor: the special roles for this many players, or null when the setup doesn't fit. */
 export function dealRoles(preset: RolePreset, mafiaCount: number, optional: Role[], players: number): Role[] | null {
@@ -60,8 +63,9 @@ export function dealRoles(preset: RolePreset, mafiaCount: number, optional: Role
     const mafia = Math.max(1, mafiaCount);
     roles = ["Godfather"];
     if (optional.includes("Silencer") && mafia > 1) roles.push("Silencer");
+    if (optional.includes("Negotiator") && mafia > roles.length) roles.push("Negotiator");
     while (roles.length < mafia) roles.push("Mafia");
-    roles.push(...OPTIONAL_ROLES.filter((r) => r !== "Silencer" && optional.includes(r)));
+    roles.push(...OPTIONAL_ROLES.filter((r) => roleMeta[r].team !== "mafia" && optional.includes(r)));
   }
   const mafiaTeam = roles.filter((r) => roleMeta[r].team === "mafia").length;
   if (roles.length > players || mafiaTeam * 2 >= players) return null;
@@ -97,4 +101,4 @@ export function nightLabelNumber(view: GameView) {
   return view.phase === "Night" ? view.nightNumber + 1 : view.nightNumber;
 }
 
-export const isMafiaRole = (role: Role | null | undefined) => role === "Mafia" || role === "Godfather" || role === "Silencer";
+export const isMafiaRole = (role: Role | null | undefined) => role === "Mafia" || role === "Godfather" || role === "Silencer" || role === "Negotiator";

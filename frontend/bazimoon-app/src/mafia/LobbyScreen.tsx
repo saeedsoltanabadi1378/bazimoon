@@ -17,7 +17,7 @@ import { VoicePreflight, type VoiceCheckState } from "./VoicePreflight";
 import { PlayerSafetyButton } from "./PlayerSafety";
 
 export function LobbyScreen() {
-  const { view, busy, joinGame, leaveGame, startGame, setReady } = useGame();
+  const { view, busy, joinGame, leaveGame, startGame, setReady, addBot, removeBot } = useGame();
   const { t, n } = useLanguage();
   const startsIn = useSecondsLeft(view?.autoStartAt);
   const { back } = useNavigation();
@@ -150,6 +150,10 @@ export function LobbyScreen() {
                 <Avatar name={p.displayName} color={playerColor(view, p.playerId)} size={36} fontSize={15} />
                 <span className="grow" style={{ fontSize: 15 }}>{you ? t("youName", { name: p.displayName }) : p.displayName}</span>
                 {p.playerId === controllerId && <span className="tiny strong" style={{ color: "#9C8CFF" }}>{t("creator")}</span>}
+                {p.isBot && <span className="tiny strong" style={{ color: "#8FA8FF" }}>{t("botTag")}</span>}
+                {p.isBot && view.youAreController && (
+                  <IconButton icon="close" label={t("removeBot", { name: p.displayName })} disabled={busy} onClick={() => void removeBot(p.playerId)} style={{ width: 36, height: 36, background: "transparent" }} />
+                )}
                 <span className={`tiny strong lobby-ready${ready.has(p.playerId) ? " lobby-ready--on" : ""}`} style={{ padding: "3px 10px", borderRadius: 999, background: ready.has(p.playerId) ? "#13302C" : "#1E2138", color: ready.has(p.playerId) ? "#5FD0BE" : "#9A9CB8" }}>
                   {ready.has(p.playerId) ? t("ready") : t("notYet")}
                 </span>
@@ -157,6 +161,14 @@ export function LobbyScreen() {
             );
           })}
         </ul>
+        {joined && view.youAreController && !full && startsIn === null && (
+          <div className="stack" style={{ gap: 6 }}>
+            <button type="button" className="btn btn--outline btn--sm" disabled={busy} onClick={() => void addBot()}>
+              <Icon name="plus" size={16} /> {t("addBot")}
+            </button>
+            <span className="tiny muted">{t("botsNote")}</span>
+          </div>
+        )}
         {joined && <PlayerSafetyButton />}
         <ActionError />
       </Body>

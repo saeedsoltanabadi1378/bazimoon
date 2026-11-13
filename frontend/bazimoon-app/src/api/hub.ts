@@ -93,6 +93,12 @@ export interface GameEvent {
   shotOutcome: "Hit" | "Saved" | "Backfired" | null;
   silenced: string | null;
   dieHardSurvived: string | null;
+  negotiationTarget?: string | null;
+  negotiated?: boolean | null;
+  guarded?: string | null;
+  bodyguardDied?: boolean | null;
+  /** Each player's private night guess at who is Mafia (player → suspect). */
+  suspicions?: Record<string, string> | null;
 }
 
 export interface GameRecap {
