@@ -19,6 +19,7 @@ public sealed class GameService
     private readonly GameMutationLock _mutationLock;
     private readonly Lounge.IPushNotifier _push;
     private readonly IGraveyardStore _graveyard;
+    private readonly ITableChatStore _tableChat;
     private readonly TimeProvider _clock;
     private readonly IActivityTracker _activity;
     private readonly PlayerSafetyService _safety;
@@ -28,7 +29,7 @@ public sealed class GameService
         IGameHistoryRepository historyRepository,
         IGameNotifier notifier,
         IGameRosterStore rosterStore, IAppSettingsService settings, BazimoonDbContext db, GameMutationLock mutationLock,
-        Lounge.IPushNotifier push, IGraveyardStore graveyard, TimeProvider clock, IActivityTracker activity, PlayerSafetyService safety)
+        Lounge.IPushNotifier push, IGraveyardStore graveyard, TimeProvider clock, IActivityTracker activity, PlayerSafetyService safety, ITableChatStore tableChat)
     {
         _push = push;
         _sessionStore = sessionStore;
@@ -39,6 +40,7 @@ public sealed class GameService
         _db = db;
         _mutationLock = mutationLock;
         _graveyard = graveyard;
+        _tableChat = tableChat;
         _clock = clock;
         _activity = activity;
         _safety = safety;
@@ -364,6 +366,39 @@ public sealed class GameService
         return message;
     }
 
+    /// <summary>The table chat so far, for anyone seated at or watching the table.</summary>
+    public async Task<IReadOnlyList<TableChatMessage>> GetTableChatAsync(Guid gameId, Guid userId)
+    {
+        var game = await LoadOrThrowAsync(gameId);
+        var id = PlayerIdentity.DeriveId(gameId, userId);
+        if (game.GetPlayer(id) is null && game.GetSpectator(id) is null)
+            throw new ForbiddenGameActionException("You are not a player in this game.");
+        return await _tableChat.GetAsync(gameId);
+    }
+
+    /// <summary>A living player writes to the table. The same length cap and pace as the graveyard chat.</summary>
+    public async Task<TableChatMessage> SendTableChatMessageAsync(Guid gameId, Guid userId, string? text)
+    {
+        var game = await LoadOrThrowAsync(gameId);
+        var id = PlayerIdentity.DeriveId(gameId, userId);
+        if (game.GetPlayer(id) is null)
+            throw new ForbiddenGameActionException(game.GetSpectator(id) is null ? "You are not a player in this game." : "Only living players can write in the table chat.");
+        game.EnsureCanWriteTableChat(id);
+        var body = text?.Trim() ?? "";
+        if (body.Length == 0) throw new GameException("Write a message first.");
+        if (body.Length > GraveyardMaxLength) throw new GameException($"Messages can be at most {GraveyardMaxLength} characters.");
+
+        var now = _clock.GetUtcNow();
+        var history = await _tableChat.GetAsync(gameId);
+        if (history.LastOrDefault(m => m.SenderId == id) is { } last && now - last.SentAt < GraveyardCooldown)
+            throw new GameException("You're sending messages too fast. Wait a moment.");
+
+        var message = new TableChatMessage(Guid.NewGuid(), id, game.GetPlayer(id)!.DisplayName, body, now);
+        await _tableChat.AppendAsync(gameId, message);
+        await _notifier.NotifyTableChatMessageAsync(gameId, message);
+        return message;
+    }
+
     /// <summary>Moves a game on when its current turn or phase timer has run out. Called every second
     /// by <see cref="PhaseDeadlineService"/>; finished games are written to history like any other end.</summary>
     public async Task AdvanceExpiredAsync(Guid gameId, DateTimeOffset now, CancellationToken cancellationToken = default)
@@ -394,6 +429,7 @@ public sealed class GameService
             await _historyRepository.SaveCompletedGameAsync(game);
             await _rosterStore.RemoveAsync(game.GameId);
             await _graveyard.RemoveAsync(game.GameId);
+            await _tableChat.RemoveAsync(game.GameId);
         }
 
         await _notifier.NotifyGameUpdatedAsync(game);
@@ -416,7 +452,7 @@ public sealed class GameService
         _db.Games.Add(new GameRecord { Id=game.GameId, CreatedAt=game.CreatedAt.UtcDateTime, EndedAt=DateTime.UtcNow, Result=WinCondition.None, Status="Cancelled", CancellationReason=reason, Players=game.Players.Select(p => new GamePlayerRecord { Id=Guid.NewGuid(), PlayerId=p.Id, UserId=roster.FirstOrDefault(r=>r.Username==p.DisplayName)?.UserId, DisplayName=p.DisplayName, Role=p.Role, SurvivedToEnd=p.IsAlive, GodfatherRank=p.GodfatherRank }).ToList() });
         _db.OperationalEvents.Add(new() { Category="AdminAudit", Message="Game cancelled", IsAdminAudit=true, TargetType="Game", TargetId=gameId.ToString(), MetadataJson=System.Text.Json.JsonSerializer.Serialize(new { reason, actor }) });
         await _db.SaveChangesAsync();
-        await _sessionStore.RemoveAsync(gameId); await _rosterStore.RemoveAsync(gameId); await _graveyard.RemoveAsync(gameId); await _notifier.NotifyGameUpdatedAsync(game); return true;
+        await _sessionStore.RemoveAsync(gameId); await _rosterStore.RemoveAsync(gameId); await _graveyard.RemoveAsync(gameId); await _tableChat.RemoveAsync(gameId); await _notifier.NotifyGameUpdatedAsync(game); return true;
     }
 
     private const string CodeAlphabet = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";

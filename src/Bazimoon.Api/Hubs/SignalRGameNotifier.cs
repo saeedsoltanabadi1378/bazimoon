@@ -20,4 +20,7 @@ public sealed class SignalRGameNotifier : IGameNotifier
 
     public Task NotifyGraveyardMessageAsync(Guid gameId, GraveyardMessage message) =>
         _hubContext.Clients.Group(GameHub.GraveyardGroupName(gameId)).SendAsync("GraveyardMessage", new { gameId, message });
+
+    public Task NotifyTableChatMessageAsync(Guid gameId, TableChatMessage message) =>
+        _hubContext.Clients.Group(GameHub.GroupName(gameId)).SendAsync("TableChatMessage", new { gameId, message });
 }

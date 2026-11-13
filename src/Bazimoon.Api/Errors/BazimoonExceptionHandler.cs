@@ -77,6 +77,9 @@ internal static class GameErrorCode
         if (message.Contains("Only a game in progress can be watched", StringComparison.Ordinal)) return "spectating_unavailable";
         if (message.Contains("already has", StringComparison.Ordinal) && message.Contains("spectators", StringComparison.Ordinal)) return "spectators_full";
         if (message.Contains("muted you", StringComparison.Ordinal)) return "graveyard_muted";
+        if (message.Contains("table chat is closed", StringComparison.Ordinal)) return "table_chat_closed";
+        if (message.Contains("silenced today", StringComparison.Ordinal)) return "table_chat_silenced";
+        if (message.Contains("Only living players can write", StringComparison.Ordinal)) return "table_chat_living_only";
         if (message.Contains("Write a message", StringComparison.Ordinal)) return "message_empty";
         if (message.Contains("Messages can be at most", StringComparison.Ordinal)) return "message_too_long";
         if (message.Contains("messages too fast", StringComparison.Ordinal)) return "message_rate_limited";

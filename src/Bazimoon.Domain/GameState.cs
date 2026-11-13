@@ -678,6 +678,24 @@ public sealed partial class GameState
         CurrentPhase != GamePhase.Ended &&
         (GetSpectator(id) is not null || GetPlayer(id) is { IsAlive: false, EliminatedBy: not EliminationCause.Left });
 
+    /// <summary>The table chat is open while the town is awake: from the morning until the day's verdict.</summary>
+    public bool TableChatOpen =>
+        CurrentPhase is GamePhase.Day or GamePhase.Defence or GamePhase.Voting or GamePhase.LastWords or GamePhase.Results;
+
+    /// <summary>
+    /// Only living players write in the table chat, and only while it is open. A player the Silencer
+    /// silenced can't write for that day either, or the silence would mean nothing.
+    /// </summary>
+    public void EnsureCanWriteTableChat(Guid playerId)
+    {
+        if (GetPlayer(playerId) is not { IsAlive: true })
+            throw new GameException("Only living players can write in the table chat.");
+        if (!TableChatOpen)
+            throw new GameException("The table chat is closed until morning.");
+        if (SilencedPlayerId == playerId)
+            throw new GameException("You are silenced today and cannot write in the table chat.");
+    }
+
     /// <summary>The Mayor reveals themselves during their own speaking turn. From then on their vote counts twice.</summary>
     public void RevealMayor(Guid playerId)
     {

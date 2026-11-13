@@ -14,4 +14,7 @@ public interface IGameNotifier
 
     /// <summary>Sends a graveyard chat message to the game's graveyard group only (players who are out and spectators).</summary>
     Task NotifyGraveyardMessageAsync(Guid gameId, GraveyardMessage message);
+
+    /// <summary>Sends a table chat message to everyone at the table. It carries nothing private: only what a living player typed.</summary>
+    Task NotifyTableChatMessageAsync(Guid gameId, TableChatMessage message);
 }

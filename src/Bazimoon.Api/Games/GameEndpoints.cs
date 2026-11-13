@@ -175,6 +175,12 @@ public static class GameEndpoints
         group.MapPost("/{gameId:guid}/graveyard/messages", async (Guid gameId, SendGraveyardMessageRequest request, GameService games, HttpContext http) =>
             Results.Ok(await games.SendGraveyardMessageAsync(gameId, http.User.GetUserId(), request.Text))).WithName("SendGraveyardMessage");
 
+        group.MapGet("/{gameId:guid}/chat/messages", async (Guid gameId, GameService games, HttpContext http) =>
+            Results.Ok(await games.GetTableChatAsync(gameId, http.User.GetUserId()))).WithName("GetTableChatMessages");
+
+        group.MapPost("/{gameId:guid}/chat/messages", async (Guid gameId, SendTableChatMessageRequest request, GameService games, HttpContext http) =>
+            Results.Ok(await games.SendTableChatMessageAsync(gameId, http.User.GetUserId(), request.Text))).WithName("SendTableChatMessage");
+
         group.MapGet("/{gameId:guid}/safety", async (Guid gameId, PlayerSafetyService safety, HttpContext http) =>
             Results.Ok(await safety.GetAsync(gameId, http.User.GetUserId()))).WithName("GetPlayerSafety");
 
@@ -267,3 +273,5 @@ public sealed record SetReadyRequest(bool Ready);
 public sealed record SetMutedRequest(bool Muted);
 
 public sealed record SendGraveyardMessageRequest(string? Text);
+
+public sealed record SendTableChatMessageRequest(string? Text);

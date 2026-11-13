@@ -60,7 +60,8 @@ public sealed record GameView(
     NegotiationView? YourNegotiation = null,
     Guid? YourLastGuardedId = null,
     Guid? BodyguardDiedId = null,
-    AccoladesView? Accolades = null)
+    AccoladesView? Accolades = null,
+    IReadOnlyList<LogEntryView>? Log = null)
 {
     public static GameView For(GameState game, Guid viewerId)
     {
@@ -224,7 +225,60 @@ public sealed record GameView(
                 ? new NegotiationView(asked, last.NegotiationSucceeded) : null,
             viewer?.Role == Role.Bodyguard ? game.LastGuardedTarget : null,
             game.LastNightResult?.BodyguardDied,
-            game.CurrentPhase == GamePhase.Ended ? AccoladesView.For(game, viewerId) : null);
+            game.CurrentPhase == GamePhase.Ended ? AccoladesView.For(game, viewerId) : null,
+            LogEntryView.For(game));
+    }
+}
+
+/// <summary>
+/// One line of the public game log: only what the whole table was told when it happened (who died,
+/// who was voted out, who left). It never says who acted at night, what anyone's role is, or what the
+/// Detective learned, so every viewer gets the same list.
+/// </summary>
+/// <param name="Kind">NightKill, NightSaved, NightQuiet, Shot, Silenced, VotedOut, VoteTied, VoteNone, Left, Removed, MayorRevealed or Inquiry.</param>
+/// <param name="Round">The night or day number.</param>
+/// <param name="PlayerId">Who the line is about, when it is about one player.</param>
+/// <param name="VoteRound">For a vote: 1 for the day's vote, 2 for the re-vote.</param>
+/// <param name="Tied">For a tied vote: the tied players.</param>
+public sealed record LogEntryView(string Kind, int Round, Guid? PlayerId = null, int VoteRound = 1, IReadOnlyList<Guid>? Tied = null)
+{
+    public static IReadOnlyList<LogEntryView> For(GameState game)
+    {
+        var log = new List<LogEntryView>();
+        foreach (var e in game.Events)
+        {
+            switch (e.Kind)
+            {
+                case GameEventKind.Night:
+                    if (e.Killed is { } killed) log.Add(new("NightKill", e.Round, killed));
+                    // A shot that hit kills its target; one that backfired kills the Sniper. Either way the table only hears who died.
+                    Guid? shot = e.ShotOutcome switch { SniperOutcome.Hit => e.ShotTarget, SniperOutcome.Backfired => e.SniperId, _ => null };
+                    if (shot is { } shotDead && shotDead != e.Killed) log.Add(new("Shot", e.Round, shotDead));
+                    if (e.Killed is null && shot is null)
+                        log.Add(new(e.KillTarget.HasValue && e.Saved == e.KillTarget ? "NightSaved" : "NightQuiet", e.Round));
+                    if (e.Silenced is { } silenced && silenced != e.Killed && silenced != shot) log.Add(new("Silenced", e.Round, silenced));
+                    break;
+                case GameEventKind.Vote:
+                    if (e.VotedOut is { } votedOut) log.Add(new("VotedOut", e.Round, votedOut, e.VoteRound));
+                    else if (e.Tied is { Count: > 1 }) log.Add(new("VoteTied", e.Round, VoteRound: e.VoteRound, Tied: e.Tied));
+                    else log.Add(new("VoteNone", e.Round, VoteRound: e.VoteRound));
+                    break;
+                case GameEventKind.Left:
+                    log.Add(new("Left", e.Round, e.PlayerId));
+                    break;
+                case GameEventKind.Removed:
+                    log.Add(new("Removed", e.Round, e.PlayerId));
+                    break;
+                case GameEventKind.MayorRevealed:
+                    log.Add(new("MayorRevealed", e.Round, e.PlayerId));
+                    break;
+                case GameEventKind.Inquiry:
+                    log.Add(new("Inquiry", e.Round));
+                    break;
+                // LastWords adds nothing the vote or night line didn't say; Promoted is for the Mafia's eyes only.
+            }
+        }
+        return log;
     }
 }
 
