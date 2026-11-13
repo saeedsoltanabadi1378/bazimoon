@@ -16,6 +16,7 @@ import { useNavigation } from "../app/router";
 import { useLanguage } from "../i18n/LanguageContext";
 import { readLocal, writeLocal } from "../lib/storage";
 import { PhaseCurtain } from "./table";
+import { MafiaStage } from "./Stage";
 import { useMafiaSounds } from "./sounds";
 
 export function MafiaRoute({ gameId }: { gameId: string }) {
@@ -24,7 +25,6 @@ export function MafiaRoute({ gameId }: { gameId: string }) {
     <GameProvider key={gameId} gameId={gameId}>
       <VoiceProvider>
         <PhaseRouter />
-        <PhaseCurtain />
       </VoiceProvider>
     </GameProvider>
   );
@@ -69,12 +69,20 @@ function PhaseRouter() {
     );
   }
 
-  switch (view.phase) {
-    case "Lobby":
-    case "RoleAssignment":
-      return <LobbyScreen />;
+  // The lobby is a portrait screen like the rest of the app. The turn to landscape happens when the game starts.
+  if (view.phase === "Lobby" || view.phase === "RoleAssignment") return <LobbyScreen />;
+  const game = view;
+  return (
+    <MafiaStage>
+      {gameScreen()}
+      <PhaseCurtain />
+    </MafiaStage>
+  );
+
+  function gameScreen() {
+    switch (game.phase) {
     case "NightZero":
-      if (!revealed && view.yourRole) {
+      if (!revealed && game.yourRole) {
         return (
           <RoleRevealScreen
             onReady={() => {
@@ -98,6 +106,9 @@ function PhaseRouter() {
     case "Results":
       return <ResultsScreen />;
     case "Ended":
-      return verdictFirst && view.lastVotingElimination ? <ResultsScreen onSeeFinal={() => setVerdictFirst(false)} /> : <GameOverScreen />;
+      return verdictFirst && game.lastVotingElimination ? <ResultsScreen onSeeFinal={() => setVerdictFirst(false)} /> : <GameOverScreen />;
+      default:
+        return null;
+    }
   }
 }

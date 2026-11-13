@@ -43,14 +43,14 @@ export function RoleRevealScreen({ onReady }: { onReady: () => void }) {
           aria-label={shown ? t("hideRole") : t("revealRole")}
           className={`role-reveal-card${shown ? " role-reveal-card--shown" : ""}`}
           style={{
-            width: "100%", minHeight: 380, borderRadius: 28, border: `1.5px solid ${shown ? meta.fg : "#2E3252"}`,
-            background: shown ? "#141629" : "#121428", color: "var(--text)", cursor: "pointer",
+            width: "100%", minHeight: 380, borderRadius: 28, border: `1.5px solid ${shown ? meta.fg : "#7A5A2A"}`,
+            background: shown ? "#1A130E" : "#140E0A", color: "var(--text)", cursor: "pointer",
             display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16, padding: 28,
           }}
         >
           {!shown ? (
             <>
-              <IconDisc icon="moon" size={96} iconSize={44} bg="#1E2138" fg="#9C8CFF" />
+              <IconDisc icon="moon" size={96} iconSize={44} bg="#2A1E14" fg="#C9A25A" />
               <span className="display" style={{ fontSize: 22, fontWeight: 700 }}>{t("tapToReveal")}</span>
               <span style={{ fontSize: 14, color: "var(--muted)" }}>{t("tapAgainToHide")}</span>
             </>
@@ -62,7 +62,7 @@ export function RoleRevealScreen({ onReady }: { onReady: () => void }) {
               <span style={{ fontSize: 15, lineHeight: 1.5, color: "var(--text-soft)", maxWidth: 280 }}>
                 {t(`reveal${role}`)}
               </span>
-              <span style={{ padding: "6px 12px", borderRadius: 999, background: "#1E2138", fontSize: 13, color: "var(--text-2)" }}>
+              <span style={{ padding: "6px 12px", borderRadius: 999, background: "#2A1E14", fontSize: 13, color: "var(--text-2)" }}>
                 {t("teamLabel", { team: meta.team === "mafia" ? t("teamMafia") : meta.team === "independent" ? t("teamIndependent") : t("teamTown") })}
               </span>
               {tip && <span style={{ fontSize: 13, lineHeight: 1.5, color: "var(--text-2)", maxWidth: 290 }}>{tip}</span>}

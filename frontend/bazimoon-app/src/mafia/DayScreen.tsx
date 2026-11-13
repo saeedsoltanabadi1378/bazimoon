@@ -8,7 +8,8 @@ import { Icon, type IconName } from "../ui/Icon";
 import { findPlayer } from "./roles";
 import { ActionError, ReconnectingBanner, RolePeek, useRoleName, TableNotices } from "./parts";
 import { GraveyardBar, SpectatorBanner } from "./Graveyard";
-import { HeaderTools, PlayerAvatar, TableRoster, VoiceHalo } from "./table";
+import { HeaderTools, PlayerAvatar, VoiceHalo } from "./table";
+import { TableScene } from "./TableScene";
 import { haptic } from "../lib/haptics";
 
 const RING = 2 * Math.PI * 60;
@@ -114,9 +115,9 @@ export function DayScreen() {
   const reportOpen = hasDetails && reportDay === view.nightNumber;
 
   return (
-    <Screen theme="day">
-      <div className="phase-atmosphere phase-atmosphere--day" aria-hidden="true" />
+    <Screen theme="day" className="screen--table">
       <PhaseHeader kicker={t("morning")} title={t("dayN", { number: view.nightNumber })} right={<HeaderTools><RolePeek role={view.yourRole} alive={view.youAreAlive} /></HeaderTools>} />
+      <TableScene nowId={discussion?.activePlayerId} doneIds={completed} />
 
       <Body tight>
         <ReconnectingBanner />
@@ -136,11 +137,11 @@ export function DayScreen() {
         ))}
 
         {discussion && active && (
-          <section className={`stack center discussion-card${seconds <= 5 ? " discussion-card--urgent" : ""}`} style={{ gap: 10, padding: "16px 16px", borderRadius: 24, background: "var(--surface)" }} aria-live="polite">
+          <section className={`stack center speaker-card discussion-card${seconds <= 5 ? " discussion-card--urgent" : ""}`} style={{ gap: 10, padding: "16px 16px", borderRadius: 24, background: "var(--surface)" }} aria-live="polite">
             <span style={{ padding: "4px 10px", borderRadius: 999, background: challenge ? "#3A2A16" : "#2B241B", color: segFg, fontSize: 12, fontWeight: 700, letterSpacing: 0.8, textTransform: "uppercase" }}>
               {challenge ? t("challenge") : t("speakerTurn")}
             </span>
-            <div style={{ position: "relative", width: 132, height: 132 }}>
+            <div className="speaker-card__ring" style={{ position: "relative", width: 132, height: 132 }}>
               <svg width="132" height="132" viewBox="0 0 132 132" aria-hidden="true" style={{ position: "absolute", inset: 0 }}>
                 <circle cx="66" cy="66" r="60" fill="none" stroke="#342C22" strokeWidth="7" />
                 <circle
@@ -173,13 +174,7 @@ export function DayScreen() {
           </section>
         )}
 
-        <TableRoster
-          heading={order.length > 0 ? t("speakingOrder") : undefined}
-          note={order.length > 0 ? t("turnLengths", { speaker: view.rules.speakerSeconds, challenge: view.rules.challengeSeconds }) : undefined}
-          order={order}
-          nowId={discussion?.originalSpeakerId}
-          doneIds={completed}
-        />
+        {order.length > 0 && <p className="tiny muted" style={{ margin: 0 }}>{t("turnLengths", { speaker: view.rules.speakerSeconds, challenge: view.rules.challengeSeconds })}</p>}
 
         <section
           className={`morning-summary phase-notice${reportOpen ? " morning-summary--open" : ""}`}

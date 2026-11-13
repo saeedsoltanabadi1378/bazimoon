@@ -5,7 +5,8 @@ import { useLanguage } from "../i18n/LanguageContext";
 import { Bar, Body, Screen } from "../ui/components";
 import { Icon } from "../ui/Icon";
 import { findPlayer } from "./roles";
-import { PlayerAvatar, TableRoster, VoiceHalo } from "./table";
+import { HeaderTools, PlayerAvatar, VoiceHalo } from "./table";
+import { TableScene } from "./TableScene";
 import { ActionError, ReconnectingBanner } from "./parts";
 import { GraveyardBar, SpectatorBanner } from "./Graveyard";
 import { useClock, useSecondsLeft } from "./timers";
@@ -41,23 +42,27 @@ export function LastWordsScreen() {
   const live = voice.publishing && !voice.muted;
 
   return (
-    <Screen theme="day">
-      <header style={{ padding: "16px 16px 8px" }}>
-        <div className="kicker" style={{ color: accent }}>
-          {night ? t("lastWordsNightKicker", { number: view.nightNumber }) : t("lastWordsVoteKicker", { number: view.nightNumber })}
+    <Screen theme="day" className="screen--table">
+      <header className="topbar topbar--split">
+        <div>
+          <div className="kicker" style={{ color: accent }}>
+            {night ? t("lastWordsNightKicker", { number: view.nightNumber }) : t("lastWordsVoteKicker", { number: view.nightNumber })}
+          </div>
+          <h1 className="h1" style={{ marginTop: 2 }}>{t("lastWordsTitle")}</h1>
         </div>
-        <h1 className="h1" style={{ marginTop: 2 }}>{t("lastWordsTitle")}</h1>
+        <HeaderTools />
       </header>
+      <TableScene nowId={lastWords?.playerId} />
 
       <Body tight>
         <ReconnectingBanner />
         <SpectatorBanner />
         {speaker && (
-          <section className="stack center" style={{ gap: 14, padding: "26px 16px", borderRadius: 24, background: "var(--surface)", textAlign: "center" }} aria-live="polite">
+          <section className="stack center speaker-card" style={{ gap: 14, padding: "26px 16px", borderRadius: 24, background: "var(--surface)", textAlign: "center" }} aria-live="polite">
             <span style={{ padding: "4px 10px", borderRadius: 999, background: night ? "#3A1C1A" : "#3A2A16", color: accent, fontSize: 12, fontWeight: 700, letterSpacing: 0.8 }}>
               {night ? t("killedLastNight") : t("votedOutByTown")}
             </span>
-            <div style={{ position: "relative", width: 150, height: 150 }}>
+            <div className="speaker-card__ring" style={{ position: "relative", width: 150, height: 150 }}>
               <svg width="150" height="150" viewBox="0 0 150 150" aria-hidden="true" style={{ position: "absolute", inset: 0 }}>
                 <circle cx="75" cy="75" r="68" fill="none" stroke="#342C22" strokeWidth="7" />
                 <circle
@@ -82,7 +87,6 @@ export function LastWordsScreen() {
           <span>{night ? t("lastWordsNightNote") : t("lastWordsVoteNote")}</span>
         </div>
 
-        <TableRoster />
         <Reactions />
         <ActionError />
       </Body>

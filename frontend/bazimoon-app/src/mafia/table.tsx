@@ -59,71 +59,8 @@ export function VoiceHalo({ inset, color }: { inset: number; color?: string }) {
   return <span ref={ref} className="voice-halo" aria-hidden="true" style={{ inset, "--halo": color } as CSSProperties} />;
 }
 
-/**
- * Everyone at the table in one strip, the same on every phase: who is alive, out, silenced or a
- * revealed Mayor. During a discussion the speakers come first, in speaking order.
- */
-export function TableRoster({ heading, note, order, nowId, doneIds }: {
-  heading?: ReactNode;
-  note?: ReactNode;
-  order?: string[];
-  nowId?: string | null;
-  doneIds?: ReadonlySet<string>;
-}) {
-  const { view } = useGame();
-  const { t } = useLanguage();
-  const roleName = useRoleName();
-  const { notes } = usePlayerNotes(view?.gameId ?? "");
-  const [noting, setNoting] = useState<{ player: PlayerView; host: Element } | null>(null);
-  if (!view) return null;
-  // Notes are a player's tool; someone watching has no use for them.
-  const canNote = !view.youAreSpectator && view.phase !== "Ended";
-  const first = (order ?? []).filter((id) => findPlayer(view, id));
-  const ids = [...first, ...view.players.map((p) => p.playerId).filter((id) => !first.includes(id))];
-  return (
-    <section className="roster mafia-table" aria-label={t("players")}>
-      <div className="row row--between" style={{ fontSize: 13 }}>
-        <span className="strong">{heading ?? t("atTheTable", { count: view.players.filter((p) => p.isAlive).length })}</span>
-        {note && <span className="muted">{note}</span>}
-      </div>
-      <ol className="roster__seats">
-        {ids.map((id) => {
-          const p = findPlayer(view, id)!;
-          const you = id === view.yourPlayerId;
-          const now = p.isAlive && id === nowId;
-          const silenced = p.isAlive && view.silencedPlayerId === id;
-          const mayor = p.isAlive && p.revealed;
-          const done = p.isAlive && !now && (doneIds?.has(id) ?? false);
-          const state = !p.isAlive ? "out" : now ? "now" : silenced ? "silenced" : mayor ? "mayor" : done ? "done" : "";
-          const claim = canNote ? notes[id]?.claim : undefined;
-          const tag = !p.isAlive ? t("outTag") : now ? t("now") : silenced ? t("silencedTag") : mayor ? t("roleMayor") : done ? t("done")
-            : claim ? roleName(claim) : p.isBot ? t("botTag") : "";
-          const seat = (
-            <>
-              <PlayerAvatar view={view} playerId={id} />
-              <span className="roster__name" dir="auto">{you ? t("you") : p.displayName}</span>
-              <span className="roster__tag">{tag}</span>
-            </>
-          );
-          return (
-            <li key={id} className={`roster__seat${state ? ` roster__seat--${state}` : ""}`}>
-              {canNote && !you ? (
-                <button type="button" className="roster__button" aria-label={t("noteOpen", { name: p.displayName })} onClick={(e) => setNoting({ player: p, host: e.currentTarget.closest(".screen") ?? document.body })}>
-                  {seat}
-                </button>
-              ) : seat}
-            </li>
-          );
-        })}
-      </ol>
-      {canNote && <span className="tiny muted">{t("notesHint")}</span>}
-      {noting && createPortal(<NoteSheet gameId={view.gameId} player={noting.player} onClose={() => setNoting(null)} />, noting.host)}
-    </section>
-  );
-}
-
 /** Your private read on one player: trust or suspect, and the role they claimed. Kept on this device only. */
-function NoteSheet({ gameId, player, onClose }: { gameId: string; player: PlayerView; onClose: () => void }) {
+export function NoteSheet({ gameId, player, onClose }: { gameId: string; player: PlayerView; onClose: () => void }) {
   const { t } = useLanguage();
   const roleName = useRoleName();
   const { notes, setNote } = usePlayerNotes(gameId);

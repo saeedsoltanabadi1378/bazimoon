@@ -567,4 +567,10 @@ export const mafia = {
   recapBodyguard: "The Mafia targeted {name}; the Bodyguard died in their place.",
   recapSuspicions: "Suspicions: {list}",
   recapSuspicionPair: "{name} → {target}",
+  aliveTag: "Alive",
+  tapASeat: "Tap a player's seat at the table.",
+  seatPicked: "Your pick: {name}",
+  stageLoadingTitle: "Setting the table",
+  stageLoadingText: "Bringing in the room and the players.",
+  stageTurnPhone: "Turn your phone sideways.",
 };

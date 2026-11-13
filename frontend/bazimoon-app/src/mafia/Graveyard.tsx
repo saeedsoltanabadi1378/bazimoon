@@ -16,18 +16,18 @@ export function SpectatorBanner() {
   const { back } = useNavigation();
   if (!view?.youAreSpectator || view.phase === "Ended") return null;
   return (
-    <div className="row" style={{ gap: 10, padding: "10px 12px", borderRadius: 14, background: "#1C2230", border: "1px solid #2E3A52" }}>
-      <Icon name="eye" size={20} color="#8FA8FF" />
+    <div className="row" style={{ gap: 10, padding: "10px 12px", borderRadius: 14, background: "#1A130E", border: "1px solid #7A5A2A" }}>
+      <Icon name="eye" size={20} color="#C9A25A" />
       <span className="grow stack" style={{ gap: 0, fontSize: 13, lineHeight: 1.4 }}>
         <b style={{ fontSize: 14 }}>{t("watchingTitle")}</b>
-        <span style={{ color: "#B9C2D8" }}>{t("watchingText")}</span>
+        <span style={{ color: "#CDBFA6" }}>{t("watchingText")}</span>
       </span>
       <span className="stack" style={{ gap: 4, alignItems: "flex-end" }}>
-        <span className="tiny" style={{ color: "#B9C2D8", whiteSpace: "nowrap" }}>{t("watchingCount", { count: n(view.spectatorCount) })}</span>
+        <span className="tiny" style={{ color: "#CDBFA6", whiteSpace: "nowrap" }}>{t("watchingCount", { count: n(view.spectatorCount) })}</span>
         <button
           type="button"
           className="btn btn--ghost btn--auto"
-          style={{ minHeight: 28, padding: "0 6px", fontSize: 12, color: "#8FA8FF" }}
+          style={{ minHeight: 28, padding: "0 6px", fontSize: 12, color: "#C9A25A" }}
           disabled={busy}
           onClick={async () => {
             if (await stopWatching()) back();
@@ -150,7 +150,7 @@ function GraveyardSheet({ onClose }: { onClose(): void }) {
             return (
               <div key={m.id} className="row" style={{ gap: 8, alignItems: "flex-start", flexDirection: mine ? "row-reverse" : "row" }}>
                 {!mine && (
-                  <span className="avatar" aria-hidden="true" style={{ width: 30, height: 30, fontSize: 12, flex: "none", background: m.fromSpectator ? "#8FA8FF" : "#5FD0BE" }}>
+                  <span className="avatar" aria-hidden="true" style={{ width: 30, height: 30, fontSize: 12, flex: "none", background: m.fromSpectator ? "#C9A25A" : "#5FD0BE" }}>
                     {Array.from(m.senderName)[0]?.toUpperCase()}
                   </span>
                 )}
@@ -158,7 +158,7 @@ function GraveyardSheet({ onClose }: { onClose(): void }) {
                   {!mine && (
                     <div className="row" style={{ gap: 6, fontSize: 12, fontWeight: 600, color: "var(--muted)", marginBottom: 2 }}>
                       <span dir="auto">{m.senderName}</span>
-                      <span style={{ padding: "1px 7px", borderRadius: 999, background: m.fromSpectator ? "#1C2230" : "var(--surface-3)", color: m.fromSpectator ? "#8FA8FF" : "var(--muted)", fontSize: 11 }}>
+                      <span style={{ padding: "1px 7px", borderRadius: 999, background: m.fromSpectator ? "#1A130E" : "var(--surface-3)", color: m.fromSpectator ? "#C9A25A" : "var(--muted)", fontSize: 11 }}>
                         {m.fromSpectator ? t("tagWatching") : t("tagOut")}
                       </span>
                       {canMute && (

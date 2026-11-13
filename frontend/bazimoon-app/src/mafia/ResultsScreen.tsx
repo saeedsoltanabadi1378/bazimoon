@@ -5,7 +5,8 @@ import { Icon } from "../ui/Icon";
 import { findPlayer, isMafiaRole, playerColor, roleMeta, voteWeight } from "./roles";
 import { ActionError, PhaseTimer, ReconnectingBanner, useRoleName, TableNotices } from "./parts";
 import { GraveyardBar, SpectatorBanner } from "./Graveyard";
-import { HeaderTools, TableRoster } from "./table";
+import { HeaderTools } from "./table";
+import { TableScene } from "./TableScene";
 import { BallotRows } from "./VotingScreen";
 import { RolePortrait } from "./RolePortrait";
 
@@ -48,8 +49,9 @@ export function ResultsScreen({ onSeeFinal }: { onSeeFinal?: () => void }) {
   const tiedNames = (result?.tiedPlayers ?? []).map((id) => name(id));
 
   return (
-    <Screen theme="day">
+    <Screen theme="day" className="screen--table">
       <PhaseHeader kicker={t("dayResults", { number: view.nightNumber })} title={headline} right={<HeaderTools />} />
+      <TableScene />
 
       <Body tight>
         <ReconnectingBanner />
@@ -130,7 +132,6 @@ export function ResultsScreen({ onSeeFinal }: { onSeeFinal?: () => void }) {
           </section>
         )}
 
-        <TableRoster />
         <ActionError />
       </Body>
 

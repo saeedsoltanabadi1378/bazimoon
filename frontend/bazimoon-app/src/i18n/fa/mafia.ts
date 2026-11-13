@@ -568,4 +568,10 @@ export const mafia: Record<keyof typeof en, string> = {
   recapBodyguard: "مافیا سراغ {name} رفت و محافظ به جای او کشته شد.",
   recapSuspicions: "حدس‌ها: {list}",
   recapSuspicionPair: "{name} ← {target}",
+  aliveTag: "زنده",
+  tapASeat: "روی صندلی یکی از بازیکنان دور میز بزنید.",
+  seatPicked: "انتخاب شما: {name}",
+  stageLoadingTitle: "میز چیده می‌شود",
+  stageLoadingText: "اتاق و بازیکنان در حال آماده شدن هستند.",
+  stageTurnPhone: "گوشی را افقی بگیرید.",
 };

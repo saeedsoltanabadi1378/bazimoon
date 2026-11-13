@@ -3,6 +3,7 @@ import { useVoice } from "./VoiceProvider";
 import { useLanguage } from "../i18n/LanguageContext";
 import { Bar, Body, IconDisc, PhaseHeader, Screen } from "../ui/components";
 import { findPlayer, isMafiaRole, playerColor } from "./roles";
+import { TableScene, type SeatTag } from "./TableScene";
 import { ActionError, MicButton, PhaseTimer, ReconnectingBanner, RolePeek, useRoleName } from "./parts";
 import { GraveyardBar, SpectatorBanner } from "./Graveyard";
 
@@ -14,18 +15,20 @@ export function FirstNightScreen() {
   if (!view) return null;
 
   const mafia = isMafiaRole(view.yourRole) && view.youAreAlive;
-  const teamIds = new Set((view.mafiaTeam ?? []).map((m) => m.playerId));
+  // Only the Mafia see who is on their side, marked on the seats.
+  const teamTags = new Map<string, SeatTag>();
+  if (mafia) for (const member of view.mafiaTeam ?? []) if (member.playerId !== view.yourPlayerId) teamTags.set(member.playerId, { text: t("yourTeam"), color: "#F08A7A" });
 
   return (
-    <Screen theme="night">
+    <Screen theme="night" className="screen--table">
       <PhaseHeader kicker={t("nightN", { number: 0 })} title={t("firstNight")} right={<RolePeek role={view.yourRole} alive={view.youAreAlive} />} />
+      <TableScene tags={teamTags} />
 
       <Body>
         <ReconnectingBanner />
         <SpectatorBanner />
         <PhaseTimer
           deadline={view.phaseDeadline} total={view.rules.nightSeconds} label={(seconds) => t("nightSecondsLeft", { seconds })}
-          accent="#9C8CFF" track="#262A44" bg="#151829" edge="#262A44"
         />
         <div className="card" style={{ fontSize: 14, lineHeight: 1.5, color: "var(--text-2)", padding: "12px 14px", borderRadius: 14 }}>
           {t("firstNightInfo")}
@@ -72,26 +75,11 @@ export function FirstNightScreen() {
           </section>
         ) : (
           <section className="stack center" style={{ gap: 14, padding: "36px 18px", borderRadius: 22, background: "var(--surface-3)", textAlign: "center" }}>
-            <IconDisc icon="moon" size={88} iconSize={40} bg="#1E2138" fg="#9C8CFF" />
+            <IconDisc icon="moon" size={88} iconSize={40} bg="#2A1E14" fg="#C9A25A" />
             <h2 className="display" style={{ fontSize: 22, fontWeight: 700 }}>{t("townSleeps")}</h2>
             <p style={{ fontSize: 14, lineHeight: 1.5, color: "var(--text-2)", maxWidth: 280 }}>{t("townSleepsText")}</p>
           </section>
         )}
-
-        <section className="stack" style={{ gap: 8 }}>
-          <h2 style={{ fontSize: 14, fontWeight: 600, color: "var(--text-2)" }}>{t("atTheTable", { count: view.players.length })}</h2>
-          <div className="row row--wrap">
-            {view.players.map((p) => {
-              const mate = mafia && teamIds.has(p.playerId);
-              const you = p.playerId === view.yourPlayerId;
-              return (
-                <span key={p.playerId} className="chip" style={{ borderColor: mate ? "#5A3439" : undefined, color: mate ? "#F08A7A" : undefined }}>
-                  {you ? t("youName", { name: p.displayName }) : p.displayName}
-                </span>
-              );
-            })}
-          </div>
-        </section>
 
         <ActionError />
       </Body>

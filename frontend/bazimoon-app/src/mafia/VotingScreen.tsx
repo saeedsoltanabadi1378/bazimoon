@@ -9,6 +9,7 @@ import { voteWeight, findPlayer } from "./roles";
 import { ActionError, PhaseTimer, ReconnectingBanner, VoiceStatusLine, TableNotices } from "./parts";
 import { GraveyardBar, SpectatorBanner } from "./Graveyard";
 import { HeaderTools, PlayerAvatar } from "./table";
+import { TableScene } from "./TableScene";
 import { haptic } from "../lib/haptics";
 
 export function VotingScreen() {
@@ -57,8 +58,7 @@ export function VotingScreen() {
   }
 
   return (
-    <Screen theme="day">
-      <div className="phase-atmosphere phase-atmosphere--day" aria-hidden="true" />
+    <Screen theme="day" className="screen--table">
       <PhaseHeader
         kicker={revote ? t("revoteKicker", { number: view.nightNumber }) : t("dayN", { number: view.nightNumber })}
         title={revote ? t("revoteTitle") : t("townVote")}
@@ -70,6 +70,12 @@ export function VotingScreen() {
             </div>
           </HeaderTools>
         }
+      />
+
+      <TableScene
+        pick={open ? { selected: picked, canPick: (id) => !busy && id !== view.yourPlayerId && candidates.some((p) => p.playerId === id), onPick: setPicked } : null}
+        counts={new Map(tally.map((row) => [row.p.playerId, row.count]))}
+        dimIds={revote ? new Set(alivePlayers.filter((p) => !runoff.has(p.playerId)).map((p) => p.playerId)) : undefined}
       />
 
       <Body tight>

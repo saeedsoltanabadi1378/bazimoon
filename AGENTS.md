@@ -17,6 +17,11 @@ It has one artboard per screen: the player web app (hub, Mafia flow, every solo 
 - The Shelem game and its reusable playing-card framework may be designed and implemented in code without adding or changing design artboards. This exception also covers Shelem rooms, bots, voice controls, game states, results, admin integration and bilingual player-facing UI.
 - The exception applies only to Shelem and shared card primitives introduced for Shelem. All other player and admin UI remains subject to the design-sync rules below.
 
+### Owner-approved exception: Mafia landscape table
+
+- The Mafia game's landscape table may be designed and implemented in code without adding or changing design artboards. This covers every Mafia screen from the moment the game starts to game over: the speakeasy room, the table and seats, the seat portraits, the loading screen before the table, and the phase panels beside the table.
+- The Mafia lobby, the tables list and all other player and admin UI remain subject to the design-sync rules below.
+
 - Design first: a new screen or game needs its artboards in the design, approved by the project owner, before any code is written for it. Draw the artboards, stop and ask for approval, then build to them.
 - Before changing a player app or admin screen, open the matching artboard in the design and build to it.
 - Any change to the player app's or admin console's UI or user-facing behaviour must also update the design in the same piece of work: new screens get a new artboard; changed layouts, copy, states, modes or rules get the artboard updated.

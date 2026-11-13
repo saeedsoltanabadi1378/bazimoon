@@ -1,3 +1,4 @@
+import { seatPortrait } from "./TableScene";
 import { useEffect, useState } from "react";
 import type { MvpPointsKind, MyGameResult } from "../api/types";
 import type { TranslationKey } from "../i18n/LanguageContext";
@@ -119,14 +120,12 @@ export function GameOverScreen() {
         </section>
 
         {mvps.length > 0 && (
-          <section className="stack center" style={{ gap: 8, padding: "22px 16px", borderRadius: 22, background: "#1F1A2E", border: "1.5px solid #F0A83A", textAlign: "center" }} aria-label={tie ? t("mvpJoint") : t("mvpOfGame")}>
+          <section className="stack center" style={{ gap: 8, padding: "22px 16px", borderRadius: 22, background: "#1A130E", border: "1.5px solid #F0A83A", textAlign: "center" }} aria-label={tie ? t("mvpJoint") : t("mvpOfGame")}>
             <span className="kicker" style={{ color: "#F0A83A" }}>{tie ? t("mvpJoint") : t("mvpOfGame")}</span>
             <div className="row" style={{ gap: 16, justifyContent: "center", flexWrap: "wrap" }}>
               {mvps.map((m) => (
                 <div key={m.playerId} className="stack center" style={{ gap: 6 }}>
-                  <span className="avatar display" aria-hidden="true" style={{ width: 72, height: 72, fontSize: 30, background: playerColor(view, m.playerId), boxShadow: "0 0 0 3px #1F1A2E, 0 0 0 5px #F0A83A" }}>
-                    {Array.from(view.players.find((p) => p.playerId === m.playerId)?.displayName ?? "?")[0]?.toUpperCase()}
-                  </span>
+                  <span className="avatar" aria-hidden="true" style={{ width: 72, height: 72, background: `#1A120C url(${seatPortrait(view.players.findIndex((p) => p.playerId === m.playerId))}) center / cover`, boxShadow: "0 0 0 3px #1A130E, 0 0 0 5px #C9A25A" }} />
                   <span style={{ fontSize: 17, fontWeight: 700 }}>{name(m.playerId)}</span>
                   <span className="tiny" style={{ color: "var(--text-2)" }}>{t("mvpPoints", { count: m.points })}</span>
                 </div>
@@ -189,7 +188,7 @@ export function GameOverScreen() {
         </div>
 
         <button type="button" className="row" onClick={() => push({ name: "recap", gameId })} style={{ gap: 12, padding: 14, border: 0, borderRadius: 16, background: "var(--surface)", color: "var(--text)", font: "inherit", textAlign: "start", cursor: "pointer" }}>
-          <span style={{ width: 40, height: 40, flex: "none", borderRadius: 12, background: "#1E2138", color: "#9C8CFF", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <span style={{ width: 40, height: 40, flex: "none", borderRadius: 12, background: "#2A1E14", color: "#C9A25A", display: "flex", alignItems: "center", justifyContent: "center" }}>
             <Icon name="clock" size={20} />
           </span>
           <span className="grow stack" style={{ gap: 0 }}>
@@ -235,10 +234,10 @@ export function GameOverScreen() {
       </Bar>
       <Toast message={toast} />
       {achievement && newAchievement && (
-        <div style={{ position: "fixed", inset: 0, zIndex: 20, background: "rgba(5,6,14,0.72)", display: "flex", alignItems: "flex-end" }}>
+        <div style={{ position: "fixed", inset: 0, zIndex: 20, background: "rgba(5,3,2,0.76)", display: "flex", alignItems: "flex-end" }}>
           <div role="dialog" aria-modal="true" aria-labelledby="achievement-title" className="stack center" style={{ width: "100%", boxSizing: "border-box", gap: 10, padding: "24px 16px 26px", borderRadius: "26px 26px 0 0", background: "var(--surface)", textAlign: "center" }}>
             <span className="kicker" style={{ color: "#F0A83A" }}>{t("achievementUnlocked")}</span>
-            <span style={{ width: 88, height: 88, borderRadius: 999, background: achievement.bg, color: achievement.fg, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: `0 0 0 6px #10122A, 0 0 0 8px ${achievement.fg}` }}>
+            <span style={{ width: 88, height: 88, borderRadius: 999, background: achievement.bg, color: achievement.fg, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: `0 0 0 6px #0B0806, 0 0 0 8px ${achievement.fg}` }}>
               <Icon name={achievement.icon} size={40} />
             </span>
             <h2 id="achievement-title" className="display" style={{ fontSize: 26, marginTop: 4 }}>{t(achievement.name)}</h2>

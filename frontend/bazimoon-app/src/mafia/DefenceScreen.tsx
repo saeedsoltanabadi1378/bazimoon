@@ -7,7 +7,8 @@ import { Icon } from "../ui/Icon";
 import { findPlayer } from "./roles";
 import { ActionError, ReconnectingBanner, RolePeek, TableNotices } from "./parts";
 import { GraveyardBar, SpectatorBanner } from "./Graveyard";
-import { HeaderTools, PlayerAvatar, TableRoster, VoiceHalo } from "./table";
+import { HeaderTools, PlayerAvatar, VoiceHalo } from "./table";
+import { TableScene } from "./TableScene";
 import { useClock, useSecondsLeft } from "./timers";
 
 const RING = 2 * Math.PI * 60;
@@ -37,19 +38,24 @@ export function DefenceScreen() {
   const live = voice.publishing && !voice.muted;
 
   return (
-    <Screen theme="day">
+    <Screen theme="day" className="screen--table">
       <PhaseHeader kicker={t("defenceKicker", { number: view.nightNumber })} title={t("defenceTitle")} right={<HeaderTools><RolePeek role={view.yourRole} alive={view.youAreAlive} /></HeaderTools>} />
+      <TableScene
+        nowId={discussion?.activePlayerId}
+        doneIds={completed}
+        dimIds={new Set(view.players.filter((p) => p.isAlive && !tied.includes(p.playerId)).map((p) => p.playerId))}
+      />
 
       <Body tight>
         <ReconnectingBanner />
         <SpectatorBanner />
         <TableNotices />
         {discussion && active && (
-          <section className="stack center" style={{ gap: 12, padding: "20px 16px", borderRadius: 24, background: "var(--surface)" }} aria-live="polite">
+          <section className="stack center speaker-card" style={{ gap: 12, padding: "20px 16px", borderRadius: 24, background: "var(--surface)" }} aria-live="polite">
             <span style={{ padding: "4px 10px", borderRadius: 999, background: "#3A2A16", color: "#F0A83A", fontSize: 12, fontWeight: 700, letterSpacing: 0.8, textTransform: "uppercase" }}>
               {t("defenceTitle")}
             </span>
-            <div style={{ position: "relative", width: 132, height: 132 }}>
+            <div className="speaker-card__ring" style={{ position: "relative", width: 132, height: 132 }}>
               <svg width="132" height="132" viewBox="0 0 132 132" aria-hidden="true" style={{ position: "absolute", inset: 0 }}>
                 <circle cx="66" cy="66" r="60" fill="none" stroke="#342C22" strokeWidth="7" />
                 <circle
@@ -73,14 +79,6 @@ export function DefenceScreen() {
             <div className="display num" style={{ fontSize: 34 }} aria-label={t("secondsLeft", { seconds })}>{clock(seconds)}</div>
           </section>
         )}
-
-        <TableRoster
-          heading={t("defenceOrder")}
-          note={t("defenceLengths", { seconds: total })}
-          order={tied}
-          nowId={discussion?.activePlayerId}
-          doneIds={completed}
-        />
 
         <section className="row" style={{ gap: 12, padding: 14, borderRadius: 18, background: "#241D12", border: "1px solid #4A3A22" }}>
           <span style={{ width: 44, height: 44, flex: "none", borderRadius: 999, background: "#3A2A16", color: "#F0A83A", display: "flex", alignItems: "center", justifyContent: "center" }}>
