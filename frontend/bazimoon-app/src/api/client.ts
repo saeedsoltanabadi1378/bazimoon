@@ -1,5 +1,6 @@
 import type {
   GraveyardMessage,
+  TableChatMessage,
   CreateGameResponse,
   GameView,
   MyGameResult,
@@ -224,6 +225,12 @@ export class BazimoonApiClient {
 
   setSpectatorMuted(gameId: string, spectatorId: string, muted: boolean) {
     return this.request<void>("PUT", `/api/games/${gameId}/spectators/${spectatorId}/muted`, { muted });
+  }
+
+  getTableChat(gameId: string) { return this.request<TableChatMessage[]>("GET", `/api/games/${gameId}/chat/messages`); }
+
+  sendTableChat(gameId: string, text: string) {
+    return this.request<TableChatMessage>("POST", `/api/games/${gameId}/chat/messages`, { text });
   }
 
   getGraveyard(gameId: string) { return this.request<GraveyardMessage[]>("GET", `/api/games/${gameId}/graveyard/messages`); }

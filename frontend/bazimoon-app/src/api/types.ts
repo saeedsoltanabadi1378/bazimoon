@@ -185,6 +185,8 @@ export interface GameView {
   bodyguardDiedId: string | null;
   /** Once the game has ended: the accolade picks so far, and your own. */
   accolades: AccoladesView | null;
+  /** What the whole table has been told so far. The same list for every viewer. */
+  log?: LogEntry[] | null;
 }
 
 export interface AccoladeCount {
@@ -204,6 +206,24 @@ export interface SpectatorView {
   id: string;
   username: string;
   muted: boolean;
+}
+
+/** One line of the public game log: who died, who was voted out, who left. Never who acted or what they are. */
+export interface LogEntry {
+  kind: "NightKill" | "NightSaved" | "NightQuiet" | "Shot" | "Silenced" | "VotedOut" | "VoteTied" | "VoteNone" | "Left" | "Removed" | "MayorRevealed" | "Inquiry";
+  round: number;
+  playerId: string | null;
+  voteRound: number;
+  tied: string[] | null;
+}
+
+/** A table chat message from a living player. */
+export interface TableChatMessage {
+  id: string;
+  senderId: string;
+  senderName: string;
+  text: string;
+  sentAt: string;
 }
 
 export interface GraveyardMessage {

@@ -32,6 +32,12 @@ function view(id) {
     yourStrikes: 0, removedForInactivity: [], mvps: phase === "Ended" ? [{ playerId: players[0].playerId, points: 42, breakdown: [{ kind: "teamWon", count: 1, points: 3 }] }] : null,
     silencedPlayerId: null, yourAbilityUsed: false, yourInquiryUsed: false, youSurvivedTheNight: false, yourShot: null, mafiaSilenceTargetId: null, jokerWinnerId: null,
     setup: { preset: "Classic", roles: ["Godfather", "Mafia", "Detective", "Doctor", "Villager"], minimumPlayers: 3, problem: null },
+    log: phase === "Lobby" ? [] : [
+      { kind: "VoteNone", round: 1, playerId: null, voteRound: 1, tied: null },
+      { kind: "NightKill", round: 1, playerId: players[4].playerId, voteRound: 1, tied: null },
+      { kind: "VoteTied", round: 1, playerId: null, voteRound: 1, tied: [players[1].playerId, players[2].playerId] },
+      { kind: "NightQuiet", round: 2, playerId: null, voteRound: 1, tied: null },
+    ],
     youAreSpectator: false, spectatorCount: 0, spectators: [], youCanUseGraveyard: false, youAreMutedInGraveyard: false,
   };
   return base;
@@ -54,6 +60,10 @@ const server = http.createServer((req, res) => {
   if (game && req.method === "GET") return send(200, view(decodeURIComponent(game[1])));
   if (req.url?.startsWith("/api/me/games/")) return send(200, { won: true, rating: 1516, ratingDelta: 16, isMvp: true, newAchievements: [] });
   if (req.url?.includes("/graveyard/messages")) return send(200, []);
+  if (req.url?.includes("/chat/messages")) return send(200, [
+    { id: "c1", senderId: players[1].playerId, senderName: players[1].displayName, text: "به نظرم کیان مشکوک است.", sentAt: new Date().toISOString() },
+    { id: "c2", senderId: players[2].playerId, senderName: players[2].displayName, text: "من فقط منطقی حرف زدم.", sentAt: new Date().toISOString() },
+  ]);
   send(200, {});
 });
 

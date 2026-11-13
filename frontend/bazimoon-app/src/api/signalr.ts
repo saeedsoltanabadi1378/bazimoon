@@ -1,6 +1,6 @@
 import type { MafiaReaction } from "../mafia/reactionTypes";
 import * as signalR from "@microsoft/signalr";
-import type { GraveyardMessage } from "./types";
+import type { GraveyardMessage, TableChatMessage } from "./types";
 
 /**
  * Connects to Bazimoon.Api's GameHub and joins a single game's broadcast group. The hub only
@@ -17,6 +17,7 @@ export async function connectToGameHub(
   onConnectionChange?: (state: "connected" | "reconnecting" | "closed") => void,
   onGraveyardMessage?: (message: GraveyardMessage) => void,
   onReaction?: (reaction: MafiaReaction) => void,
+  onTableChatMessage?: (message: TableChatMessage) => void,
 ): Promise<signalR.HubConnection> {
   const connection = new signalR.HubConnectionBuilder()
     .withUrl(`${baseUrl}/hubs/game`, {
@@ -32,6 +33,11 @@ export async function connectToGameHub(
   // Graveyard chat is the one payload pushed directly: the server sends it only to players who are out and spectators.
   connection.on("GraveyardMessage", (event: { gameId: string; message: GraveyardMessage }) => {
     if (event.gameId === gameId) onGraveyardMessage?.(event.message);
+  });
+
+  // Table chat goes to everyone at the table: it is only what a living player typed.
+  connection.on("TableChatMessage", (event: { gameId: string; message: TableChatMessage }) => {
+    if (event.gameId === gameId) onTableChatMessage?.(event.message);
   });
 
   connection.onreconnecting(() => onConnectionChange?.("reconnecting"));

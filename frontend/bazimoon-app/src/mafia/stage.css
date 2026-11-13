@@ -497,6 +497,235 @@ html[lang="fa"] .mafia-stage {
   z-index: -1;
 }
 
+/* ---------- game log and table chat ---------- */
+
+.table-talk__button {
+  position: relative;
+}
+
+.table-talk__badge {
+  position: absolute;
+  top: -5px;
+  inset-inline-end: -5px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: #c7332c;
+  color: #fff;
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 18px;
+  text-align: center;
+}
+
+.table-talk__badge--inline {
+  position: static;
+  display: inline-block;
+  margin-inline-start: 6px;
+}
+
+.table-talk {
+  --gold: #c9a25a;
+  --gold-hi: #f1d79a;
+  --gold-lo: #7a5a2a;
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  display: flex;
+  justify-content: flex-end;
+  background: rgb(4 3 2 / 62%);
+  color: #f3e9d6;
+  font-family: var(--font-body);
+}
+
+.table-talk__sheet {
+  display: flex;
+  flex-direction: column;
+  width: min(380px, 92%);
+  height: 100%;
+  padding: 0 12px;
+  border-inline-start: 1px solid var(--gold);
+  background: linear-gradient(#1a130e, #0c0806);
+}
+
+/* Opened over a turned stage: upright and full screen, so the keyboard sits the right way round. */
+.table-talk--upright {
+  z-index: 200;
+}
+
+.table-talk--upright .table-talk__sheet {
+  width: 100%;
+  padding-top: env(safe-area-inset-top, 0px);
+  border-inline-start: 0;
+}
+
+.table-talk__tabs {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  flex: none;
+  padding-top: 10px;
+  border-bottom: 1px solid var(--gold-lo);
+}
+
+.table-talk__tabs > button {
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid var(--gold-lo);
+  border-bottom: 0;
+  border-radius: 8px 8px 0 0;
+  background: transparent;
+  color: #b9aa90;
+  font-family: var(--font-noir, inherit);
+  font-size: 17px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.table-talk__tabs > button.on {
+  border-color: var(--gold);
+  background: #241a12;
+  color: #f3e9d6;
+}
+
+.table-talk__tabs > .table-talk__close {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  margin-inline-start: auto;
+  padding: 0;
+  border: 0;
+  color: var(--gold-hi);
+}
+
+.table-talk__list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 2px;
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.table-talk__empty,
+.table-talk__closed {
+  margin: 0;
+  color: #a8998a;
+  font-size: 13px;
+  text-align: center;
+}
+
+.table-talk__empty {
+  padding: 24px 0;
+}
+
+.table-talk__heading {
+  margin: 4px 0 2px;
+  color: var(--gold-hi);
+  font-family: var(--font-noir, inherit);
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.table-talk__line {
+  margin: 0;
+  padding-inline-start: 10px;
+  border-inline-start: 1px solid var(--gold-lo);
+  color: #e6dcc8;
+}
+
+.table-talk__message {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.table-talk__face {
+  width: 32px;
+  height: 32px;
+  flex: none;
+  border-radius: 50%;
+  background: #1a120c center / cover;
+  box-shadow: 0 0 0 1.5px var(--gold);
+}
+
+.table-talk__bubble {
+  min-width: 0;
+  padding: 6px 10px;
+  border-radius: 10px;
+  background: #241a12;
+  overflow-wrap: anywhere;
+}
+
+.table-talk__bubble b {
+  display: block;
+  color: var(--gold-hi);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.table-talk__message--mine {
+  flex-direction: row-reverse;
+}
+
+.table-talk__message--mine .table-talk__bubble {
+  background: #3a2c14;
+}
+
+.table-talk__compose {
+  flex: none;
+  padding: 10px 0 calc(12px + env(safe-area-inset-bottom, 0px));
+  border-top: 1px solid var(--gold-lo);
+}
+
+.table-talk__error {
+  margin: 0 0 8px;
+  color: #f08a7a;
+  font-size: 13px;
+}
+
+.table-talk__compose form {
+  display: flex;
+  gap: 8px;
+}
+
+.table-talk__compose input {
+  flex: 1;
+  min-width: 0;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--gold-lo);
+  border-radius: 8px;
+  background: #0d0907;
+  color: #f3e9d6;
+  font: inherit;
+  /* 16px keeps iPhones from zooming the page when the field takes focus. */
+  font-size: 16px;
+}
+
+.table-talk__compose form button {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  flex: none;
+  border: 0;
+  border-radius: 8px;
+  background: var(--gold);
+  color: #1a1206;
+  cursor: pointer;
+}
+
+.table-talk__compose form button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
 /* ---------- loading: the art comes in before the table is shown ---------- */
 
 .stage-loader {

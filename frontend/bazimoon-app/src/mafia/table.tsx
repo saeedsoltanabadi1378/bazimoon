@@ -11,6 +11,7 @@ import { LeaveGameButton, useRoleName } from "./parts";
 import { usePlayerNotes, type PlayerNote } from "./notes";
 import { PlayerSafetyButton } from "./PlayerSafety";
 import { SpectatorList } from "./Graveyard";
+import { TableTalkButton } from "./TableTalk";
 import "./table.css";
 
 /** A player's avatar: seat colour, a pattern and (optionally) the seat number, so colour is never the only cue. */
@@ -106,6 +107,7 @@ export function HeaderTools({ children }: { children?: ReactNode }) {
   return (
     <div className="row" style={{ gap: 6, flex: "none" }}>
       {children}
+      <TableTalkButton />
       <TableMenu />
     </div>
   );

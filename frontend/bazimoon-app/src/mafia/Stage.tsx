@@ -51,6 +51,20 @@ export function MafiaStage({ children }: { children: ReactNode }) {
     };
   }, [urls, ready]);
 
+  useEffect(() => {
+    const orientation = screen.orientation as (ScreenOrientation & { lock?: (orientation: string) => Promise<void> }) | undefined;
+    // Only installed apps and full-screen pages may lock; everywhere else this is refused and the
+    // stage is simply drawn sideways (see stage.css).
+    orientation?.lock?.("landscape").catch(() => undefined);
+    return () => {
+      try {
+        orientation?.unlock?.();
+      } catch {
+        // Nothing was locked.
+      }
+    };
+  }, []);
+
   const percent = Math.round((Math.min(loaded, urls.length) / urls.length) * 100);
 
   return (

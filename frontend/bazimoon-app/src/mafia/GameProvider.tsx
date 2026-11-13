@@ -2,7 +2,7 @@ import type { HubConnection } from "@microsoft/signalr";
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { ApiError, type BazimoonApiClient } from "../api/client";
 import { connectToGameHub } from "../api/signalr";
-import type { AccoladeKind, GameView, GraveyardMessage, NightActionType, PlayerSafetyTarget } from "../api/types";
+import type { AccoladeKind, GameView, GraveyardMessage, NightActionType, PlayerSafetyTarget, TableChatMessage } from "../api/types";
 import { useSession } from "../app/session";
 import { useLanguage } from "../i18n/LanguageContext";
 import { haptic } from "../lib/haptics";
@@ -52,6 +52,11 @@ export interface GameContextValue {
   graveyardUnread: number;
   markGraveyardRead(): void;
   sendGraveyard(text: string): Promise<boolean>;
+  /** Table chat, written by living players while the town is awake. */
+  tableChat: TableChatMessage[];
+  tableChatUnread: number;
+  markTableChatRead(): void;
+  sendTableChat(text: string): Promise<boolean>;
   reactions: MafiaReaction[];
   sendReaction(kind: ReactionKind): Promise<boolean>;
   blockedPlayers: PlayerSafetyTarget[];
@@ -93,6 +98,12 @@ export function GameProvider({ gameId, children }: { gameId: string; children: R
 
   const addGraveyard = useCallback((message: GraveyardMessage) => {
     setGraveyard((list) => (list.some((m) => m.id === message.id) ? list : [...list, message].slice(-200)));
+  }, []);
+
+  const [tableChat, setTableChat] = useState<TableChatMessage[]>([]);
+  const [tableChatSeen, setTableChatSeen] = useState(0);
+  const addTableChat = useCallback((message: TableChatMessage) => {
+    setTableChat((list) => (list.some((m) => m.id === message.id) ? list : [...list, message].slice(-200)));
   }, []);
 
   const refresh = useCallback(async () => {
@@ -142,7 +153,7 @@ export function GameProvider({ gameId, children }: { gameId: string; children: R
         recoveredTimer.current = window.setTimeout(() => setConnectionRecovered(false), 4000);
       }
       setLink(state);
-    }, addGraveyard, addReaction)
+    }, addGraveyard, addReaction, addTableChat)
       .then(async (hub) => {
         if (cancelled) {
           await hub.stop();
@@ -162,7 +173,28 @@ export function GameProvider({ gameId, children }: { gameId: string; children: R
       void hubRef.current?.stop();
       hubRef.current = null;
     };
-  }, [api, gameId, status, refresh, addGraveyard, addReaction, liveAttempt]);
+  }, [api, gameId, status, refresh, addGraveyard, addReaction, addTableChat, liveAttempt]);
+
+  // The table chat so far, loaded once the game starts and again after a reconnect. What was already
+  // there when you arrived counts as read.
+  const inGame = Boolean(view && view.phase !== "Lobby" && view.phase !== "RoleAssignment" && view.phase !== "Ended");
+  useEffect(() => {
+    if (status !== "ready" || !inGame) return;
+    let cancelled = false;
+    api.getTableChat(gameId)
+      .then((history) => {
+        if (cancelled || !Array.isArray(history)) return;
+        setTableChat((list) => {
+          const merged = [...history, ...list.filter((m) => !history.some((h) => h.id === m.id))].slice(-200);
+          setTableChatSeen((seen) => (list.length === 0 ? merged.length : seen));
+          return merged;
+        });
+      })
+      .catch((err) => console.warn("[Bazimoon] Failed to load the table chat", err));
+    return () => {
+      cancelled = true;
+    };
+  }, [api, gameId, status, inGame, hubVersion]);
 
   useEffect(() => () => {
     if (recoveredTimer.current !== null) window.clearTimeout(recoveredTimer.current);
@@ -186,6 +218,7 @@ export function GameProvider({ gameId, children }: { gameId: string; children: R
 
   const yourId = view?.yourPlayerId;
   const graveyardUnread = graveyard.slice(graveyardSeen).filter((m) => m.senderId !== yourId).length;
+  const tableChatUnread = tableChat.slice(tableChatSeen).filter((m) => m.senderId !== yourId).length;
 
   // A dropped hub means we may have missed updates — poll until it's back.
   useEffect(() => {
@@ -255,6 +288,20 @@ export function GameProvider({ gameId, children }: { gameId: string; children: R
       setActionError(null);
       try {
         addGraveyard(await api.sendGraveyard(gameId, text));
+        return true;
+      } catch (err) {
+        haptic.warn();
+        setActionError(err instanceof ApiError ? localizedGameError(err, t) : t("genericError"));
+        return false;
+      }
+    },
+    tableChat,
+    tableChatUnread,
+    markTableChatRead: () => setTableChatSeen(tableChat.length),
+    sendTableChat: async (text) => {
+      setActionError(null);
+      try {
+        addTableChat(await api.sendTableChat(gameId, text));
         return true;
       } catch (err) {
         haptic.warn();
