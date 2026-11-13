@@ -8,14 +8,14 @@ import { Icon } from "../ui/Icon";
 import { voteWeight, findPlayer } from "./roles";
 import { ActionError, ReconnectingBanner, VoiceStatusLine, TableNotices } from "./parts";
 import { GraveyardBar, SpectatorBanner } from "./Graveyard";
-import { HeaderTools, PlayerAvatar } from "./table";
-import { TableScene } from "./TableScene";
+import { HeaderTools } from "./table";
+import { TableScene, type SeatTag } from "./TableScene";
 import { PhasePanel } from "./TablePanel";
 import { haptic } from "../lib/haptics";
 
 export function VotingScreen() {
   const { view, busy, submitVote } = useGame();
-  const { t } = useLanguage();
+  const { t, n } = useLanguage();
   const [picked, setPicked] = useState<string | null>(null);
   if (!view) return null;
 
@@ -37,15 +37,13 @@ export function VotingScreen() {
   const alive = view.youAreAlive;
   const open = alive && !voted;
 
-  // Seat order, never re-sorted: rows that jump as votes arrive make people tap the wrong player.
-  const tally = candidates.map((p) => {
-    const ballots = votes.filter((v) => v.targetPlayerId === p.playerId);
-    const by = ballots.map((v) => name(v.voterPlayerId));
-    return { p, by, count: ballots.reduce((sum, v) => sum + voteWeight(view, v.voterPlayerId), 0) };
-  });
-  const lead = Math.max(0, ...tally.map((row) => row.count));
-
-  const outWatching = view.players.filter((p) => !p.isAlive).map((p) => p.displayName);
+  // The vote is read off the table: a count on each candidate, a line from each voter to their
+  // choice, and under each voter the seat they voted for.
+  const counts = new Map(candidates.map((p) => [p.playerId, votes.filter((v) => v.targetPlayerId === p.playerId).reduce((sum, v) => sum + voteWeight(view, v.voterPlayerId), 0)]));
+  const voteTags = new Map<string, SeatTag>(votes.map((v) => {
+    const seat = view.players.findIndex((p) => p.playerId === v.targetPlayerId);
+    return [v.voterPlayerId, { text: seat >= 0 ? t("seatVotedFor", { seat: n(seat + 1) }) : t("seatAbstained"), color: "#F1D79A" }];
+  }));
 
   let doneText = "";
   if (view.youAreSpectator) doneText = t("voteSpectatorNote");
@@ -75,7 +73,9 @@ export function VotingScreen() {
 
       <TableScene
         pick={open ? { selected: picked, canPick: (id) => !busy && id !== view.yourPlayerId && candidates.some((p) => p.playerId === id), onPick: setPicked } : null}
-        counts={new Map(tally.map((row) => [row.p.playerId, row.count]))}
+        counts={counts}
+        tags={voteTags}
+        links={votes.flatMap((v) => (v.targetPlayerId ? [{ fromId: v.voterPlayerId, toId: v.targetPlayerId }] : []))}
         dimIds={revote ? new Set(alivePlayers.filter((p) => !runoff.has(p.playerId)).map((p) => p.playerId)) : undefined}
         clock={{ label: revote ? t("revoteTitle") : t("townVote"), deadline: view.phaseDeadline }}
       />
@@ -85,64 +85,12 @@ export function VotingScreen() {
         <SpectatorBanner />
         <TableNotices />
         {revote && <p style={{ margin: 0, fontSize: 14, lineHeight: 1.5, color: "var(--text-2)" }}>{t("revoteRule")}</p>}
-        <div className="stack" style={{ gap: 8 }} role="radiogroup" aria-label={revote ? t("revoteTitle") : t("townVote")}>
-          {tally.map(({ p, by, count }) => {
-            const you = p.playerId === view.yourPlayerId;
-            const chosen = (open && picked === p.playerId) || mine?.targetPlayerId === p.playerId;
-            const locked = !open || you;
-            const pct = alivePlayers.length ? Math.round((count / alivePlayers.length) * 100) : 0;
-            return (
-              <button
-                key={p.playerId}
-                type="button"
-                role="radio"
-                aria-checked={chosen}
-                disabled={locked || busy}
-                className={`vote-candidate${chosen ? " vote-candidate--chosen" : ""}`}
-                onClick={() => {
-                  haptic.select();
-                  setPicked(p.playerId);
-                }}
-                style={{
-                  display: "flex", alignItems: "center", gap: 12, minHeight: 62, padding: "10px 12px", borderRadius: 16,
-                  border: `2px solid ${chosen ? "#F0A83A" : "#2B241B"}`, background: "#1F1A14", color: "var(--text)",
-                  textAlign: "start", cursor: locked ? "default" : "pointer", position: "relative", overflow: "hidden",
-                }}
-              >
-                <span className="vote-candidate__tally" style={{ position: "absolute", insetInlineStart: 0, top: 0, bottom: 0, width: `${pct}%`, background: count > 0 && count === lead ? "#4A3418" : "#33271A" }} />
-                <PlayerAvatar view={view} playerId={p.playerId} size={38} />
-                <span style={{ position: "relative", flex: 1, minWidth: 0 }}>
-                  <span style={{ display: "block", fontSize: 15, fontWeight: 600 }}>{name(p.playerId)}</span>
-                  <span style={{ display: "block", fontSize: 12, color: "var(--text-2)" }}>
-                    {by.length ? t("byVoters", { names: by.join(", ") }) : you ? t("you") : t("noVotesYet")}
-                  </span>
-                  {p.revealed && <span style={{ display: "block", fontSize: 11, fontWeight: 700, color: "#F0A83A" }}>{t("mayorTag")}</span>}
-                </span>
-                <span className="num" style={{ position: "relative", fontSize: 20, fontWeight: 700, color: count > 0 && count === lead ? "#F0A83A" : undefined }}>{count}</span>
-              </button>
-            );
-          })}
-        </div>
-
         {revote && roundOne.length > 0 && (
-          <section className="stack" style={{ gap: 8, padding: 14, borderRadius: 18, background: "#1A1611" }}>
-            <h2 style={{ fontSize: 14, fontWeight: 600 }}>{t("roundOne")}</h2>
+          <section className="stack" style={{ gap: 6, padding: 10, borderRadius: 12, background: "#1A1611" }}>
+            <h2 style={{ fontSize: 13, fontWeight: 600 }}>{t("roundOne")}</h2>
             <BallotRows ballots={roundOne} name={name} weight={(id) => voteWeight(view, id)} />
           </section>
         )}
-
-        <section className="stack" style={{ gap: 8, padding: 14, borderRadius: 18, background: "#1A1611" }} aria-live="polite">
-          <h2 style={{ fontSize: 14, fontWeight: 600 }}>{t("liveVoting")}</h2>
-          {votes.length === 0 && <div style={{ fontSize: 14, color: "var(--text-2)" }}>{t("waitingForVotes")}</div>}
-          {[...votes].reverse().map((v) => (
-            <div key={v.voterPlayerId} className="vote-event" style={{ fontSize: 14, color: "var(--text-2)" }}>
-              <b style={{ color: "var(--text)" }}>{name(v.voterPlayerId)}</b>{" "}
-              {v.targetPlayerId ? <>{t("votedFor")} <b style={{ color: "var(--text)" }}>{name(v.targetPlayerId)}</b></> : t("abstained")}
-            </div>
-          ))}
-          {outWatching.length > 0 && <div className="small muted">{t("outWatching", { names: outWatching.join(", ") })}</div>}
-        </section>
-
         <ActionError />
       </PhasePanel>
 

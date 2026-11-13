@@ -1,15 +1,13 @@
 import { useGame } from "./GameProvider";
 import { useLanguage } from "../i18n/LanguageContext";
-import { Bar, IconDisc, PhaseHeader, RoleTag, Screen } from "../ui/components";
-import { Icon } from "../ui/Icon";
-import { findPlayer, isMafiaRole, playerColor, roleMeta, voteWeight } from "./roles";
+import { Bar, PhaseHeader, Screen } from "../ui/components";
+import { findPlayer, isMafiaRole, roleMeta, voteWeight } from "./roles";
 import { ActionError, ReconnectingBanner, useRoleName, TableNotices } from "./parts";
 import { GraveyardBar, SpectatorBanner } from "./Graveyard";
 import { HeaderTools } from "./table";
-import { TableScene } from "./TableScene";
-import { PhasePanel } from "./TablePanel";
+import { TableScene, type SeatTag } from "./TableScene";
+import { PanelNote, PhasePanel } from "./TablePanel";
 import { BallotRows } from "./VotingScreen";
-import { RolePortrait } from "./RolePortrait";
 
 /**
  * Verdict after a vote. When the vote ended the game, `onSeeFinal` is set and the footer leads
@@ -17,7 +15,7 @@ import { RolePortrait } from "./RolePortrait";
  */
 export function ResultsScreen({ onSeeFinal }: { onSeeFinal?: () => void }) {
   const { view, busy, startNight } = useGame();
-  const { t } = useLanguage();
+  const { t, n } = useLanguage();
   const roleName = useRoleName();
   if (!view) return null;
 
@@ -37,10 +35,7 @@ export function ResultsScreen({ onSeeFinal }: { onSeeFinal?: () => void }) {
     if (b.targetPlayerId) rows.set(b.targetPlayerId, (rows.get(b.targetPlayerId) ?? 0) + voteWeight(view, b.voterPlayerId));
     else abstained++;
   }
-  const tally = [...rows.entries()].map(([id, n]) => ({ label: name(id), n })).sort((a, b) => b.n - a.n);
-  if (abstained) tally.push({ label: t("abstainRow"), n: abstained });
-  const top = tally.reduce((m, r) => Math.max(m, r.n), 0);
-  const voters = Math.max(1, ballots.length);
+  const counts = rows;
 
   const promotedName = view.players.find((p) => p.wasPromoted && p.isAlive);
   const meta = out?.revealedRole ? roleMeta[out.revealedRole] : null;
@@ -49,58 +44,48 @@ export function ResultsScreen({ onSeeFinal }: { onSeeFinal?: () => void }) {
   const headline = out ? t("verdictIn") : tie ? (revote ? t("tiedAgain") : t("tiedVote")) : t("noVerdict");
   const tiedNames = (result?.tiedPlayers ?? []).map((id) => name(id));
 
+  // Under each voter, the seat they voted for; under the player who went out, their role.
+  const seatTags = new Map<string, SeatTag>(ballots.map((b) => {
+    const seat = view.players.findIndex((p) => p.playerId === b.targetPlayerId);
+    return [b.voterPlayerId, { text: seat >= 0 ? t("seatVotedFor", { seat: n(seat + 1) }) : t("seatAbstained"), color: "#F1D79A" }];
+  }));
+  if (out?.revealedRole && meta) seatTags.set(out.playerId, { text: roleName(out.revealedRole), color: meta.fg });
+
   return (
     <Screen theme="day" className="screen--table">
       <PhaseHeader kicker={t("dayResults", { number: view.nightNumber })} title={headline} right={<HeaderTools />} />
-      {/* At a timed table the night starts by itself (GameState.ResultsSeconds on the server). */}
-      <TableScene clock={view.phase === "Results" ? { label: t("nightStartsIn"), deadline: view.phaseDeadline } : null} />
+      {/* The verdict sits on the table: who went out and what they were, the final count on each seat
+          and a line from every voter. At a timed table the night starts by itself, so the clock runs
+          under it (GameState.ResultsSeconds on the server). */}
+      <TableScene
+        spotId={out?.playerId}
+        counts={counts}
+        tags={seatTags}
+        links={ballots.flatMap((b) => (b.targetPlayerId ? [{ fromId: b.voterPlayerId, toId: b.targetPlayerId }] : []))}
+        clock={{
+          label: out ? (revote ? t("roundTwoVotedOut") : t("townVotedOut")) : headline,
+          name: out ? name(out.playerId)
+            : tie ? t(revote ? "bothRoundsTied" : "tiedBetween", { names: tiedNames.join(t("listAnd")) })
+            : t("noVotesCast"),
+          sub: out ? (out.revealedRole ? t("theyWereThe", { role: roleName(out.revealedRole) }) : view.rules.revealRolesOnDeath ? undefined : t("roleHidden"))
+            : revote ? t("nobodyOutToday") : t("nobodyEliminated"),
+          deadline: view.phase === "Results" ? view.phaseDeadline : null,
+          accent: out ? "#F08A7A" : "#F0A83A",
+        }}
+      />
 
       <PhasePanel>
         <ReconnectingBanner />
         <SpectatorBanner />
         <TableNotices />
-        {out ? (
-          <section className="stack center" style={{ gap: 12, padding: "24px 16px", borderRadius: 24, background: "var(--surface)", textAlign: "center" }}>
-            {out.revealedRole ? (
-              <RolePortrait role={out.revealedRole} size={128} full muted={!out.isAlive} />
-            ) : (
-              <span className="avatar display" aria-hidden="true" style={{ width: 96, height: 96, fontSize: 38, fontWeight: 800, background: playerColor(view, out.playerId), filter: "grayscale(0.6)" }}>
-                {Array.from(out.displayName)[0]?.toUpperCase()}
-              </span>
-            )}
-            <div style={{ fontSize: 15, color: "var(--text-2)" }}>{revote ? t("roundTwoVotedOut") : t("townVotedOut")}</div>
-            <div className="display" style={{ fontSize: 30, lineHeight: 1 }}>{name(out.playerId)}</div>
-            {meta && out.revealedRole && <RoleTag icon={meta.icon} bg={meta.bg} fg={meta.fg} label={t("theyWereThe", { role: roleName(out.revealedRole) })} />}
-            {!out.revealedRole && !view.rules.revealRolesOnDeath && <div className="small muted">{t("roleHidden")}</div>}
-            {view.jokerWinnerId === out.playerId && view.winCondition === "None" && (
-              <div className="stack" style={{ gap: 4, padding: "12px 14px", borderRadius: 14, background: "#1C1428", border: "1px solid #3D2E55", fontSize: 14, lineHeight: 1.5 }}>
-                <b>{t("jokerWonTitle", { name: name(out.playerId) })}</b>
-                <span style={{ color: "var(--text-2)" }}>{t("jokerGoesOnText")}</span>
-              </div>
-            )}
-          </section>
-        ) : (
-          <section className="stack center" style={{ gap: 10, padding: "28px 16px", borderRadius: 24, background: "var(--surface)", textAlign: "center" }}>
-            <IconDisc icon="scales" size={72} iconSize={32} bg="#2B241B" fg="#F0A83A" strokeWidth={2} />
-            <div style={{ fontSize: 18, fontWeight: 600 }}>
-              {tie
-                ? t(revote ? "bothRoundsTied" : "tiedBetween", { names: tiedNames.join(t("listAnd")) })
-                : t("noVotesCast")}
-            </div>
-            <div style={{ fontSize: 14, color: "var(--text-2)" }}>{revote ? t("nobodyOutToday") : t("nobodyEliminated")}</div>
-          </section>
+        {out && view.jokerWinnerId === out.playerId && view.winCondition === "None" && (
+          <PanelNote icon="star" title={t("jokerWonTitle", { name: name(out.playerId) })}>{t("jokerGoesOnText")}</PanelNote>
         )}
 
         {result?.godfatherPromoted && (
-          <div className="row" style={{ gap: 10, alignItems: "flex-start", padding: "12px 14px", borderRadius: 14, background: "#2A1418", border: "1px solid #4A2620", fontSize: 14, lineHeight: 1.45 }}>
-            <span style={{ marginTop: 2 }}><Icon name="godfather" size={18} color="#F08A7A" /></span>
-            <span>
-              {t("godfatherFallen")}{" "}
-              <span style={{ color: "var(--text-2)" }}>
-                {isMafiaRole(view.yourRole) && promotedName ? t("newGodfatherIs", { name: name(promotedName.playerId) }) : t("onlyMafiaSees")}
-              </span>
-            </span>
-          </div>
+          <PanelNote icon="godfather" title={t("godfatherFallen")}>
+            {isMafiaRole(view.yourRole) && promotedName ? t("newGodfatherIs", { name: name(promotedName.playerId) }) : t("onlyMafiaSees")}
+          </PanelNote>
         )}
 
         {revote && (
@@ -115,21 +100,6 @@ export function ResultsScreen({ onSeeFinal }: { onSeeFinal?: () => void }) {
               </section>
             ))}
           </div>
-        )}
-
-        {!revote && tally.length > 0 && (
-          <section className="stack" style={{ gap: 8 }}>
-            <h2 style={{ fontSize: 14, fontWeight: 600 }}>{t("finalTally")}</h2>
-            {tally.map((row) => (
-              <div key={row.label} className="row">
-                <span style={{ width: 86, fontSize: 14, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{row.label}</span>
-                <div className="grow" style={{ height: 10, borderRadius: 999, background: "#2B241B", overflow: "hidden" }}>
-                  <div style={{ width: `${Math.round((row.n / voters) * 100)}%`, height: 10, background: row.n === top ? "#F0A83A" : "#6B5A3E" }} />
-                </div>
-                <span className="num" style={{ width: 20, textAlign: "end", fontSize: 14, fontWeight: 600 }}>{row.n}</span>
-              </div>
-            ))}
-          </section>
         )}
 
         <ActionError />

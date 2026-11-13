@@ -34,6 +34,12 @@ export interface SeatTag {
   color?: string;
 }
 
+/** A standing line from one seat to another: a vote, shown for as long as the vote stands. */
+export interface SeatLink {
+  fromId: string;
+  toId: string;
+}
+
 /** The countdown everyone is watching, drawn on the felt in the middle of the table. */
 export interface TableClock {
   /** What is being timed: a speaker's turn, a challenge, the vote. */
@@ -105,7 +111,7 @@ function seatPoints(count: number, rx: number, ry: number): [number, number][] {
  * The table with everyone seated around it, the same on every phase: who is alive, out, speaking,
  * silenced or a revealed Mayor. Seats are tapped to pick a player, or to open your private note.
  */
-export function TableScene({ pick, tags, counts, nowId, doneIds, dimIds, clock }: {
+export function TableScene({ pick, tags, counts, nowId, doneIds, dimIds, clock, links, spotId }: {
   pick?: SeatPick | null;
   tags?: ReadonlyMap<string, SeatTag>;
   /** Votes against each player, shown on their seat. */
@@ -116,6 +122,10 @@ export function TableScene({ pick, tags, counts, nowId, doneIds, dimIds, clock }
   /** Seats that take no part right now (a re-vote is only between the tied players). */
   dimIds?: ReadonlySet<string>;
   clock?: TableClock | null;
+  /** Who voted for whom, drawn across the table. */
+  links?: readonly SeatLink[];
+  /** The seat the verdict is about. */
+  spotId?: string | null;
 }) {
   const { view, reactions, seatLines, blockedPlayers, sendReaction, reactionCooling, link } = useGame();
   const canReact = useCanReact();
@@ -164,15 +174,24 @@ export function TableScene({ pick, tags, counts, nowId, doneIds, dimIds, clock }
     const shown = bubbles.get(line.senderId);
     if (!shown || line.at > shown.at) bubbles.set(line.senderId, { key: line.id, at: line.at, text: line.text });
   }
-  // An aimed reaction also draws a line across the table to the player it is about.
-  const aims = points.length === 0 ? [] : shownReactions.flatMap((r) => {
-    const from = points[seatOf.get(r.senderId) ?? -1];
-    const to = points[seatOf.get(r.targetId ?? "") ?? -1];
-    if (!from || !to || bubbles.get(r.senderId)?.key !== r.id) return [];
+  // A line across the table from one seat to another, stopping short of both portraits.
+  const segment = (fromId: string | null | undefined, toId: string | null | undefined) => {
+    const from = points[seatOf.get(fromId ?? "") ?? -1];
+    const to = points[seatOf.get(toId ?? "") ?? -1];
+    if (!from || !to || from === to) return null;
     const length = Math.hypot(to[0] - from[0], to[1] - from[1]) || 1;
     const inset = Math.min(face * 0.62, length / 3);
     const [ux, uy] = [(to[0] - from[0]) / length, (to[1] - from[1]) / length];
-    return [{ id: r.id, targetId: r.targetId!, color: reactionColors[r.kind], x1: w / 2 + from[0] + ux * inset, y1: h / 2 + from[1] + uy * inset, x2: w / 2 + to[0] - ux * inset, y2: h / 2 + to[1] - uy * inset }];
+    return { x1: w / 2 + from[0] + ux * inset, y1: h / 2 + from[1] + uy * inset, x2: w / 2 + to[0] - ux * inset, y2: h / 2 + to[1] - uy * inset };
+  };
+  // An aimed reaction also draws a line across the table to the player it is about.
+  const aims = shownReactions.flatMap((r) => {
+    const line = bubbles.get(r.senderId)?.key === r.id ? segment(r.senderId, r.targetId) : null;
+    return line ? [{ id: r.id, targetId: r.targetId!, color: reactionColors[r.kind], ...line }] : [];
+  });
+  const voteLines = (links ?? []).flatMap((link) => {
+    const line = segment(link.fromId, link.toId);
+    return line ? [{ id: `${link.fromId}-${link.toId}`, ...line }] : [];
   });
   const aimedAt = new Map(aims.map((aim) => [aim.targetId, aim.color]));
   const seatName = (id: string | null | undefined) => {
@@ -183,6 +202,16 @@ export function TableScene({ pick, tags, counts, nowId, doneIds, dimIds, clock }
   return (
     <section ref={ref} className="table-scene" dir="ltr" aria-label={t("players")}>
       <img className="table-scene__table" src={tableArt.table} alt="" draggable={false} style={{ width: tableWidth, height: tableHeight }} />
+      {voteLines.length > 0 && (
+        <svg className="table-links" width={w} height={h} aria-hidden="true">
+          {voteLines.map((line) => (
+            <g key={line.id}>
+              <line x1={line.x1} y1={line.y1} x2={line.x2} y2={line.y2} />
+              <circle cx={line.x2} cy={line.y2} r={3.5} />
+            </g>
+          ))}
+        </svg>
+      )}
       {aims.length > 0 && (
         <svg className="table-aims" width={w} height={h} aria-hidden="true">
           {aims.map((aim) => (
@@ -223,7 +252,7 @@ export function TableScene({ pick, tags, counts, nowId, doneIds, dimIds, clock }
         const aimColor = aimedAt.get(id);
         // You hear your own mic state; for everyone else the floor decides who can be heard.
         const micLive = now && (you ? voice.publishing && !voice.muted : true);
-        const state = !p.isAlive ? t("outTag") : tag ? tag.text : now ? t("now") : silenced ? t("silencedTag") : mayor ? t("roleMayor") : done ? t("done") : p.isBot ? t("botTag") : t("aliveTag");
+        const state = tag ? tag.text : !p.isAlive ? t("outTag") : now ? t("now") : silenced ? t("silencedTag") : mayor ? t("roleMayor") : done ? t("done") : p.isBot ? t("botTag") : t("aliveTag");
         const classes = ["table-seat"];
         if (pickable || notable) classes.push("table-seat--tap");
         if (!p.isAlive) classes.push("table-seat--out");
@@ -234,6 +263,7 @@ export function TableScene({ pick, tags, counts, nowId, doneIds, dimIds, clock }
         if (p.isAlive && !pickable && (dimIds?.has(id) || (pick && !you))) classes.push("table-seat--dim");
         if (bubble) classes.push("table-seat--saying");
         if (aimColor) classes.push("table-seat--aimed");
+        if (spotId === id) classes.push("table-seat--spot");
         return (
           <button
             key={id}
@@ -266,7 +296,7 @@ export function TableScene({ pick, tags, counts, nowId, doneIds, dimIds, clock }
             </span>
             <span className="table-seat__plate">
               <span className="table-seat__name" dir="auto">{you ? t("you") : p.displayName}</span>
-              {(!compact || tag) && <span className="table-seat__state" style={tag?.color && p.isAlive ? { color: tag.color } : undefined}>{state}</span>}
+              {(!compact || tag) && <span className="table-seat__state" style={tag?.color ? { color: tag.color } : undefined}>{state}</span>}
             </span>
             {bubble && (
               // Bubbles open towards the middle of the table, so they never run off its edge.

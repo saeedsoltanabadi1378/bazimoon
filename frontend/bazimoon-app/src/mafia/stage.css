@@ -651,6 +651,36 @@ html[lang="fa"] .table-clock__label {
   100% { opacity: 0; }
 }
 
+/* Votes: a thin standing line from each voter to the player they voted for. */
+.table-links {
+  position: absolute;
+  inset: 0;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.table-links line {
+  stroke: var(--gold-hi);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  opacity: 0.5;
+}
+
+.table-links circle {
+  fill: var(--gold-hi);
+  opacity: 0.85;
+}
+
+/* The seat a verdict is about. */
+.table-seat--spot .table-seat__face {
+  filter: grayscale(0.5) brightness(0.85);
+  box-shadow: 0 0 0 3px #e0352f, 0 0 20px 6px rgb(224 53 47 / 65%), 0 6px 14px rgb(0 0 0 / 80%);
+}
+
+.table-seat--spot .table-seat__name {
+  color: #f3e9d6;
+}
+
 /* An aimed reaction: a line from the sender to the player it is about, who lights up in its colour. */
 .table-aims {
   position: absolute;
