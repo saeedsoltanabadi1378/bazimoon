@@ -1,0 +1,330 @@
+/* Home: the Mafia marquee, the puzzle rail, the together grid and the league strip. */
+
+/* On the narrowest phones the streak and profile need the room: the tiles stand in for the name. */
+@media (max-width: 359px) {
+  .home-wordmark {
+    display: none;
+  }
+}
+
+.home-hero {
+  position: relative;
+  display: flex;
+  flex: none;
+  min-height: 330px;
+  border-radius: 26px;
+  overflow: hidden;
+  background: #1a0f10 url("/images/mafia-table/room.webp") 18% 30% / auto 135% no-repeat;
+  color: #fff;
+}
+
+.home-hero::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgb(12 7 8 / 25%) 0%, rgb(12 7 8 / 10%) 28%, rgb(12 7 8 / 82%) 62%, rgb(12 7 8 / 96%) 84%),
+    linear-gradient(90deg, rgb(12 7 8 / 75%), rgb(12 7 8 / 0%) 65%);
+}
+
+[dir="rtl"] .home-hero::before {
+  background:
+    linear-gradient(180deg, rgb(12 7 8 / 25%) 0%, rgb(12 7 8 / 10%) 28%, rgb(12 7 8 / 82%) 62%, rgb(12 7 8 / 96%) 84%),
+    linear-gradient(270deg, rgb(12 7 8 / 75%), rgb(12 7 8 / 0%) 65%);
+}
+
+.home-hero__man {
+  position: absolute;
+  bottom: -34px;
+  inset-inline-end: -84px;
+  height: 320px;
+  width: auto;
+  pointer-events: none;
+  filter: drop-shadow(0 0 30px rgb(0 0 0 / 80%));
+  -webkit-mask-image: linear-gradient(180deg, #000 70%, transparent 96%);
+  mask-image: linear-gradient(180deg, #000 70%, transparent 96%);
+}
+
+[dir="rtl"] .home-hero__man {
+  transform: scaleX(-1);
+}
+
+.home-hero__in {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px;
+}
+
+.home-hero__chip {
+  align-self: flex-start;
+  max-width: 100%;
+  padding: 7px 12px;
+  background: rgb(10 8 10 / 60%);
+  border: 1px solid rgb(255 255 255 / 16%);
+  color: #fff;
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+}
+
+.home-hero__chip > span:last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.home-live {
+  width: 8px;
+  height: 8px;
+  flex: none;
+  border-radius: 999px;
+  background: #6fe08a;
+  box-shadow: 0 0 0 4px rgb(111 224 138 / 20%);
+}
+
+.home-hero__title {
+  margin: 0;
+  font-size: 44px;
+  line-height: 1;
+  text-shadow: 0 2px 20px rgb(0 0 0 / 70%);
+}
+
+.home-hero__sub {
+  max-width: 190px;
+  font-size: 14px;
+  color: #e6d8c9;
+}
+
+.home-hero__face {
+  width: 28px;
+  height: 28px;
+  margin-inline-end: -8px;
+  border-radius: 999px;
+  border: 2px solid #17121a;
+  color: #101218;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.home-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 0 20px;
+  border-radius: 999px;
+  border: 0;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: transform 80ms ease;
+}
+
+.home-btn:active {
+  transform: scale(0.97);
+}
+
+.home-btn--gold {
+  background: #f0a83a;
+  color: #1a1206;
+}
+
+.home-btn--glass {
+  background: rgb(255 255 255 / 12%);
+  border: 1px solid rgb(255 255 255 / 22%);
+  color: #fff;
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+}
+
+.home-btn--sm {
+  min-height: 36px;
+  padding: 0 16px;
+  font-size: 14px;
+}
+
+.home-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #f0a83a;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* The rail bleeds to the screen edges so the next card peeks in. */
+.home-rail {
+  display: flex;
+  gap: 10px;
+  margin-inline: -16px;
+  padding-inline: 16px;
+  padding-block: 4px;
+  overflow-x: auto;
+  scroll-snap-type: x proximity;
+  scroll-padding-inline: 16px;
+  scrollbar-width: none;
+}
+
+.home-rail::-webkit-scrollbar {
+  display: none;
+}
+
+.home-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 150px;
+  flex: none;
+  padding: 12px;
+  border: 0;
+  border-radius: 22px;
+  color: var(--text);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+  scroll-snap-align: start;
+}
+
+.home-card__board {
+  height: 126px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.home-card__meta {
+  font-size: 13px;
+  color: rgb(255 255 255 / 66%);
+}
+
+.home-ladder {
+  display: grid;
+  gap: 4px;
+  width: 112px;
+}
+
+.home-ladder > span {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  gap: 4px;
+}
+
+.home-ladder b {
+  aspect-ratio: 1;
+  border-radius: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 700;
+  background: rgb(240 168 58 / 90%);
+  color: #1a1206;
+}
+
+.home-ladder .is-todo b {
+  background: transparent;
+  border: 1.5px dashed rgb(240 168 58 / 45%);
+}
+
+.home-ladder .is-goal b {
+  background: rgb(240 168 58 / 18%);
+  color: #f0a83a;
+}
+
+.home-merge {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 5px;
+  width: 116px;
+}
+
+.home-merge b {
+  aspect-ratio: 1;
+  border-radius: 7px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+  background: rgb(255 255 255 / 7%);
+}
+
+.home-chip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 10px;
+  border: 0;
+  border-radius: 18px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+.home-chip__icon {
+  width: 42px;
+  height: 42px;
+  flex: none;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.home-chip__text {
+  flex: 1;
+  min-width: 0;
+}
+
+.home-chip__text > span {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.home-chip__text > span + span {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  white-space: normal;
+  line-height: 1.35;
+}
+
+.home-strip {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 14px;
+  border: 0;
+  border-radius: 18px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
