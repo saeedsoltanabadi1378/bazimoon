@@ -7,6 +7,7 @@ Disallow: /t/
 Disallow: /g/
 Disallow: /couple/
 Disallow: /ef/
+Disallow: /sh/
 Disallow: /f/
 Disallow: /friends
 

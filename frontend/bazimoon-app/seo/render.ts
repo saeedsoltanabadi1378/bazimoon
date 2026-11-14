@@ -318,6 +318,31 @@ export function searchPages(): [string, string][] {
   return out
 }
 
+/**
+ * Plain text and links for the app's own page (/), in both languages. It sits inside #root, so the
+ * app replaces it on start; crawlers and browsers without JavaScript get the games and their pages.
+ */
+export function homeFallback(): string {
+  const block = (lang: Lang) => {
+    const s = site[lang]
+    const links = [
+      ...games.map((g) => `<li><a href="${gamePath(lang, g.slug)}">${esc(g[lang].name)}</a>: ${esc(g[lang].line)}</li>`),
+      `<li><a href="${guidesPath(lang)}">${esc(s.guides)}</a></li>`,
+    ]
+    return `<section lang="${lang}" dir="${lang === 'fa' ? 'rtl' : 'ltr'}">
+<h1><a href="${landingPath(lang)}">${esc(s.h1)}</a></h1>
+<p>${esc(s.intro)}</p>
+<ul>
+${links.join('\n')}
+</ul>
+</section>`
+  }
+  return `<div id="seo-home" style="max-width:720px;margin:0 auto;padding:16px;color:#EDEBF5;line-height:1.7">
+${block('fa')}
+${block('en')}
+</div>`
+}
+
 /** Sitemap with the app root, both landing pages and every game page, each with its language twin. */
 export function sitemap(): string {
   const entry = (loc: string, en: string, fa: string, priority: string) => `  <url>

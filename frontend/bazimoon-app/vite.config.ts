@@ -1,14 +1,16 @@
 import { defineConfig, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
-import { searchPages, sitemap } from './seo/render.ts'
+import { homeFallback, searchPages, sitemap } from './seo/render.ts'
 
 // Writes the static search pages (/en/, /fa/, /en/<game>/, /fa/<game>/) and sitemap.xml, so Google
 // has real text to index in both languages. Their Play links open the app (see readDeepLink).
+// The app's own page (/) also carries the games and links to their search pages in its HTML.
 function searchPagesPlugin(): Plugin {
   return {
     name: 'bazimoon-search-pages',
     apply: 'build',
+    transformIndexHtml: (html) => html.replace('<!--seo-home-->', homeFallback()),
     generateBundle() {
       for (const [fileName, source] of searchPages()) this.emitFile({ type: 'asset', fileName, source })
       this.emitFile({ type: 'asset', fileName: 'sitemap.xml', source: sitemap() })
