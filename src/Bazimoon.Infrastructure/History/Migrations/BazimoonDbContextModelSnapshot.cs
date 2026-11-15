@@ -296,6 +296,265 @@ namespace Bazimoon.Infrastructure.History.Migrations
                     b.ToTable("games", (string)null);
                 });
 
+            modelBuilder.Entity("Bazimoon.Infrastructure.Hub.ClanBanRecord", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<Guid>("ClanId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("ClanId", "UserId")
+                        .IsUnique();
+
+                    b.ToTable("clan_bans", (string)null);
+                });
+
+            modelBuilder.Entity("Bazimoon.Infrastructure.Hub.ClanEventRecord", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<bool>("Cancelled")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid>("ClanId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("CreatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("GameId")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("HourReminderSent")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("NextScheduled")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<bool>("RepeatWeekly")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("Seats")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("StartReminderSent")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime>("StartsAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Cancelled", "StartsAt");
+
+                    b.HasIndex("ClanId", "StartsAt");
+
+                    b.ToTable("clan_events", (string)null);
+                });
+
+            modelBuilder.Entity("Bazimoon.Infrastructure.Hub.ClanJoinRequestRecord", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<Guid>("ClanId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("ClanId", "UserId")
+                        .IsUnique();
+
+                    b.ToTable("clan_join_requests", (string)null);
+                });
+
+            modelBuilder.Entity("Bazimoon.Infrastructure.Hub.ClanMemberRecord", b =>
+                {
+                    b.Property<Guid>("ClanId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("JoinedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<long>("LastReadMessageId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Role")
+                        .IsRequired()
+                        .HasMaxLength(8)
+                        .HasColumnType("character varying(8)");
+
+                    b.HasKey("ClanId", "UserId");
+
+                    b.HasIndex("UserId")
+                        .IsUnique();
+
+                    b.ToTable("clan_members", (string)null);
+                });
+
+            modelBuilder.Entity("Bazimoon.Infrastructure.Hub.ClanMessageRecord", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<Guid>("ClanId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsAnnouncement")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Text")
+                        .IsRequired()
+                        .HasMaxLength(400)
+                        .HasColumnType("character varying(400)");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("ClanId", "Id");
+
+                    b.HasIndex("ClanId", "IsAnnouncement", "Id");
+
+                    b.ToTable("clan_messages", (string)null);
+                });
+
+            modelBuilder.Entity("Bazimoon.Infrastructure.Hub.ClanRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Bio")
+                        .HasMaxLength(140)
+                        .HasColumnType("character varying(140)");
+
+                    b.Property<string>("Color")
+                        .IsRequired()
+                        .HasMaxLength(9)
+                        .HasColumnType("character varying(9)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Emblem")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<string>("InviteCode")
+                        .IsRequired()
+                        .HasMaxLength(8)
+                        .HasColumnType("character varying(8)");
+
+                    b.Property<bool>("IsListed")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime?>("LastTableNoticeAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(24)
+                        .HasColumnType("character varying(24)");
+
+                    b.Property<string>("NameKey")
+                        .IsRequired()
+                        .HasMaxLength(24)
+                        .HasColumnType("character varying(24)");
+
+                    b.Property<Guid>("OwnerId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("InviteCode")
+                        .IsUnique();
+
+                    b.HasIndex("IsListed");
+
+                    b.HasIndex("NameKey")
+                        .IsUnique();
+
+                    b.ToTable("clans", (string)null);
+                });
+
+            modelBuilder.Entity("Bazimoon.Infrastructure.Hub.ClanRsvpRecord", b =>
+                {
+                    b.Property<long>("EventId")
+                        .HasColumnType("bigint");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Answer")
+                        .IsRequired()
+                        .HasMaxLength(8)
+                        .HasColumnType("character varying(8)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("EventId", "UserId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("clan_rsvps", (string)null);
+                });
+
             modelBuilder.Entity("Bazimoon.Infrastructure.Hub.CoupleAnswerRecord", b =>
                 {
                     b.Property<long>("Id")
@@ -487,6 +746,9 @@ namespace Bazimoon.Infrastructure.History.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<Guid?>("ClanId")
+                        .HasColumnType("uuid");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -506,6 +768,8 @@ namespace Bazimoon.Infrastructure.History.Migrations
                         .HasColumnType("character varying(40)");
 
                     b.HasKey("GameId");
+
+                    b.HasIndex("ClanId");
 
                     b.HasIndex("InviteCode")
                         .IsUnique();
@@ -969,6 +1233,90 @@ namespace Bazimoon.Infrastructure.History.Migrations
                         .IsRequired();
 
                     b.Navigation("GameRecord");
+                });
+
+            modelBuilder.Entity("Bazimoon.Infrastructure.Hub.ClanBanRecord", b =>
+                {
+                    b.HasOne("Bazimoon.Infrastructure.Hub.ClanRecord", null)
+                        .WithMany()
+                        .HasForeignKey("ClanId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Bazimoon.Infrastructure.Identity.UserRecord", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Bazimoon.Infrastructure.Hub.ClanEventRecord", b =>
+                {
+                    b.HasOne("Bazimoon.Infrastructure.Hub.ClanRecord", null)
+                        .WithMany()
+                        .HasForeignKey("ClanId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Bazimoon.Infrastructure.Hub.ClanJoinRequestRecord", b =>
+                {
+                    b.HasOne("Bazimoon.Infrastructure.Hub.ClanRecord", null)
+                        .WithMany()
+                        .HasForeignKey("ClanId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Bazimoon.Infrastructure.Identity.UserRecord", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Bazimoon.Infrastructure.Hub.ClanMemberRecord", b =>
+                {
+                    b.HasOne("Bazimoon.Infrastructure.Hub.ClanRecord", null)
+                        .WithMany()
+                        .HasForeignKey("ClanId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Bazimoon.Infrastructure.Identity.UserRecord", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Bazimoon.Infrastructure.Hub.ClanMessageRecord", b =>
+                {
+                    b.HasOne("Bazimoon.Infrastructure.Hub.ClanRecord", null)
+                        .WithMany()
+                        .HasForeignKey("ClanId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Bazimoon.Infrastructure.Identity.UserRecord", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Bazimoon.Infrastructure.Hub.ClanRsvpRecord", b =>
+                {
+                    b.HasOne("Bazimoon.Infrastructure.Hub.ClanEventRecord", null)
+                        .WithMany()
+                        .HasForeignKey("EventId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Bazimoon.Infrastructure.Identity.UserRecord", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Bazimoon.Infrastructure.Hub.FriendshipRecord", b =>

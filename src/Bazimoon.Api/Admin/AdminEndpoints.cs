@@ -16,7 +16,7 @@ namespace Bazimoon.Api.Admin;
 public static class AdminEndpoints
 {
     private const string CsrfCookie = "bazimoon-admin-csrf";
-    private static bool ValidCsrf(HttpContext c) => c.Request.Cookies.TryGetValue(CsrfCookie, out var cookie) && c.Request.Headers.TryGetValue("X-CSRF-Token", out var header) && CryptographicOperations.FixedTimeEquals(System.Text.Encoding.UTF8.GetBytes(cookie), System.Text.Encoding.UTF8.GetBytes(header.ToString()));
+    internal static bool ValidCsrf(HttpContext c) => c.Request.Cookies.TryGetValue(CsrfCookie, out var cookie) && c.Request.Headers.TryGetValue("X-CSRF-Token", out var header) && CryptographicOperations.FixedTimeEquals(System.Text.Encoding.UTF8.GetBytes(cookie), System.Text.Encoding.UTF8.GetBytes(header.ToString()));
 
     public static void MapAdminEndpoints(this IEndpointRouteBuilder app)
     {

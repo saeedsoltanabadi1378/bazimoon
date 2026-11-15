@@ -7,11 +7,12 @@ import { Icon } from "../ui/Icon";
 import { TabBar } from "../ui/TabBar";
 import { useHub, useLoad } from "./HubData";
 import { CoupleHomeCard } from "../couple/CoupleHomeCard";
+import { ClanCard } from "../clans/ClanCard";
 import type { Table } from "../api/hub";
 
 const faceColors = ["#F0A83A", "#5FD0BE", "#B79CF2", "#8FA8FF", "#E9D8A6", "#F08A7A"];
 
-/** Together tab: Couple Quiz, then Mafia tables (public ones, or the ones you host or sit at), a code box
+/** Together tab: Couple Quiz, your clan, then Mafia tables (public ones, or the ones you host or sit at), a code box
  * and "Create a table". Opening an invite link (/t/CODE) lands here with the code filled in. */
 export function MafiaTablesScreen({ code }: { code?: string }) {
   const { t } = useLanguage();
@@ -71,6 +72,8 @@ export function MafiaTablesScreen({ code }: { code?: string }) {
         {isGameOn("couple") && <CoupleHomeCard />}
 
         {mafiaOn && <>
+
+        <ClanCard />
 
         <div className="row" style={{ gap: 10, paddingTop: 4 }}>
           <span style={{ width: 32, height: 32, borderRadius: 10, background: "#2E2340", color: "#B79CF2", display: "flex", alignItems: "center", justifyContent: "center" }}>

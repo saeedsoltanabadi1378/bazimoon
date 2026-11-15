@@ -6,7 +6,8 @@ function appBase() {
 /**
  * Shareable link into the app. Start parameters map to paths:
  * <c>t_CODE</c> → /t/CODE (Mafia table), <c>couple_TOKEN</c> → /couple/TOKEN, <c>couple</c> → /couple,
- * <c>ef_CODE</c> → /ef/CODE (Esm-Famil room), <c>f_CODE</c> → /f/CODE (friend link), a game id → /g/ID.
+ * <c>ef_CODE</c> → /ef/CODE (Esm-Famil room), <c>f_CODE</c> → /f/CODE (friend link), <c>c_CODE</c> → /c/CODE
+ * (clan invite), a game id → /g/ID.
  */
 export function appLink(startParam?: string) {
   return `${appBase()}${startPath(startParam)}`;
@@ -20,6 +21,7 @@ function startPath(start?: string) {
   if (start.startsWith("ef_")) return `/ef/${encodeURIComponent(start.slice(3))}`;
   if (start.startsWith("sh_")) return `/sh/${encodeURIComponent(start.slice(3))}`;
   if (start.startsWith("f_")) return `/f/${encodeURIComponent(start.slice(2))}`;
+  if (start.startsWith("c_")) return `/c/${encodeURIComponent(start.slice(2))}`;
   return `/g/${encodeURIComponent(start)}`;
 }
 
@@ -32,6 +34,8 @@ export type DeepLink =
   | { kind: "shelem"; code: string }
   | { kind: "friend"; code: string }
   | { kind: "friends" }
+  | { kind: "clanInvite"; code: string }
+  | { kind: "clan" }
   | { kind: "play"; game: string };
 
 /** Reads the deep link the app was opened with from its path. */
@@ -45,6 +49,9 @@ export function readDeepLink(pathname = window.location.pathname): DeepLink | nu
   if (first === "f" && second) return { kind: "friend", code: second };
   // Friend notifications open /friends.
   if (first === "friends") return { kind: "friends" };
+  if (first === "c" && second) return { kind: "clanInvite", code: second };
+  // Clan notifications open /clan.
+  if (first === "clan") return { kind: "clan" };
   // Play buttons on the search pages (/en/<game>/, /fa/<game>/) open /play/<game>.
   if (first === "play" && second) return { kind: "play", game: second };
   return null;

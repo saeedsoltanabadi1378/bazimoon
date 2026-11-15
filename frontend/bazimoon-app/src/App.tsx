@@ -25,12 +25,16 @@ const RecapScreen = lazy(() => import("./mafia/RecapScreen").then((m) => ({ defa
 const GameRoute = lazy(() => import("./games/GameRoute").then((m) => ({ default: m.GameRoute })));
 const FriendsScreen = lazy(() => import("./hub/FriendsScreen").then((m) => ({ default: m.FriendsScreen })));
 const FriendLinkScreen = lazy(() => import("./hub/FriendsScreen").then((m) => ({ default: m.FriendLinkScreen })));
+const ClanScreen = lazy(() => import("./clans/ClanScreen").then((m) => ({ default: m.ClanScreen })));
+const ClanLinkScreen = lazy(() => import("./clans/ClanLinkScreen").then((m) => ({ default: m.ClanLinkScreen })));
+const ClanFormScreen = lazy(() => import("./clans/ClanFormScreen").then((m) => ({ default: m.ClanFormScreen })));
+const ClanEventScreen = lazy(() => import("./clans/ClanEventScreen").then((m) => ({ default: m.ClanEventScreen })));
 const CoupleRoute = lazy(() => import("./couple/CoupleRoute").then((m) => ({ default: m.CoupleRoute })));
 
 const gameKeys: GameKey[] = ["zip", "queens", "merge", "mines", "memory", "word", "ladder", "stack", "blocks", "sudoku", "snake", "dooz", "spy", "esmfamil", "shelem"];
 const isGameKey = (key: string): key is GameKey => (gameKeys as string[]).includes(key);
 
-/** Where the app opens: an invite or game link (/t/CODE, /g/ID, /couple/TOKEN, /ef/CODE, /f/CODE, /friends, /play/GAME), or home. */
+/** Where the app opens: an invite or game link (/t/CODE, /g/ID, /couple/TOKEN, /ef/CODE, /f/CODE, /friends, /c/CODE, /clan, /play/GAME), or home. */
 function initialRoutes(): Route[] {
   const link = readDeepLink();
   // The link has been read; keep the address bar on the app root so reloads open Home.
@@ -52,6 +56,10 @@ function initialRoutes(): Route[] {
       return [{ name: "home" }, { name: "friendLink", code: link.code }];
     case "friends":
       return [{ name: "home" }, { name: "friends" }];
+    case "clanInvite":
+      return [{ name: "home" }, { name: "clanLink", code: link.code }];
+    case "clan":
+      return [{ name: "home" }, { name: "clan" }];
     case "play":
       if (link.game === "mafia") return [{ name: "home" }, { name: "mafia" }];
       if (link.game === "couple") return [{ name: "home" }, { name: "couple", screen: "home" }];
@@ -91,6 +99,18 @@ function CurrentScreen() {
       break;
     case "friendLink":
       screen = <FriendLinkScreen code={route.code} />;
+      break;
+    case "clan":
+      screen = <ClanScreen />;
+      break;
+    case "clanLink":
+      screen = <ClanLinkScreen code={route.code} />;
+      break;
+    case "clanForm":
+      screen = <ClanFormScreen clanId={route.clanId} />;
+      break;
+    case "clanEvent":
+      screen = <ClanEventScreen clanId={route.clanId} />;
       break;
     case "recap":
       screen = <RecapScreen gameId={route.gameId} />;

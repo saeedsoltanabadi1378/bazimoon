@@ -27,6 +27,7 @@ export const adminApi = {
   get: <T>(path: string) => request<T>(path),
   put: <T>(path: string, body: unknown) => request<T>(path, { method: "PUT", body: JSON.stringify(body) }),
   post: <T>(path: string, body: unknown) => request<T>(path, { method: "POST", body: JSON.stringify(body) }),
+  del: (path: string) => request<void>(path, { method: "DELETE" }),
 };
 
 export interface Page<T> {
@@ -431,4 +432,19 @@ export interface Interactions {
   steps: { flow: string; name: string; events: number; users: number }[];
   social: { friendRequestsWaiting: number; friendshipsMade: number; gameInvitesSent: number; gameInvitesAccepted: number; couplesFormed: number; reports: number; blocks: number };
   topUsers: { userId: string; name: string; events: number; sessions: number; screens: number; lastAt: string; registered: boolean }[];
+}
+
+export interface AdminClan {
+  id: string;
+  name: string;
+  bio: string | null;
+  emblem: string;
+  color: string;
+  isListed: boolean;
+  owner: string;
+  ownerId: string;
+  members: number;
+  /** Clan tables ever opened. */
+  tables: number;
+  createdAt: string;
 }

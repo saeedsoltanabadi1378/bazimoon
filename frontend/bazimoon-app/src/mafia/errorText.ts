@@ -3,6 +3,7 @@ import type { TranslationKey } from "../i18n/LanguageContext";
 
 const errorKeys: Record<string, TranslationKey> = {
   game_not_found: "errorGameNotFound",
+  clan_members_only: "clanErr_clan_members_only",
   lobby_full: "errorLobbyFull",
   not_enough_players: "errorNotEnoughPlayers",
   role_setup_invalid: "errorRoleSetupInvalid",

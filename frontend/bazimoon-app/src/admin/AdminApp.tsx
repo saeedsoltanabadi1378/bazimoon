@@ -6,6 +6,7 @@ import { OverviewPage } from "./pages/Overview";
 import { GamesPage } from "./pages/Games";
 import { PlayersPage } from "./pages/Players";
 import { PuzzlesPage } from "./pages/Puzzles";
+import { ClansPage } from "./pages/Clans";
 import { ActivityPage } from "./pages/Activity";
 import { MarketingPage } from "./pages/Marketing";
 import { SettingsPage } from "./pages/Settings";
@@ -74,6 +75,7 @@ function AdminRoot() {
       {page === "overview" && <OverviewPage go={go} />}
       {page === "games" && <GamesPage />}
       {page === "players" && <PlayersPage />}
+      {page === "clans" && <ClansPage />}
       {page === "puzzles" && <PuzzlesPage />}
       {page === "activity" && <ActivityPage />}
       {page === "marketing" && <MarketingPage />}

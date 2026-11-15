@@ -32,6 +32,13 @@ public sealed class BazimoonDbContext : DbContext
     public DbSet<GameInviteRecord> GameInvites => Set<GameInviteRecord>();
     public DbSet<PlayerBlockRecord> PlayerBlocks => Set<PlayerBlockRecord>();
     public DbSet<PlayerReportRecord> PlayerReports => Set<PlayerReportRecord>();
+    public DbSet<ClanRecord> Clans => Set<ClanRecord>();
+    public DbSet<ClanMemberRecord> ClanMembers => Set<ClanMemberRecord>();
+    public DbSet<ClanJoinRequestRecord> ClanJoinRequests => Set<ClanJoinRequestRecord>();
+    public DbSet<ClanBanRecord> ClanBans => Set<ClanBanRecord>();
+    public DbSet<ClanMessageRecord> ClanMessages => Set<ClanMessageRecord>();
+    public DbSet<ClanEventRecord> ClanEvents => Set<ClanEventRecord>();
+    public DbSet<ClanRsvpRecord> ClanRsvps => Set<ClanRsvpRecord>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -224,6 +231,83 @@ public sealed class BazimoonDbContext : DbContext
             b.Property(x => x.InviteCode).HasMaxLength(8);
             b.HasIndex(x => x.InviteCode).IsUnique();
             b.HasIndex(x => new { x.IsOpen, x.CreatedAt });
+            b.HasIndex(x => x.ClanId);
+        });
+
+        modelBuilder.Entity<ClanRecord>(b =>
+        {
+            b.ToTable("clans");
+            b.HasKey(x => x.Id);
+            b.Property(x => x.Name).HasMaxLength(24);
+            b.Property(x => x.NameKey).HasMaxLength(24);
+            b.Property(x => x.Bio).HasMaxLength(140);
+            b.Property(x => x.Emblem).HasMaxLength(16);
+            b.Property(x => x.Color).HasMaxLength(9);
+            b.Property(x => x.InviteCode).HasMaxLength(8);
+            b.HasIndex(x => x.NameKey).IsUnique();
+            b.HasIndex(x => x.InviteCode).IsUnique();
+            b.HasIndex(x => x.IsListed);
+        });
+
+        modelBuilder.Entity<ClanMemberRecord>(b =>
+        {
+            b.ToTable("clan_members");
+            b.HasKey(x => new { x.ClanId, x.UserId });
+            b.Property(x => x.Role).HasMaxLength(8);
+            // One clan per player.
+            b.HasIndex(x => x.UserId).IsUnique();
+            b.HasOne<ClanRecord>().WithMany().HasForeignKey(x => x.ClanId).OnDelete(DeleteBehavior.Cascade);
+            b.HasOne<UserRecord>().WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<ClanJoinRequestRecord>(b =>
+        {
+            b.ToTable("clan_join_requests");
+            b.HasKey(x => x.Id);
+            b.HasIndex(x => new { x.ClanId, x.UserId }).IsUnique();
+            b.HasIndex(x => x.UserId);
+            b.HasOne<ClanRecord>().WithMany().HasForeignKey(x => x.ClanId).OnDelete(DeleteBehavior.Cascade);
+            b.HasOne<UserRecord>().WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<ClanBanRecord>(b =>
+        {
+            b.ToTable("clan_bans");
+            b.HasKey(x => x.Id);
+            b.HasIndex(x => new { x.ClanId, x.UserId }).IsUnique();
+            b.HasOne<ClanRecord>().WithMany().HasForeignKey(x => x.ClanId).OnDelete(DeleteBehavior.Cascade);
+            b.HasOne<UserRecord>().WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<ClanMessageRecord>(b =>
+        {
+            b.ToTable("clan_messages");
+            b.HasKey(x => x.Id);
+            b.Property(x => x.Text).HasMaxLength(400);
+            b.HasIndex(x => new { x.ClanId, x.Id });
+            b.HasIndex(x => new { x.ClanId, x.IsAnnouncement, x.Id });
+            b.HasOne<ClanRecord>().WithMany().HasForeignKey(x => x.ClanId).OnDelete(DeleteBehavior.Cascade);
+            b.HasOne<UserRecord>().WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<ClanEventRecord>(b =>
+        {
+            b.ToTable("clan_events");
+            b.HasKey(x => x.Id);
+            b.Property(x => x.Title).HasMaxLength(40);
+            b.Property(x => x.Note).HasMaxLength(200);
+            b.HasIndex(x => new { x.ClanId, x.StartsAt });
+            b.HasIndex(x => new { x.Cancelled, x.StartsAt });
+            b.HasOne<ClanRecord>().WithMany().HasForeignKey(x => x.ClanId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<ClanRsvpRecord>(b =>
+        {
+            b.ToTable("clan_rsvps");
+            b.HasKey(x => new { x.EventId, x.UserId });
+            b.Property(x => x.Answer).HasMaxLength(8);
+            b.HasOne<ClanEventRecord>().WithMany().HasForeignKey(x => x.EventId).OnDelete(DeleteBehavior.Cascade);
+            b.HasOne<UserRecord>().WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<AppSettingsRecord>(b => { b.ToTable("app_settings"); b.HasKey(x => x.Id); b.Property(x => x.DisabledGamesJson).HasDefaultValue("[]"); });

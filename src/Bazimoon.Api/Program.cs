@@ -38,6 +38,7 @@ builder.Services.AddScoped<HubService>();
 builder.Services.AddScoped<TableService>();
 builder.Services.AddScoped<CoupleService>();
 builder.Services.AddScoped<FriendService>();
+builder.Services.AddScoped<ClanService>();
 builder.Services.AddSingleton<Bazimoon.Api.EsmFamil.EsmFamilRoomService>();
 builder.Services.AddSingleton<Bazimoon.Api.Shelem.ShelemRoomService>();
 builder.Services.AddSingleton<Bazimoon.Api.Shelem.IShelemNotifier, Bazimoon.Api.Shelem.SignalRShelemNotifier>();
@@ -51,6 +52,7 @@ builder.Services.AddHttpClient<IPushNotifier, WebPushNotifier>(c => c.Timeout = 
 if (!builder.Environment.IsEnvironment("Testing"))
 {
     builder.Services.AddHostedService<ReminderService>();
+    builder.Services.AddHostedService<ClanEventService>();
     builder.Services.AddHostedService<GuestCleanupService>();
 }
 builder.Services.AddSingleton(TimeProvider.System);
@@ -170,6 +172,7 @@ app.MapHubEndpoints();
 app.MapTableEndpoints();
 app.MapCoupleEndpoints();
 app.MapFriendEndpoints();
+app.MapClanEndpoints();
 app.MapPushEndpoints();
 Bazimoon.Api.Activity.ActivityEndpoints.MapActivityEndpoints(app);
 Bazimoon.Api.EsmFamil.EsmFamilEndpoints.MapEsmFamilEndpoints(app);

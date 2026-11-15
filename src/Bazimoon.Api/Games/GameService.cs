@@ -65,8 +65,9 @@ public sealed class GameService
             GameId = game.GameId,
             CreatorUserId = creatorUserId,
             Name = string.IsNullOrWhiteSpace(table?.Name) ? null : table.Name.Trim()[..Math.Min(40, table.Name.Trim().Length)],
-            IsOpen = table?.IsOpen ?? false,
+            IsOpen = table?.ClanId is null && (table?.IsOpen ?? false),
             InviteCode = await NewInviteCodeAsync(),
+            ClanId = table?.ClanId,
         });
         _db.OperationalEvents.Add(new() { Category = "Game", Message = "Game created", TargetType = "Game", TargetId = game.GameId.ToString() });
         await _db.SaveChangesAsync();
@@ -83,6 +84,10 @@ public sealed class GameService
 
         if (game.GetPlayer(playerId) is null)
         {
+            // A clan table only seats that clan's members.
+            if (await _db.MafiaTables.AsNoTracking().Where(t => t.GameId == gameId).Select(t => t.ClanId).FirstOrDefaultAsync() is { } clanId
+                && !await _db.ClanMembers.AnyAsync(m => m.ClanId == clanId && m.UserId == userId))
+                throw new ForbiddenGameActionException("Only members of this clan can sit at its table.", "clan_members_only");
             if (await _safety.ConflictsWithRosterAsync(gameId, userId))
                 throw new ForbiddenGameActionException("You cannot join a table containing a blocked player.", "blocked_player_at_table");
             game.AddPlayer(new Player(playerId, username));
@@ -112,7 +117,7 @@ public sealed class GameService
 
         var previous = await _db.MafiaTables.FindAsync(gameId);
         var rematchId = await CreateGameAsync(userId, username,
-            previous is null ? null : new TableOptions(previous.Name, previous.IsOpen, game.Config.MaxPlayers, TableRules.From(game.Config)));
+            previous is null ? null : new TableOptions(previous.Name, previous.IsOpen, game.Config.MaxPlayers, TableRules.From(game.Config), previous.ClanId));
         game.SetRematch(rematchId);
         // The finished game is already in history; only refresh the live copy so players see the rematch.
         await _sessionStore.SaveAsync(game);
@@ -534,7 +539,8 @@ public sealed class GameService
 
 /// <summary>How a table is set up when it is created from the app (or copied into a rematch).
 /// <paramref name="IsOpen"/>: public (listed in Open tables) or private (invite link or code only).</summary>
-public sealed record TableOptions(string? Name, bool IsOpen, int? Seats, TableRules? Rules = null);
+/// <summary><paramref name="ClanId"/>: a clan table, private and only for that clan's members.</summary>
+public sealed record TableOptions(string? Name, bool IsOpen, int? Seats, TableRules? Rules = null, Guid? ClanId = null);
 
 /// <summary>Timers (seconds) and rule switches the creator picks on Create a table. Missing values keep
 /// the defaults. The night and the vote always have a timer.</summary>

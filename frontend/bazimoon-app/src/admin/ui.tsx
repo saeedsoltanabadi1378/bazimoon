@@ -3,12 +3,13 @@ import { adminApi } from "./adminApi";
 import type { LiveGame, ServiceStatus } from "./adminApi";
 import { useAdminI18n, type AdminLang } from "./i18n";
 
-export type AdminPage = "overview" | "games" | "players" | "puzzles" | "activity" | "marketing" | "settings" | "system";
+export type AdminPage = "overview" | "games" | "players" | "clans" | "puzzles" | "activity" | "marketing" | "settings" | "system";
 
-export const NAV: { page: AdminPage; label: "navOverview" | "navGames" | "navPlayers" | "navPuzzles" | "navActivity" | "navMarketing" | "navSettings" | "navSystem"; icon: string }[] = [
+export const NAV: { page: AdminPage; label: "navOverview" | "navGames" | "navPlayers" | "navClans" | "navPuzzles" | "navActivity" | "navMarketing" | "navSettings" | "navSystem"; icon: string }[] = [
   { page: "overview", label: "navOverview", icon: "M3 11.5 12 4l9 7.5M5 10v10h14V10" },
   { page: "games", label: "navGames", icon: "M12 3a9 9 0 1 0 9 9M12 3v9h9" },
   { page: "players", label: "navPlayers", icon: "M16 19v-1a4 4 0 0 0-8 0v1M12 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM20 19v-1a3 3 0 0 0-2-2.8M4 19v-1a3 3 0 0 1 2-2.8" },
+  { page: "clans", label: "navClans", icon: "M12 3 4 7v5c0 5 3.5 8 8 9 4.5-1 8-4 8-9V7zM9 12l2 2 4-4" },
   { page: "puzzles", label: "navPuzzles", icon: "M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z" },
   { page: "activity", label: "navActivity", icon: "M3 17h4v4H3zM10 10h4v11h-4zM17 4h4v17h-4z" },
   { page: "marketing", label: "navMarketing", icon: "M4 13V6l16-3v14l-16-3zM8 14l1 6h4l-1-5" },

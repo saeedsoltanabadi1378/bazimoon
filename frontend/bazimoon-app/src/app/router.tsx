@@ -15,6 +15,10 @@ export type Route =
   | { name: "friendLink"; code: string }
   | { name: "mafia"; gameId?: string; code?: string }
   | { name: "createTable" }
+  | { name: "clan" }
+  | { name: "clanLink"; code: string }
+  | { name: "clanForm"; clanId?: string }
+  | { name: "clanEvent"; clanId: string }
   | { name: "mafiaStats" }
   | { name: "recap"; gameId: string }
   | { name: "game"; game: GameKey; screen: GameScreen; params?: Record<string, string | number | boolean | null> }
@@ -143,6 +147,9 @@ export function tabFor(route: Route): TabKey | null {
       return "solo";
     case "mafia":
     case "createTable":
+    case "clan":
+    case "clanForm":
+    case "clanEvent":
       return "mafia";
     case "league":
       return "league";

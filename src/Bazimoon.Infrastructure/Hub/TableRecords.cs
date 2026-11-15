@@ -14,4 +14,7 @@ public sealed class MafiaTableRecord
     /// <summary>Short code used in the <c>/t/&lt;code&gt;</c> invite link and typed into "Got a code?".</summary>
     public string InviteCode { get; set; } = string.Empty;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    /// <summary>The clan this table belongs to: only its members can sit down, and its finished games
+    /// count towards the clan ranking.</summary>
+    public Guid? ClanId { get; set; }
 }
