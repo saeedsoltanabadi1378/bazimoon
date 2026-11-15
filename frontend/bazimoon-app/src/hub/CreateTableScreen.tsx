@@ -4,6 +4,7 @@ import { useNavigation } from "../app/router";
 import { Body, Screen, TopBar } from "../ui/components";
 import { Icon } from "../ui/Icon";
 import { useHub } from "./HubData";
+import { useNameGate } from "../app/NameGate";
 import type { TableRules } from "../api/hub";
 import type { Role, RolePreset } from "../api/types";
 import { OPTIONAL_ROLES, dealRoles, minimumPlayers, roleMeta, rolesFor } from "../mafia/roles";
@@ -32,6 +33,7 @@ export function CreateTableScreen() {
   const { t, n } = useLanguage();
   const { back, replace } = useNavigation();
   const { api } = useHub();
+  const { ensureName } = useNameGate();
   const [isOpen, setIsOpen] = useState(true);
   const [name, setName] = useState("");
   const [seats, setSeats] = useState(10);
@@ -54,6 +56,7 @@ export function CreateTableScreen() {
   const [failed, setFailed] = useState(false);
 
   async function create() {
+    await ensureName();
     setBusy(true);
     setFailed(false);
     try {

@@ -57,6 +57,23 @@ public static class AuthEndpoints
         .WithName("LinkGoogle")
         .RequireAuthorization();
 
+        // A guest names themself, usually just before joining a game. The token pair returned here
+        // carries the new name, which every game, room and league then uses.
+        group.MapPost("/name", async (RenameRequest request, HttpContext http, UserAccountService accounts, AuthSessionFactory sessions) =>
+        {
+            var result = await accounts.RenameGuestAsync(http.User.GetUserId(), request.DisplayName);
+            return result.Outcome switch
+            {
+                RenameOutcome.Renamed => Results.Ok(await sessions.CreateAsync(result.User!)),
+                RenameOutcome.InvalidName => Results.Problem(statusCode: 400, title: "invalid_name",
+                    detail: $"A name needs 2 to {UserAccountService.MaxChosenNameLength} characters."),
+                RenameOutcome.NotAGuest => Results.Problem(statusCode: 400, title: "not_a_guest", detail: "Signed-in players use the name from their sign-in."),
+                _ => Results.Unauthorized(),
+            };
+        })
+        .WithName("RenameGuest")
+        .RequireAuthorization();
+
         group.MapPost("/refresh", async (RefreshRequest request, RefreshTokenService refresh, AuthSessionFactory sessions) =>
             await refresh.RedeemAsync(request.RefreshToken) is { } user
                 ? Results.Ok(await sessions.CreateAsync(user))
@@ -104,6 +121,8 @@ public sealed record AttributionRequest(string? Source = null, string? Medium = 
 }
 
 public sealed record RefreshRequest(string? RefreshToken);
+
+public sealed record RenameRequest(string? DisplayName);
 
 public sealed record AuthUserDto(Guid Id, string DisplayName, bool IsGuest, string Language);
 

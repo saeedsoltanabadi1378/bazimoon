@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties }
 import { useLanguage } from "../../i18n/LanguageContext";
 import { useNavigation } from "../../app/router";
 import { useSession } from "../../app/session";
+import { useNameGate } from "../../app/NameGate";
 import { shelemApi, type ShelemRoom, type ShelemSuit } from "../../api/shelem";
 import { ApiError } from "../../api/client";
 import { connectToShelemRoom } from "../../api/signalr";
@@ -25,12 +26,14 @@ export function ShelemIntro() {
   const { t } = useLanguage();
   const { back, push } = useNavigation();
   const session = useSession();
+  const { ensureName } = useNameGate();
   const api = useMemo(() => shelemApi(session.api), [session.api]);
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   async function create(withBots: boolean) {
+    await ensureName();
     setBusy(true); setError(null);
     try {
       const room = await api.create(withBots);
@@ -41,6 +44,7 @@ export function ShelemIntro() {
 
   async function join() {
     if (!code.trim()) return;
+    await ensureName();
     setBusy(true); setError(null);
     try {
       const room = await api.join(code);
@@ -85,6 +89,10 @@ export function ShelemRoomScreen({ code }: { code: string }) {
   const { t, n } = useLanguage();
   const { back } = useNavigation();
   const session = useSession();
+  const { ensureName } = useNameGate();
+  // Read through a ref so the polling loop is not rebuilt when the name changes.
+  const ensureNameRef = useRef(ensureName);
+  ensureNameRef.current = ensureName;
   const api = useMemo(() => shelemApi(session.api), [session.api]);
   const [room, setRoom] = useState<ShelemRoom | null>(null);
   const [busy, setBusy] = useState(false);
@@ -131,6 +139,7 @@ export function ShelemRoomScreen({ code }: { code: string }) {
     if (polling.current || submitting.current) { queued.current = true; return; }
     polling.current = true;
     try {
+      if (version.current < 0) await ensureNameRef.current();
       const next = version.current < 0 ? await api.join(code) : await api.get(code);
       if (next.version > version.current) { version.current = next.version; setRoom(next); }
       setReconnecting(false);

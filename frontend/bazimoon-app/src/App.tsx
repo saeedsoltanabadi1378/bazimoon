@@ -11,6 +11,7 @@ import { GoogleButton } from "./ui/GoogleButton";
 import { UpdatePrompt } from "./app/UpdatePrompt";
 import { GoogleResultSheet } from "./hub/SaveProgress";
 import { InviteBanner } from "./hub/InviteBanner";
+import { NameGateProvider } from "./app/NameGate";
 
 // Screens past Home load on demand so the first paint only needs the hub.
 const MafiaRoute = lazy(() => import("./mafia/MafiaRoute").then((m) => ({ default: m.MafiaRoute })));
@@ -127,12 +128,14 @@ function SessionGate() {
     case "ready":
       return (
         <HubDataProvider>
-          <NavigationProvider initial={routes}>
-            <Suspense fallback={<LoadingScreen />}>
-              <CurrentScreen />
-            </Suspense>
-            <InviteBanner />
-          </NavigationProvider>
+          <NameGateProvider>
+            <NavigationProvider initial={routes}>
+              <Suspense fallback={<LoadingScreen />}>
+                <CurrentScreen />
+              </Suspense>
+              <InviteBanner />
+            </NavigationProvider>
+          </NameGateProvider>
           <GoogleResultSheet />
         </HubDataProvider>
       );

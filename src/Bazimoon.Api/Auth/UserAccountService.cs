@@ -9,6 +9,8 @@ namespace Bazimoon.Api.Auth;
 public sealed class UserAccountService
 {
     public const int MaxDisplayNameLength = 64;
+    /// <summary>The longest name a guest can type; short enough to fit under a seat at the table.</summary>
+    public const int MaxChosenNameLength = 20;
 
     private readonly BazimoonDbContext _db;
     private readonly TimeProvider _clock;
@@ -102,6 +104,33 @@ public sealed class UserAccountService
         return new LinkResult(LinkOutcome.Linked, user);
     }
 
+    /// <summary>Lets a guest pick the name other players see. Signed-in players keep the name from
+    /// their sign-in. The leagues' copy of the name changes with it.</summary>
+    public async Task<RenameResult> RenameGuestAsync(Guid userId, string? displayName)
+    {
+        var user = await _db.Users.FindAsync(userId);
+        if (user is null) return new RenameResult(RenameOutcome.UserNotFound, null);
+        if (!user.IsGuest) return new RenameResult(RenameOutcome.NotAGuest, user);
+        if (CleanChosenName(displayName) is not { } name) return new RenameResult(RenameOutcome.InvalidName, user);
+
+        user.DisplayName = name;
+        user.LastSeenAt = _clock.GetUtcNow().UtcDateTime;
+        if (await _db.PlayerStats.FirstOrDefaultAsync(s => s.UserId == userId) is { } stats) stats.Username = name;
+        await _db.SaveChangesAsync();
+        return new RenameResult(RenameOutcome.Renamed, user);
+    }
+
+    /// <summary>A name a player typed: control characters removed, spaces collapsed, 2 to
+    /// <see cref="MaxChosenNameLength"/> letters. Null when nothing usable is left.</summary>
+    public static string? CleanChosenName(string? name)
+    {
+        var parts = new string((name ?? string.Empty).Where(c => !char.IsControl(c)).ToArray())
+            .Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
+        var joined = string.Join(' ', parts);
+        var length = new System.Globalization.StringInfo(joined).LengthInTextElements;
+        return length is >= 2 and <= MaxChosenNameLength ? joined : null;
+    }
+
     public static string CleanName(string? name)
     {
         var trimmed = (name ?? string.Empty).Trim();
@@ -184,3 +213,7 @@ public sealed record AcquisitionData(string? Source = null, string? Medium = nul
 public enum LinkOutcome { Linked, AlreadyLinkedElsewhere, NotAGuest, UserNotFound }
 
 public sealed record LinkResult(LinkOutcome Outcome, UserRecord? User);
+
+public enum RenameOutcome { Renamed, InvalidName, NotAGuest, UserNotFound }
+
+public sealed record RenameResult(RenameOutcome Outcome, UserRecord? User);

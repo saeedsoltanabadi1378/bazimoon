@@ -4,6 +4,7 @@ import { useNavigation } from "../app/router";
 import { useLanguage } from "../i18n/LanguageContext";
 import { useHub, useLoad } from "../hub/HubData";
 import { useCoupleApi } from "./useCoupleApi";
+import { useNameGate } from "../app/NameGate";
 import { type CoupleDay, type CoupleLevel, type CoupleState, type CoupleStats } from "../api/couple";
 import { ApiError } from "../api/client";
 import { Body, IconButton, Screen, Toast } from "../ui/components";
@@ -78,6 +79,7 @@ function CoupleInvite({ state, onChange }: { state: CoupleState; onChange: () =>
   const { back } = useNavigation();
   const { profile } = useHub();
   const capi = useCoupleApi();
+  const { ensureName } = useNameGate();
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const pending = state.status === "pending" && state.invite;
@@ -85,6 +87,7 @@ function CoupleInvite({ state, onChange }: { state: CoupleState; onChange: () =>
   const hoursLeft = pending ? Math.max(1, Math.round((new Date(state.invite!.expiresAt).getTime() - Date.now()) / 3_600_000)) : 0;
 
   async function invite() {
+    await ensureName();
     setBusy(true);
     try {
       const next = await capi.invite();
@@ -196,6 +199,7 @@ function CoupleJoin({ token }: { token: string }) {
   const { reset, replace } = useNavigation();
   const { profile } = useHub();
   const capi = useCoupleApi();
+  const { ensureName } = useNameGate();
   const preview = useLoad(() => capi.preview(token), [capi, token]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -209,6 +213,7 @@ function CoupleJoin({ token }: { token: string }) {
   const name = preview.data?.inviterName ?? "?";
 
   async function accept() {
+    await ensureName();
     setBusy(true);
     setError(null);
     try {

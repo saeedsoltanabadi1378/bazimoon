@@ -28,6 +28,8 @@ interface Session {
   /** After "exists": leaves this guest for the Google account's profile; the guest's progress is dropped. */
   switchToGoogleProfile(): Promise<void>;
   continueAsGuest(): Promise<void>;
+  /** A guest picks the name every game, room and league shows from now on. */
+  renameGuest(name: string): Promise<void>;
   logout(): Promise<void>;
   retry(): void;
 }
@@ -150,6 +152,10 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     void refreshPushSubscription(api);
   }, [api, startGuest]);
 
+  const renameGuest = useCallback(async (name: string) => {
+    api.useSession(await api.renameGuest(name));
+  }, [api]);
+
   const retry = useCallback(() => setAttempt((a) => a + 1), []);
 
   const value = useMemo<Session>(() => ({
@@ -163,9 +169,10 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     dismissGoogle,
     switchToGoogleProfile,
     continueAsGuest: startGuest,
+    renameGuest,
     logout,
     retry,
-  }), [api, status, user, startGoogle, googleStage, dismissGoogle, switchToGoogleProfile, startGuest, logout, retry]);
+  }), [api, status, user, startGoogle, googleStage, dismissGoogle, switchToGoogleProfile, startGuest, renameGuest, logout, retry]);
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
 }

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useLanguage, type Language } from "../../i18n/LanguageContext";
 import { useNavigation } from "../../app/router";
 import { useSession } from "../../app/session";
+import { useNameGate } from "../../app/NameGate";
 import { useHub, useLoad } from "../../hub/HubData";
 import { esmApi } from "../../api/esmfamil";
 import { Body, IconButton, Screen, Segmented, TopBar } from "../../ui/components";
@@ -38,6 +39,7 @@ export function EsmFamilIntro() {
   const { t, n, language } = useLanguage();
   const { back, push } = useNavigation();
   const session = useSession();
+  const { ensureName } = useNameGate();
   const { api } = useHub();
   const stats = useLoad(() => api.stats("esmfamil"), [api]).data;
   const [way, setWay] = useState<Way>("online");
@@ -67,6 +69,7 @@ export function EsmFamilIntro() {
     } else if (way === "solo") {
       push({ name: "game", game: "esmfamil", screen: "solo", params: { mode: soloDone ? "practice" : "daily", letters: settings.letters } });
     } else {
+      await ensureName();
       setBusy(true);
       try {
         const room = await esmApi(session.api).create({ categories: settings.categories, rounds: settings.rounds, seconds: settings.seconds, letters: settings.letters });

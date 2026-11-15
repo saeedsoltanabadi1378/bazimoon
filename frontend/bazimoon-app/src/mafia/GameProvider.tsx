@@ -4,6 +4,7 @@ import { ApiError, type BazimoonApiClient } from "../api/client";
 import { connectToGameHub } from "../api/signalr";
 import type { AccoladeKind, GameView, GraveyardMessage, NightActionType, PlayerSafetyTarget, TableChatMessage } from "../api/types";
 import { useSession } from "../app/session";
+import { useNameGate } from "../app/NameGate";
 import { useLanguage } from "../i18n/LanguageContext";
 import { haptic } from "../lib/haptics";
 import { localizedGameError } from "./errorText";
@@ -90,6 +91,7 @@ const GameContext = createContext<GameContextValue | null>(null);
 
 export function GameProvider({ gameId, children }: { gameId: string; children: ReactNode }) {
   const { api } = useSession();
+  const { ensureName } = useNameGate();
   const { t } = useLanguage();
   const [status, setStatus] = useState<GameStatus>("loading");
   const [link, setLink] = useState<LinkState>("connected");
@@ -305,7 +307,10 @@ export function GameProvider({ gameId, children }: { gameId: string; children: R
     actionError,
     clearActionError: () => setActionError(null),
     refresh,
-    joinGame: () => run(() => api.joinGame(gameId)),
+    joinGame: async () => {
+      await ensureName();
+      return run(() => api.joinGame(gameId));
+    },
     leaveGame: () => run(() => api.leaveGame(gameId)),
     startGame: () => run(() => api.startGame(gameId)),
     submitNightAction: (target, type) => run(() => api.submitNightAction(gameId, target, type)),

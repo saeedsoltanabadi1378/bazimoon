@@ -3,6 +3,7 @@ import { useLanguage, type Language } from "../i18n/LanguageContext";
 import { badgeMeta } from "./badges";
 import { useNavigation } from "../app/router";
 import { useSession } from "../app/session";
+import { useNameGate } from "../app/NameGate";
 import { Body, ProgressBar, Screen, Segmented, Switch } from "../ui/components";
 import { Icon } from "../ui/Icon";
 import { TabBar } from "../ui/TabBar";
@@ -20,6 +21,7 @@ import { useInstallMode } from "../lib/install";
 export function ProfileScreen() {
   const { t, n, language } = useLanguage();
   const session = useSession();
+  const { changeName } = useNameGate();
   const { profile, saveSettings, friends: fapi } = useHub();
   const friendList = useLoad(() => fapi.list(), [fapi]);
   const { push } = useNavigation();
@@ -60,7 +62,14 @@ export function ProfileScreen() {
           </span>
           <div className="grow stack stack--sm">
             <div>
-              <h1 className="display" style={{ fontSize: 24 }}>{name}</h1>
+              <div className="row row--wrap" style={{ gap: 8, alignItems: "baseline" }}>
+                <h1 className="display" style={{ fontSize: 24, overflowWrap: "anywhere" }}>{name}</h1>
+                {session.isGuest && (
+                  <button type="button" onClick={changeName} style={{ minHeight: 32, padding: "0 10px", border: 0, borderRadius: 999, background: "#2B3042", color: "#F6C377", font: "inherit", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
+                    {t("changeName")}
+                  </button>
+                )}
+              </div>
               <div className="small muted">{t("levelDivision", { level: p.level, division: t(`division${p.division}` as "divisionGold"), tier: roman(p.tier) })}</div>
             </div>
             <ProgressBar value={(p.xpIntoLevel / p.xpForNext) * 100} track="#2B3042" label={t("xpToLevel", { xp: n(p.xpIntoLevel), next: n(p.xpForNext), level: p.level + 1 })} />

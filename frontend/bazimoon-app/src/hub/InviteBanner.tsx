@@ -3,6 +3,7 @@ import { useLanguage } from "../i18n/LanguageContext";
 import { useNavigation, type Route } from "../app/router";
 import { Icon } from "../ui/Icon";
 import { useHub } from "./HubData";
+import { useNameGate } from "../app/NameGate";
 import { haptic } from "../lib/haptics";
 import type { GameInvite } from "../api/friends";
 
@@ -18,6 +19,7 @@ function busyIn(route: Route) {
 export function InviteBanner() {
   const { t } = useLanguage();
   const { friends } = useHub();
+  const { ensureName } = useNameGate();
   const { route, push } = useNavigation();
   const [invites, setInvites] = useState<GameInvite[]>([]);
   const [hidden, setHidden] = useState<number[]>([]);
@@ -49,6 +51,7 @@ export function InviteBanner() {
   };
 
   async function join() {
+    await ensureName();
     setBusy(true);
     try {
       const joined = await friends.acceptInvite(invite!.id);

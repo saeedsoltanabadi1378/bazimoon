@@ -189,6 +189,52 @@ public class AuthFlowTests : IClassFixture<BazimoonApiFactory>, IAsyncLifetime
     }
 
     [Fact]
+    public async Task Guest_CanChooseTheirName_AndTheAppUsesItEverywhere()
+    {
+        var guest = await PostAsync("/api/auth/guest", new GuestAuthRequest());
+        (await ClientWith(guest.AccessToken).GetAsync("/api/me/profile")).EnsureSuccessStatusCode();
+
+        var renamed = await PostAsync("/api/auth/name", new RenameRequest("  Shirin \n  Kh  "), guest.AccessToken);
+
+        Assert.Equal(guest.User.Id, renamed.User.Id);
+        Assert.True(renamed.User.IsGuest);
+        Assert.Equal("Shirin Kh", renamed.User.DisplayName);
+        var profile = await ClientWith(renamed.AccessToken).GetFromJsonAsync<Bazimoon.Api.Lounge.ProfileDto>("/api/me/profile");
+        Assert.Equal("Shirin Kh", profile!.Name);
+        // A refreshed session keeps the chosen name.
+        var refreshed = await PostAsync("/api/auth/refresh", new RefreshRequest(renamed.RefreshToken));
+        Assert.Equal("Shirin Kh", refreshed.User.DisplayName);
+        using var scope = _factory.Services.CreateScope();
+        var stats = await scope.ServiceProvider.GetRequiredService<BazimoonDbContext>().PlayerStats.SingleAsync(s => s.UserId == guest.User.Id);
+        Assert.Equal("Shirin Kh", stats.Username);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    [InlineData("A")]
+    [InlineData("This name is far too long to fit")]
+    public async Task Guest_CannotChooseAnUnusableName(string name)
+    {
+        var guest = await PostAsync("/api/auth/guest", new GuestAuthRequest());
+
+        var response = await SendAsync("/api/auth/name", new RenameRequest(name), guest.AccessToken);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task SignedInPlayers_KeepTheNameFromTheirSignIn()
+    {
+        var user = await PostAsync("/api/auth/google", new GoogleAuthRequest(FakeGoogleTokenValidator.Token("g-600", "Reza")));
+
+        var response = await SendAsync("/api/auth/name", new RenameRequest("Someone else"), user.AccessToken);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, (await SendAsync("/api/auth/name", new RenameRequest("Nobody"))).StatusCode);
+    }
+
+    [Fact]
     public async Task Refresh_RotatesTheToken_AndReusingAnOldOneSignsOutEverywhere()
     {
         var session = await PostAsync("/api/auth/guest", new GuestAuthRequest());

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLanguage } from "../../i18n/LanguageContext";
 import { useNavigation } from "../../app/router";
 import { useSession } from "../../app/session";
+import { useNameGate } from "../../app/NameGate";
 import { esmApi, type EsmRoom } from "../../api/esmfamil";
 import { Body, IconButton, Screen, TopBar } from "../../ui/components";
 import { Icon } from "../../ui/Icon";
@@ -93,7 +94,11 @@ function settingsChips(room: EsmRoom, t: ReturnType<typeof useLanguage>["t"], n:
 export function EsmFamilLobby({ code }: { code: string }) {
   const { t, n } = useLanguage();
   const { back, push, replace } = useNavigation();
-  const { room, error, act } = useRoom(code, 1500, (api) => api.join(code));
+  const { ensureName } = useNameGate();
+  const { room, error, act } = useRoom(code, 1500, async (api) => {
+    await ensureName();
+    return api.join(code);
+  });
   const [copied, setCopied] = useState(false);
   const link = appLink(`ef_${code.replace("EF-", "")}`);
 

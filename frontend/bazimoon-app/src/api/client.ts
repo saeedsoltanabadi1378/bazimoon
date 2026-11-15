@@ -136,6 +136,11 @@ export class BazimoonApiClient {
     return this.request<AuthSession>("POST", "/api/auth/link/google", { idToken, nonce });
   }
 
+  /** A guest picks the name other players see; the returned session carries it. */
+  renameGuest(displayName: string) {
+    return this.request<AuthSession>("POST", "/api/auth/name", { displayName });
+  }
+
   pushKey() {
     return this.request<{ publicKey: string | null }>("GET", "/api/push/key");
   }
