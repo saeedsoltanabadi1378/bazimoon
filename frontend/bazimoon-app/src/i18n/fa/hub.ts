@@ -47,8 +47,7 @@ export const hub: Record<keyof typeof en, string> = {
 
   soloGames: "بازی‌های تکی",
   soloSubtitle: "هر وقت خواستی، بدون گروه",
-  continueLabel: "ادامه",
-  mergeContinue: "۲۰۴۸ · امتیاز {score}",
+  gamesScore: "امتیاز {score}",
   gameType: "نوع بازی",
   filterAll: "همه",
   filterPuzzles: "معما",

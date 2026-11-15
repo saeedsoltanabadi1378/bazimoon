@@ -1,4 +1,3 @@
-import type { ReactNode } from "react";
 import { useLanguage } from "../i18n/LanguageContext";
 import { useNavigation, type GameKey } from "../app/router";
 import { useSession } from "../app/session";
@@ -7,7 +6,9 @@ import { Icon, type IconName } from "../ui/Icon";
 import { LogoTiles } from "../ui/LogoTiles";
 import { TabBar } from "../ui/TabBar";
 import { useHub, useLoad } from "./HubData";
-import type { Home, LevelStatus } from "../api/hub";
+import { GameCard } from "./GameCard";
+import { entryFor } from "../games/catalog";
+import type { Home } from "../api/hub";
 import { dailyLadder } from "../games/ladder/logic";
 import { useCoupleSummary } from "../couple/CoupleHomeCard";
 import { haptic } from "../lib/haptics";
@@ -44,10 +45,10 @@ export function HomeScreen() {
   const ladderPuzzle = ladder ? dailyLadder(ladder.level, language) : null;
 
   const puzzles = [
-    { game: "zip", tint: "linear-gradient(160deg, #1F4F48, #14302D)", board: <ZipBoard />, title: t("gameZip"), meta: levelMeta("zip"), status: levelOf("zip"), onPlay: () => playLevel("zip") },
-    { game: "queens", tint: "linear-gradient(160deg, #3D2F58, #261D36)", board: <QueensBoard />, title: t("gameQueens"), meta: levelMeta("queens"), status: levelOf("queens"), onPlay: () => playLevel("queens") },
-    { game: "ladder", tint: "linear-gradient(160deg, #4A3418, #2A1F10)", board: <LadderBoard start={ladderPuzzle?.start} end={ladderPuzzle?.end} />, title: t("gameLadder"), meta: levelMeta("ladder"), status: ladder, onPlay: () => playLevel("ladder") },
-    { game: "merge", tint: "linear-gradient(160deg, #322D66, #1F1C40)", board: <MergeBoard />, title: t("gameMerge"), meta: data?.mergeBest ? t("homeMergeBest", { best: n(data.mergeBest) }) : t("tagEndless"), status: undefined, onPlay: () => open("merge", "intro") },
+    { game: "zip", tint: entryFor("zip").tint, board: <ZipBoard />, title: t("gameZip"), meta: levelMeta("zip"), status: levelOf("zip"), onPlay: () => playLevel("zip") },
+    { game: "queens", tint: entryFor("queens").tint, board: <QueensBoard />, title: t("gameQueens"), meta: levelMeta("queens"), status: levelOf("queens"), onPlay: () => playLevel("queens") },
+    { game: "ladder", tint: entryFor("ladder").tint, board: <LadderBoard start={ladderPuzzle?.start} end={ladderPuzzle?.end} />, title: t("gameLadder"), meta: levelMeta("ladder"), status: ladder, onPlay: () => playLevel("ladder") },
+    { game: "merge", tint: entryFor("merge").tint, board: <MergeBoard />, title: t("gameMerge"), meta: data?.mergeBest ? t("homeMergeBest", { best: n(data.mergeBest) }) : t("tagEndless"), status: undefined, onPlay: () => open("merge", "intro") },
   ].filter((puzzle) => isGameOn(puzzle.game));
 
   return (
@@ -86,7 +87,9 @@ export function HomeScreen() {
           </div>
           {puzzles.length > 0 && (
             <div className="home-rail">
-              {puzzles.map((puzzle, i) => <PuzzleCard key={puzzle.game} {...puzzle} primary={i === 0} />)}
+              {puzzles.map(({ game, status, ...puzzle }, i) => (
+                <GameCard key={game} {...puzzle} solvedToday={status?.solvedToday} action={status?.hasSave ? t("continueGame") : t("play")} gold={i === 0} />
+              ))}
             </div>
           )}
         </section>
@@ -178,37 +181,6 @@ function MafiaHero({ data }: { data: Home | null }) {
         </div>
       </div>
     </section>
-  );
-}
-
-/** A puzzle in Home's rail: its board, the player's level, and a way into the next one. */
-function PuzzleCard({ tint, board, title, meta, status, primary, onPlay }: {
-  tint: string;
-  board: ReactNode;
-  title: string;
-  meta: string;
-  status?: LevelStatus;
-  primary?: boolean;
-  onPlay: () => void;
-}) {
-  const { t } = useLanguage();
-  return (
-    <button type="button" className="home-card interactive-card" style={{ background: tint }} onClick={onPlay}>
-      <span className="home-card__board">{board}</span>
-      <span>
-        <span style={{ display: "block", fontWeight: 600, fontSize: 16 }}>{title}</span>
-        <span className="home-card__meta" style={{ display: "block" }}>{meta}</span>
-        {status && status.solvedToday > 0 && (
-          <span className="row tiny" style={{ gap: 4, marginTop: 2, color: "#5FD0BE", fontWeight: 600 }}>
-            <Icon name="check" size={12} strokeWidth={3} />
-            {t("levelsSolvedToday", { count: status.solvedToday })}
-          </span>
-        )}
-      </span>
-      <span className={`home-btn home-btn--sm ${primary ? "home-btn--gold" : "home-btn--glass"}`} style={{ marginTop: "auto" }}>
-        {status?.hasSave ? t("continueGame") : t("play")}
-      </span>
-    </button>
   );
 }
 

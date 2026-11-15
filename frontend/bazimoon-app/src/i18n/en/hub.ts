@@ -46,8 +46,7 @@ export const hub = {
 
   soloGames: "Solo games",
   soloSubtitle: "Play anytime, no group needed",
-  continueLabel: "Continue",
-  mergeContinue: "Merge 2048 · score {score}",
+  gamesScore: "Score {score}",
   gameType: "Game type",
   filterAll: "All",
   filterPuzzles: "Puzzles",
