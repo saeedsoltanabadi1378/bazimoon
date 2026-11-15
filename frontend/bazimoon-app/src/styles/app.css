@@ -1428,12 +1428,33 @@ html[lang="fa"] .kicker {
 .shelem-room-code { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:14px 16px; border-radius:18px; background:linear-gradient(135deg,#1E2245,#15182D); }
 .shelem-room-code small,.shelem-room-code b { display:block; }
 .shelem-room-code b { color:#F7E3B4; font-size:24px; letter-spacing:2px; }
-.shelem-lobby-seats { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
-.shelem-lobby-seat { position:relative; min-height:108px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; padding:12px; border:1px dashed #353957; border-radius:18px; background:#121529; }
-.shelem-lobby-seat.is-ready { border-style:solid; border-color:rgba(95,208,190,.45); }
-.shelem-lobby-seat > svg { position:absolute; inset:10px 10px auto auto; color:#5FD0BE; }
-.shelem-lobby-seat small { color:var(--text-2); }
-.shelem-seat-avatar { width:40px; height:40px; display:grid; place-items:center; margin-bottom:3px; border-radius:13px; background:#252A4A; color:#E2B86B; font-weight:800; }
+.shelem-room-code > span:first-child { margin-inline-end:auto; }
+.shelem-room-code { flex-wrap:wrap; }
+.shelem-room-code__note { flex-basis:100%; min-height:0; color:#5FD0BE; }
+.shelem-room-code__note:empty { display:none; }
+.shelem-lobby-table { position:relative; display:grid; grid-template-columns:1fr 1fr 1fr; grid-template-areas:". top ." "left felt right" ". bottom ."; gap:8px; align-items:center; padding:4px 0; }
+.shelem-lobby-felt { grid-area:felt; align-self:stretch; min-height:74px; display:grid; place-items:center; border-radius:999px; border:1px solid #2F4A44; background:radial-gradient(ellipse at center,#1F4A40,#12302B); color:#E2B86B55; font-size:22px; }
+.shelem-lobby-seat { position:relative; min-width:0; min-height:104px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; padding:10px 6px; border:1.5px dashed #353957; border-radius:16px; background:#121529; color:var(--text); font:inherit; text-align:center; }
+button.shelem-lobby-seat { cursor:pointer; }
+button.shelem-lobby-seat:focus-visible { outline:2px solid #E2B86B; outline-offset:2px; }
+.shelem-lobby-seat--top { grid-area:top; } .shelem-lobby-seat--bottom { grid-area:bottom; }
+.shelem-lobby-seat--left { grid-area:left; } .shelem-lobby-seat--right { grid-area:right; }
+.shelem-lobby-seat:not(.is-open) { border-style:solid; }
+.shelem-lobby-seat.is-ours:not(.is-open) { border-color:#75B8D180; background:#14263A; }
+.shelem-lobby-seat.is-theirs:not(.is-open) { border-color:#D894A780; background:#2A1A2A; }
+.shelem-lobby-seat.is-picked { border-color:#E2B86B; box-shadow:0 0 0 2px #E2B86B55; }
+.shelem-lobby-seat b { max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:14px; }
+.shelem-lobby-seat small { color:var(--text-2); font-size:11px; }
+.shelem-lobby-seat__state { display:inline-flex; align-items:center; gap:3px; }
+.shelem-lobby-seat.is-ready .shelem-lobby-seat__state { color:#5FD0BE; }
+.shelem-seat-avatar { position:relative; width:38px; height:38px; display:grid; place-items:center; margin-bottom:2px; border-radius:13px; background:#252A4A; color:#E2B86B; font-weight:800; }
+.shelem-seat-host { position:absolute; inset-block-start:-7px; inset-inline-end:-7px; width:20px; height:20px; display:grid; place-items:center; border-radius:50%; background:#E2B86B; color:#17142B; }
+.shelem-lobby-table,.shelem-room-code { flex-shrink:0; }
+.shelem-seat-actions { flex-shrink:0; min-height:64px; display:flex; flex-direction:column; justify-content:center; gap:8px; padding:12px 14px; border-radius:16px; background:#121529; text-align:start; }
+.shelem-seat-actions p { margin:0; }
+.shelem-seat-actions .btn { flex:1; gap:6px; }
+.shelem-seat-remove { color:#F08A7A; border-color:#F08A7A66; }
+.shelem-lobby-status { margin:0; text-align:center; }
 .shelem-voice { display:flex; flex-wrap:wrap; gap:7px; }
 .shelem-voice button { min-height:42px; display:inline-flex; align-items:center; gap:7px; padding:8px 11px; border:1px solid #343956; border-radius:12px; background:#171A30; color:var(--text); cursor:pointer; }
 .shelem-voice button.is-muted { color:#F08A7A; background:#2A171D; }

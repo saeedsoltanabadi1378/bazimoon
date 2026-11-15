@@ -58,11 +58,24 @@ public sealed class ShelemGame
         return player;
     }
 
-    public ShelemPlayer AddBot(string name)
+    public ShelemPlayer AddBot(string name, int? seat = null)
     {
+        RequirePhase(ShelemPhase.Lobby);
         if (Players.Count >= 4) throw new GameException("This room is full.", "room_full");
-        var player = new ShelemPlayer { Seat = Enumerable.Range(0, 4).First(seat => Players.All(p => p.Seat != seat)), Name = name, IsBot = true, Ready = true };
+        if (seat is < 0 or > 3) throw new GameException("Invalid seat.", "invalid_seat");
+        if (seat is not null && Players.Any(p => p.Seat == seat)) throw new GameException("That seat is taken.", "seat_taken");
+        var player = new ShelemPlayer { Seat = seat ?? Enumerable.Range(0, 4).First(free => Players.All(p => p.Seat != free)), Name = name, IsBot = true, Ready = true };
         Players.Add(player);
+        Players.Sort((a, b) => a.Seat.CompareTo(b.Seat));
+        return player;
+    }
+
+    /// <summary>Frees a seat before the game starts.</summary>
+    public ShelemPlayer RemovePlayer(int seat)
+    {
+        RequirePhase(ShelemPhase.Lobby);
+        var player = Player(seat);
+        Players.Remove(player);
         return player;
     }
 

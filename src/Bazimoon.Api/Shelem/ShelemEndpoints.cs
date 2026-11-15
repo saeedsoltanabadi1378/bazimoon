@@ -13,6 +13,9 @@ public static class ShelemEndpoints
         rooms.MapGet("/{code}", (string code, ShelemRoomService service, HttpContext http) => service.GetAsync(code, http.User.GetUserId()));
         rooms.MapPost("/{code}/join", (string code, ShelemRoomService service, HttpContext http) => service.JoinAsync(code, http.User.GetUserId(), http.User.GetDisplayName()));
         rooms.MapPost("/{code}/seats", (string code, MoveShelemPlayerRequest request, ShelemRoomService service, HttpContext http) => service.MovePlayerAsync(code, http.User.GetUserId(), request.FromSeat, request.ToSeat));
+        rooms.MapPost("/{code}/seats/{seat:int}/remove", (string code, int seat, ShelemRoomService service, HttpContext http) => service.RemoveSeatAsync(code, http.User.GetUserId(), seat));
+        rooms.MapPost("/{code}/bots", (string code, AddShelemBotRequest request, ShelemRoomService service, HttpContext http) => service.AddBotAsync(code, http.User.GetUserId(), request.Seat));
+        rooms.MapPost("/{code}/leave", async (string code, ShelemRoomService service, HttpContext http) => { await service.LeaveAsync(code, http.User.GetUserId()); return Results.NoContent(); });
         rooms.MapPost("/{code}/ready", (string code, ReadyShelemRequest request, ShelemRoomService service, HttpContext http) => service.ReadyAsync(code, http.User.GetUserId(), request.Ready));
         rooms.MapPost("/{code}/start", (string code, StartShelemRequest request, ShelemRoomService service, HttpContext http) => service.StartAsync(code, http.User.GetUserId(), request.FillBots));
         rooms.MapPost("/{code}/bid", (string code, BidShelemRequest request, ShelemRoomService service, HttpContext http) => service.BidAsync(code, http.User.GetUserId(), request.Bid, request.Shelem));
@@ -33,6 +36,7 @@ public static class ShelemEndpoints
 }
 
 public sealed record CreateShelemRequest(bool WithBots);
+public sealed record AddShelemBotRequest(int? Seat);
 public sealed record ReadyShelemRequest(bool Ready);
 public sealed record StartShelemRequest(bool FillBots);
 public sealed record BidShelemRequest(int? Bid, bool Shelem);

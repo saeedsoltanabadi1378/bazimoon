@@ -88,10 +88,51 @@ public sealed class ShelemRoomService
     {
         RequireHost(room, userId);
         room.Game.MovePlayer(fromSeat, toSeat);
+        // Only the people who changed seats confirm again; everyone else keeps their answer.
         if (fromSeat != toSeat)
-            foreach (var player in room.Game.Players)
+            foreach (var player in room.Game.Players.Where(p => p.Seat == fromSeat || p.Seat == toSeat))
                 player.Ready = player.IsBot || player.UserId == room.HostUserId;
     });
+
+    /// <summary>The host seats a bot in one open seat, or in every open seat when no seat is given.</summary>
+    public Task<ShelemRoomView> AddBotAsync(string code, Guid userId, int? seat) => Act(code, userId, (room, _) =>
+    {
+        RequireHost(room, userId);
+        if (seat is null) FillBots(room.Game);
+        else room.Game.AddBot(NextBotName(room.Game), seat);
+    });
+
+    /// <summary>The host frees a seat held by a bot or another player.</summary>
+    public Task<ShelemRoomView> RemoveSeatAsync(string code, Guid userId, int seat) => Act(code, userId, (room, me) =>
+    {
+        RequireHost(room, userId);
+        if (me!.Seat == seat) throw new GameException("Leave the table instead.", "cannot_remove_self");
+        room.Game.RemovePlayer(seat);
+    });
+
+    /// <summary>Gives up a seat before the game starts. The host's place passes to the next person; a table with nobody left closes.</summary>
+    public async Task LeaveAsync(string code, Guid userId)
+    {
+        long version;
+        string roomCode;
+        lock (_gate)
+        {
+            var room = Find(code);
+            var me = room.Game.Players.FirstOrDefault(p => p.UserId == userId);
+            if (me is null) return;
+            room.Game.RemovePlayer(me.Seat);
+            if (room.HostUserId == userId)
+            {
+                var next = room.Game.Players.FirstOrDefault(p => !p.IsBot);
+                if (next is null) _rooms.Remove(room.Code);
+                else { room.HostUserId = next.UserId!.Value; next.Ready = true; }
+            }
+            version = ++room.Version;
+            room.LastActivity = Now;
+            roomCode = room.Code;
+        }
+        await _notifier.RoomChangedAsync(roomCode, version);
+    }
 
     public Task<ShelemRoomView> ReadyAsync(string code, Guid userId, bool ready) => Act(code, userId, (room, me) => room.Game.SetReady(me!.Seat, ready));
 
@@ -220,7 +261,7 @@ public sealed class ShelemRoomService
             game.Phase == ShelemPhase.Playing ? Enumerable.Range(0, 2).Select(team => game.Players.Where(p => p.Seat % 2 == team).Sum(p => p.Captured.Sum(ShelemGame.CardPoints) + p.Tricks * 5)).ToArray() : game.RoundPoints.ToArray(),
             game.RoundDelta, game.WinnerTeam, me?.Seat, room.HostUserId == userId, me?.Hand.OrderBy(c => c.Suit).ThenBy(c => c.Rank).Select(c => c.Code).ToArray() ?? [], legal,
             game.Players.Select(p => new ShelemPlayerView(p.Seat, p.Name, p.IsBot, p.Ready, p.Passed, p.Hand.Count, p.UserId == userId,
-                p.UserId is { } id ? VoiceUid(id) : 0, p.LastBid)).ToArray(),
+                p.UserId is { } id ? VoiceUid(id) : 0, p.LastBid, p.UserId == room.HostUserId)).ToArray(),
             (holdingTrick ? game.LastTrick : game.Trick).Select(p => new ShelemPlayView(p.Seat, p.Card.Code)).ToArray(),
             game.LastTrick.Select(p => new ShelemPlayView(p.Seat, p.Card.Code)).ToArray(), game.LastTrickWinner,
             game.Zamin.Count, game.Discards.Count, room.BotActAt is not null,
@@ -244,7 +285,8 @@ public sealed class ShelemRoomService
 
     private Room Find(string code) => _rooms.TryGetValue(NormalizeCode(code), out var room) ? room : throw new GameException("No room has that code.", "room_not_found");
     private static void RequireHost(Room room, Guid userId) { if (room.HostUserId != userId) throw new ForbiddenGameActionException("Only the host can do that."); }
-    private static void FillBots(ShelemGame game) { while (game.Players.Count < 4) game.AddBot(BotNames[game.Players.Count - 1]); }
+    private static void FillBots(ShelemGame game) { while (game.Players.Count < 4) game.AddBot(NextBotName(game)); }
+    private static string NextBotName(ShelemGame game) => BotNames.First(name => game.Players.All(p => !p.IsBot || p.Name != name));
     private void Purge() { var cutoff = Now.AddHours(-4); foreach (var key in _rooms.Where(x => x.Value.LastActivity < cutoff).Select(x => x.Key).ToArray()) _rooms.Remove(key); }
     private static CardSuit ParseSuit(string suit) => Enum.TryParse<CardSuit>(suit, true, out var value) ? value : throw new GameException("Choose a valid trump suit.", "invalid_suit");
     public static uint VoiceUid(Guid userId) => Math.Max(1u, BitConverter.ToUInt32(userId.ToByteArray()));
@@ -269,7 +311,7 @@ public sealed class ShelemRoomService
     }
 }
 
-public sealed record ShelemPlayerView(int Seat, string Name, bool IsBot, bool Ready, bool Passed, int Cards, bool IsYou, uint VoiceUid, int? LastBid);
+public sealed record ShelemPlayerView(int Seat, string Name, bool IsBot, bool Ready, bool Passed, int Cards, bool IsYou, uint VoiceUid, int? LastBid, bool IsHost);
 public sealed record ShelemPlayView(int Seat, string Card);
 public sealed record ShelemRoomView(string Code, Guid GameId, long Version, string Phase, int Round, int DealerSeat, int TurnSeat,
     int? HighestBid, int? DeclarerSeat, bool ShelemCalled, string? Trump, int[] TeamScores, int[] RoundPoints, int[] RoundDelta,

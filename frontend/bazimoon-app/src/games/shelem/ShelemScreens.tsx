@@ -70,7 +70,7 @@ export function ShelemIntro() {
 
       <form className="shelem-join" onSubmit={(e) => { e.preventDefault(); void join(); }}>
         <label htmlFor="shelem-code">{t("shelemJoinRoom")}</label>
-        <div className="row" style={{ gap: 8 }}><input id="shelem-code" className="text-field grow" dir="ltr" placeholder="SH-7K2M" value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} /><button className="btn btn--outline btn--auto" disabled={busy}>{t("shelemJoin")}</button></div>
+        <div className="row" style={{ gap: 8 }}><input id="shelem-code" className="text-field grow" dir="ltr" placeholder="SH-7K2M" value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} /><button className="btn btn--outline btn--auto" disabled={busy || !code.trim()}>{t("shelemJoin")}</button></div>
       </form>
       {error && <div className="banner banner--error" role="alert">{error}</div>}
 
@@ -137,7 +137,10 @@ export function ShelemRoomScreen({ code }: { code: string }) {
     } catch (error) {
       if (error instanceof ApiError && (['room_not_found', 'room_full', 'already_started'].includes(error.code ?? '') || [400, 403, 404, 409].includes(error.status))) {
         loadBlocked.current = true;
-        setEntryError(error.code === 'room_full' ? 'shelemInviteFull' : error.code === 'already_started' ? 'shelemInviteStarted' : error.code === 'room_not_found' ? 'shelemRoomNotFound' : 'shelemCouldNotOpen');
+        // Losing the seat after sitting down means the host removed this player.
+        const removed = version.current >= 0 && error.status === 403;
+        setEntryError(removed ? 'shelemRemovedFromTable' : error.code === 'room_full' ? 'shelemInviteFull' : error.code === 'already_started' ? 'shelemInviteStarted' : error.code === 'room_not_found' ? 'shelemRoomNotFound' : 'shelemCouldNotOpen');
+        if (version.current >= 0) { setRoom(null); void voice.current.leave(); }
         setReconnecting(false);
       } else setReconnecting(true);
     }
@@ -171,6 +174,13 @@ export function ShelemRoomScreen({ code }: { code: string }) {
     finally { submitting.current = false; setBusy(false); void load(); }
   }
 
+  /** Before the game starts, going back gives the seat up so the table is not left waiting for someone who has gone. */
+  async function leaveTable() {
+    loadBlocked.current = true;
+    try { await api.leave(code); } catch { /* the seat is cleared with the table if this does not arrive */ }
+    back();
+  }
+
   async function joinVoice() {
     setError(null);
     try {
@@ -192,16 +202,16 @@ export function ShelemRoomScreen({ code }: { code: string }) {
 
   return <Screen theme="night" label={t("gameShelem")}>
     <header className={`shelem-topbar${room.phase !== "lobby" ? " shelem-game-toolbar" : ""}`}>
-      <IconButton icon="back" label={t("back")} onClick={back} />
-      <div className="grow"><div className="kicker">{phaseTitle}</div><div className="display" style={{ fontSize: 20 }}>{room.phase === "lobby" ? room.code : t("shelemRoundN", { n: room.round })}</div></div>
-      <button type="button" className="shelem-score" aria-label={t("shelemScoreboard")} onClick={() => setScoresOpen(true)}><small>{t("shelemMatchScore")}</small><span>{t("shelemUs")} <b>{n(room.teamScores[team])}</b></span><span>{t("shelemThem")} <b>{n(room.teamScores[1 - team])}</b></span>{room.phase === 'playing' && <small>{t("shelemCapturedScore", { us: room.roundPoints[team], them: room.roundPoints[1-team] })}</small>}</button>
+      <IconButton icon="back" label={room.phase === "lobby" ? t("shelemLeaveTable") : t("back")} onClick={room.phase === "lobby" ? () => void leaveTable() : back} />
+      <div className="grow"><div className="kicker">{phaseTitle}</div><div className="display" style={{ fontSize: 20 }}>{room.phase === "lobby" ? t("shelemLobbyTitle") : t("shelemRoundN", { n: room.round })}</div></div>
+      {room.phase !== "lobby" && <button type="button" className="shelem-score" aria-label={t("shelemScoreboard")} onClick={() => setScoresOpen(true)}><small>{t("shelemMatchScore")}</small><span>{t("shelemUs")} <b>{n(room.teamScores[team])}</b></span><span>{t("shelemThem")} <b>{n(room.teamScores[1 - team])}</b></span>{room.phase === 'playing' && <small>{t("shelemCapturedScore", { us: room.roundPoints[team], them: room.roundPoints[1-team] })}</small>}</button>}
       <IconButton icon="sliders" label={t("shelemSettings")} onClick={() => setSettingsOpen(true)} />
     </header>
     {room.phase !== 'lobby' && <div className="shelem-voice-entry"><button type="button" className="btn btn--outline" onClick={()=>voiceOn ? void toggleMic() : void joinVoice()}><Icon name={voiceOn && micMuted ? 'micOff' : 'mic'} size={18}/>{voiceOn ? t(micMuted ? 'shelemUnmuteMic' : 'shelemMuteMic') : t('shelemJoinVoice')}</button></div>}
     {(busy || reconnecting || moveRejected) && <div className="shelem-network" role="status">{busy ? t('shelemSending') : reconnecting ? t('shelemReconnecting') : t('shelemMoveRejected')}{!busy && <button type="button" onClick={()=>{setMoveRejected(false); void load();}}>{t('shelemRetry')}</button>}</div>}
 
     {room.phase === "lobby" ? <Lobby room={room} busy={busy} voiceOn={voiceOn} micMuted={micMuted} localMutes={localMutes} onVoice={() => void joinVoice()} onMic={() => void toggleMic()} onPlayerMute={togglePlayer}
-      onMove={(from, to) => void act(() => api.movePlayer(code, from, to))} onReady={() => void act(() => api.ready(code, !me?.ready))} onStart={(fill) => void act(() => api.start(code, fill))} /> :
+      onMove={(from, to) => void act(() => api.movePlayer(code, from, to))} onAddBot={(seat) => void act(() => api.addBot(code, seat))} onRemove={(seat) => void act(() => api.removeSeat(code, seat))} onReady={() => void act(() => api.ready(code, !me?.ready))} onStart={() => void act(() => api.start(code, false))} /> :
       <GameTable room={room} />}
 
     {error && <div className="shelem-toast" role="alert">{error}</div>}
@@ -254,26 +264,105 @@ function DealSequence({ room }: { room: ShelemRoom }) {
   </div>;
 }
 
-function Lobby({ room, busy, voiceOn, micMuted, localMutes, onVoice, onMic, onPlayerMute, onReady, onStart, onMove }: {
-  room: ShelemRoom; busy: boolean; voiceOn: boolean; micMuted: boolean; localMutes: Set<number>; onVoice(): void; onMic(): void; onPlayerMute(uid: number): void; onReady(): void; onStart(fill: boolean): void; onMove(from: number, to: number): void;
+// Where each seat sits around the table, seen from your own chair: partner across, opponents at the sides.
+const LOBBY_SPOTS = ["bottom", "left", "top", "right"] as const;
+
+function Lobby({ room, busy, voiceOn, micMuted, localMutes, onVoice, onMic, onPlayerMute, onReady, onStart, onMove, onAddBot, onRemove }: {
+  room: ShelemRoom; busy: boolean; voiceOn: boolean; micMuted: boolean; localMutes: Set<number>; onVoice(): void; onMic(): void; onPlayerMute(uid: number): void;
+  onReady(): void; onStart(): void; onMove(from: number, to: number): void; onAddBot(seat: number | null): void; onRemove(seat: number): void;
 }) {
   const { t } = useLanguage();
+  const [picked, setPicked] = useState<number | null>(null);
+  const [copied, setCopied] = useState(false);
+  const own = room.yourSeat ?? 0;
+  const host = room.youAreHost;
   const me = room.players.find((p) => p.isYou);
+  const at = (seat: number) => room.players.find((p) => p.seat === seat);
+  const pickedPlayer = picked == null ? undefined : at(picked);
+  const seated = room.players.length;
+  const notReady = room.players.find((p) => !p.ready);
+  const canStart = seated === 4 && !notReady;
+  const status = seated < 4 ? t("shelemWaitingPlayers", { n: seated })
+    : notReady ? (notReady.isYou ? t("shelemTapReady") : t("shelemWaitingReady", { name: notReady.name }))
+    : host ? t("shelemStartGame") : t("shelemGuestWaitingHost");
+
+  useEffect(() => {
+    if (!copied) return;
+    const timer = window.setTimeout(() => setCopied(false), 1800);
+    return () => window.clearTimeout(timer);
+  }, [copied]);
+
   const invite = async () => void await shareLink(appLink(`sh_${room.code.replace("SH-", "")}`), t("shelemInviteText", { code: room.code }));
-  return <Body style={{ gap: 16, paddingBottom: 180 }}>
-    <section className="shelem-room-code"><span><small>{t("shelemRoomCode")}</small><b dir="ltr">{room.code}</b></span><button className="btn btn--outline btn--auto" onClick={() => void invite()}><Icon name="share" size={17} /> {t("share")}</button></section>
-    <section className="stack stack--sm"><h2 className="h2">{t("shelemTeamSetup")}</h2><p className="small muted">{t(room.youAreHost ? "shelemTeamSetupHost" : "shelemTeamSetupGuest")}</p></section>
-    <div className="shelem-lobby-seats">{[0, 2, 1, 3].map((seat) => {
-      const p = room.players.find((x) => x.seat === seat);
-      return <div className={`shelem-lobby-seat${p?.ready ? " is-ready" : ""}`} key={seat}><span className="shelem-seat-avatar">{p?.isBot ? "✦" : p?.name?.[0]?.toUpperCase() ?? "+"}</span><b>{p?.name ?? t("shelemOpenSeat")}</b><small>{seat % 2 === 0 ? t("shelemTeamA") : t("shelemTeamB")}{p?.isBot ? ` · ${t("shelemBot")}` : ""}</small>{p?.ready && <Icon name="check" size={16} />}{room.youAreHost && p && <label className="shelem-seat-control"><span>{t('shelemMovePlayer', { name: p.name })}</span><select value={seat} disabled={busy} onChange={event => onMove(seat, Number(event.target.value))}>{[0,2,1,3].map(target => <option key={target} value={target}>{t(target % 2 === 0 ? 'shelemTeamA' : 'shelemTeamB')} · {t('shelemSeatNumber', { n: Math.floor(target / 2) + 1 })}{room.players.find(player => player.seat === target) ? ` · ${room.players.find(player => player.seat === target)?.name}` : ` · ${t('shelemOpenSeat')}`}</option>)}</select></label>}</div>;
-    })}</div>
-    <VoicePanel room={room} voiceOn={voiceOn} micMuted={micMuted} localMutes={localMutes} onVoice={onVoice} onMic={onMic} onPlayerMute={onPlayerMute} />
-    <div className="card small muted"><Icon name="shield" size={18} /> {t("shelemFairBots")}</div>
-    <div className="screen__bar screen__bar--row">
-      {!room.youAreHost && <button className={`btn${me?.ready ? " btn--outline" : ""}`} disabled={busy} onClick={onReady}>{me?.ready ? t("shelemNotReady") : t("shelemReady")}</button>}
-      {room.youAreHost && <><button className="btn btn--outline" disabled={busy} onClick={() => onStart(false)}>{t("shelemStartFour")}</button><button className="btn" disabled={busy} onClick={() => onStart(true)}>{t("shelemFillBots")}</button></>}
+  const copyCode = async () => { try { await navigator.clipboard.writeText(room.code); setCopied(true); } catch { void invite(); } };
+
+  function tapSeat(seat: number) {
+    if (picked == null) setPicked(seat);
+    else if (picked === seat) setPicked(null);
+    else if (pickedPlayer) { onMove(picked, seat); setPicked(null); }
+    else setPicked(seat);
+  }
+
+  return <>
+    <Body style={{ gap: 14, paddingBottom: 20 }}>
+      <section className="shelem-room-code">
+        <span><small>{t("shelemRoomCode")}</small><b dir="ltr">{room.code}</b></span>
+        <span className="row" style={{ gap: 8 }}>
+          <IconButton icon={copied ? "check" : "link"} label={t("shelemCopyCode")} onClick={() => void copyCode()} />
+          <button className="btn btn--outline btn--auto btn--sm" onClick={() => void invite()}><Icon name="share" size={17} /> {t("shelemInvite")}</button>
+        </span>
+        <small className="shelem-room-code__note" role="status">{copied ? t("shelemCodeCopied") : ""}</small>
+      </section>
+
+      <div className="shelem-lobby-table" dir="ltr">
+        <div className="shelem-lobby-felt" aria-hidden="true"><span>✦</span></div>
+        {[0, 1, 2, 3].map((delta) => {
+          const seat = (own + delta) % 4;
+          const p = at(seat);
+          const role = delta === 0 ? t("you") : delta === 2 ? t("shelemPartner") : t("shelemOpponent");
+          const state = !p ? t("shelemOpenSeat") : p.isBot ? t("shelemBot") : p.ready ? t("shelemSeatReady") : t("shelemSeatNotReady");
+          const cls = `shelem-lobby-seat shelem-lobby-seat--${LOBBY_SPOTS[delta]} ${delta % 2 === 0 ? "is-ours" : "is-theirs"}${p ? "" : " is-open"}${p?.ready ? " is-ready" : ""}${picked === seat ? " is-picked" : ""}`;
+          const content = <>
+            <span className="shelem-seat-avatar">{!p ? <Icon name="plus" size={18} /> : p.isBot ? "✦" : p.name[0]?.toUpperCase()}{p?.isHost && <i className="shelem-seat-host" title={t("shelemHost")}><Icon name="crown" size={12} /></i>}</span>
+            <small className="shelem-lobby-seat__role">{role}</small>
+            <b dir="auto">{p ? p.name : t("shelemOpenSeat")}</b>
+            {p && <small className="shelem-lobby-seat__state">{p.ready && !p.isBot && <Icon name="check" size={12} />}{p.isHost ? `${t("shelemHost")} · ${state}` : state}</small>}
+          </>;
+          const label = `${role} · ${p ? `${p.name} · ${p.isHost ? `${t("shelemHost")} · ` : ""}${state}` : t("shelemOpenSeat")}`;
+          return host
+            ? <button type="button" key={seat} className={cls} aria-pressed={picked === seat} aria-label={label} disabled={busy} onClick={() => tapSeat(seat)}>{content}</button>
+            : <div key={seat} className={cls} role="group" aria-label={label}>{content}</div>;
+        })}
+      </div>
+
+      <div className="shelem-seat-actions" role="status">
+        {!host ? <p className="small muted">{t("shelemSeatHintGuest")}</p>
+          : picked == null ? <p className="small muted">{t("shelemSeatHintHost")}</p>
+          : !pickedPlayer ? <>
+              <p className="small"><b>{t("shelemSeatOpenPicked")}</b></p>
+              <div className="row" style={{ gap: 8 }}>
+                <button className="btn btn--primary btn--sm" disabled={busy} onClick={() => { onAddBot(picked); setPicked(null); }}><Icon name="bolt" size={17} /> {t("shelemAddBot")}</button>
+                <button className="btn btn--outline btn--sm" onClick={() => { void invite(); setPicked(null); }}><Icon name="share" size={17} /> {t("shelemInviteFriend")}</button>
+              </div>
+            </>
+          : <>
+              <p className="small">{pickedPlayer.isYou ? t("shelemMoveSelfHint") : t("shelemMoveHint", { name: pickedPlayer.name })}</p>
+              {!pickedPlayer.isYou && <button className="btn btn--outline btn--sm shelem-seat-remove" disabled={busy} onClick={() => { onRemove(picked); setPicked(null); }}><Icon name="close" size={17} /> {t("shelemRemovePlayer", { name: pickedPlayer.name })}</button>}
+            </>}
+      </div>
+
+      <VoicePanel room={room} voiceOn={voiceOn} micMuted={micMuted} localMutes={localMutes} onVoice={onVoice} onMic={onMic} onPlayerMute={onPlayerMute} />
+      <div className="card small muted"><Icon name="shield" size={18} /> {t("shelemFairBots")}</div>
+    </Body>
+    <div className="screen__bar">
+      {host ? <>
+        {seated < 4 && <button className="btn btn--outline btn--sm" disabled={busy} onClick={() => { onAddBot(null); setPicked(null); }}>{t("shelemFillSeats")}</button>}
+        <button className="btn btn--primary" disabled={busy || !canStart} onClick={onStart} aria-live="polite">{status}</button>
+      </> : <>
+        <p className="small muted shelem-lobby-status" role="status">{status}</p>
+        <button className={`btn ${me?.ready ? "btn--outline" : "btn--primary"}`} disabled={busy} onClick={onReady}>{me?.ready ? t("shelemNotReady") : t("shelemReady")}</button>
+      </>}
     </div>
-  </Body>;
+  </>;
 }
 
 function GameTable({ room }: { room: ShelemRoom }) {

@@ -6,7 +6,7 @@ export type ShelemSuit = "clubs" | "diamonds" | "hearts" | "spades";
 
 export interface ShelemPlayer {
   lastBid: number | null;
-  seat: number; name: string; isBot: boolean; ready: boolean; passed: boolean; cards: number; isYou: boolean; voiceUid: number;
+  seat: number; name: string; isBot: boolean; ready: boolean; passed: boolean; cards: number; isYou: boolean; voiceUid: number; isHost: boolean;
 }
 export interface ShelemPlay { seat: number; card: string }
 export interface ShelemRoom {
@@ -26,6 +26,10 @@ export const shelemApi = (api: BazimoonApiClient) => ({
   get: (code: string) => api.request<ShelemRoom>("GET", base(code)),
   join: (code: string) => api.request<ShelemRoom>("POST", `${base(code)}/join`),
   movePlayer: (code: string, fromSeat: number, toSeat: number) => api.request<ShelemRoom>("POST", `${base(code)}/seats`, { fromSeat, toSeat }),
+  /** Seats a bot in one open seat, or in every open seat when no seat is given. */
+  addBot: (code: string, seat: number | null) => api.request<ShelemRoom>("POST", `${base(code)}/bots`, { seat }),
+  removeSeat: (code: string, seat: number) => api.request<ShelemRoom>("POST", `${base(code)}/seats/${seat}/remove`),
+  leave: (code: string) => api.request<void>("POST", `${base(code)}/leave`),
   ready: (code: string, ready: boolean) => api.request<ShelemRoom>("POST", `${base(code)}/ready`, { ready }),
   start: (code: string, fillBots: boolean) => api.request<ShelemRoom>("POST", `${base(code)}/start`, { fillBots }),
   bid: (code: string, bid: number | null, shelem = false) => api.request<ShelemRoom>("POST", `${base(code)}/bid`, { bid, shelem }),

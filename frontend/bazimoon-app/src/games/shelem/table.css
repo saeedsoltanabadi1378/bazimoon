@@ -92,10 +92,6 @@
 .screen:has(.shelem-game-toolbar) .shelem-hand .playing-card:first-child { margin-left:0; }
 .screen:has(.shelem-game-toolbar) .shelem-opponent-hand .card-back-fan--vertical .playing-card { transform-origin:center; rotate:calc((var(--back-i) - (var(--back-count) - 1)/2) * 1.4deg); }
 
-.shelem-seat-control { display:grid; gap:5px; width:100%; text-align:start; font-size:11px; margin-block-start:8px; }
-.shelem-seat-control select { width:100%; min-width:0; min-height:42px; padding:6px; border:1px solid #65718c; border-radius:8px; background:#142039; color:#fff; font:inherit; }
-.shelem-lobby-seat { min-width:0; }
-
 /* Keep controls quiet and give immediate bid actions a clear focus state. */
 .shelem-bid-heading { display:grid; gap:4px; text-align:start; margin-block-end:4px; }
 .screen:has(.shelem-game-toolbar) .shelem-bid-values button:enabled:hover { background:#34554f; border-color:#e2b86b; }

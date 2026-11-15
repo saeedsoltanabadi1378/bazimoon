@@ -49,6 +49,82 @@ public sealed class ShelemRoomServiceTests
     }
 
     [Fact]
+    public async Task MovingASeat_OnlyAsksTheMovedPlayersToReadyAgain()
+    {
+        var service = new ShelemRoomService(new FakeClock(), new Settings(), new RecordingNotifier());
+        var host = Guid.NewGuid();
+        var mover = Guid.NewGuid();
+        var bystander = Guid.NewGuid();
+        var room = await service.CreateAsync(host, "Host", withBots: false);
+        await service.JoinAsync(room.Code, mover, "Mover");
+        await service.JoinAsync(room.Code, bystander, "Bystander");
+        await service.ReadyAsync(room.Code, mover, true);
+        await service.ReadyAsync(room.Code, bystander, true);
+        var moved = await service.MovePlayerAsync(room.Code, host, 1, 3);
+        Assert.False(moved.Players.Single(p => p.Name == "Mover").Ready);
+        Assert.True(moved.Players.Single(p => p.Name == "Bystander").Ready);
+    }
+
+    [Fact]
+    public async Task HostSeatsAndRemovesBotsAndPlayers_SeatBySeat()
+    {
+        var service = new ShelemRoomService(new FakeClock(), new Settings(), new RecordingNotifier());
+        var host = Guid.NewGuid();
+        var guest = Guid.NewGuid();
+        var room = await service.CreateAsync(host, "Host", withBots: false);
+        await service.JoinAsync(room.Code, guest, "Guest");
+        await Assert.ThrowsAsync<Bazimoon.Api.Games.ForbiddenGameActionException>(() => service.AddBotAsync(room.Code, guest, 2));
+
+        var withBot = await service.AddBotAsync(room.Code, host, 3);
+        Assert.True(withBot.Players.Single(p => p.Seat == 3).IsBot);
+        Assert.Equal("seat_taken", (await Assert.ThrowsAsync<Bazimoon.Domain.GameException>(() => service.AddBotAsync(room.Code, host, 3))).Code);
+        Assert.Equal("cannot_remove_self", (await Assert.ThrowsAsync<Bazimoon.Domain.GameException>(() => service.RemoveSeatAsync(room.Code, host, 0))).Code);
+
+        var removed = await service.RemoveSeatAsync(room.Code, host, 1);
+        Assert.DoesNotContain(removed.Players, p => p.Name == "Guest");
+        await Assert.ThrowsAsync<Bazimoon.Api.Games.ForbiddenGameActionException>(() => service.GetAsync(room.Code, guest));
+
+        var full = await service.AddBotAsync(room.Code, host, null);
+        Assert.Equal(4, full.Players.Length);
+        Assert.Equal(3, full.Players.Where(p => p.IsBot).Select(p => p.Name).Distinct().Count());
+        Assert.Equal("bidding", (await service.StartAsync(room.Code, host, fillBots: false)).Phase);
+    }
+
+    [Fact]
+    public async Task Leaving_FreesTheSeat_AndPassesTheHostOn()
+    {
+        var service = new ShelemRoomService(new FakeClock(), new Settings(), new RecordingNotifier());
+        var host = Guid.NewGuid();
+        var guest = Guid.NewGuid();
+        var room = await service.CreateAsync(host, "Host", withBots: false);
+        await service.JoinAsync(room.Code, guest, "Guest");
+        await service.AddBotAsync(room.Code, host, null);
+
+        await service.LeaveAsync(room.Code, host);
+        var afterHost = await service.GetAsync(room.Code, guest);
+        Assert.True(afterHost.YouAreHost);
+        Assert.True(afterHost.Players.Single(p => p.IsYou).IsHost);
+        Assert.True(afterHost.Players.Single(p => p.IsYou).Ready);
+        Assert.Equal(3, afterHost.Players.Length);
+        Assert.Equal(0, (await service.JoinAsync(room.Code, Guid.NewGuid(), "Late")).YourSeat);
+    }
+
+    [Fact]
+    public async Task LastPersonLeaving_ClosesTheTable_AndNobodyLeavesAStartedGame()
+    {
+        var service = new ShelemRoomService(new FakeClock(), new Settings(), new RecordingNotifier());
+        var host = Guid.NewGuid();
+        var room = await service.CreateAsync(host, "Host", withBots: false);
+        await service.AddBotAsync(room.Code, host, 2);
+        await service.LeaveAsync(room.Code, host);
+        Assert.Equal("room_not_found", (await Assert.ThrowsAsync<Bazimoon.Domain.GameException>(() => service.GetAsync(room.Code, host))).Code);
+
+        var started = await service.CreateAsync(host, "Host", withBots: true);
+        Assert.Equal("wrong_phase", (await Assert.ThrowsAsync<Bazimoon.Domain.GameException>(() => service.LeaveAsync(started.Code, host))).Code);
+        Assert.Equal(4, (await service.GetAsync(started.Code, host)).Players.Length);
+    }
+
+    [Fact]
     public async Task TeamChangesAreRejectedAfterStarting()
     {
         var service = new ShelemRoomService(new FakeClock(), new Settings(), new RecordingNotifier());
