@@ -15,17 +15,19 @@ const players = [
 const deadline = () => new Date(Date.now() + 45_000).toISOString();
 const rules = { speakerSeconds: 60, challengeSeconds: 30, defenceSeconds: 30, lastWordsSeconds: 20, nightSeconds: 60, votingSeconds: 45, lastWordsForNightKills: false, preset: "Classic", godfatherAppearsInnocent: false, jokerWinEndsGame: true, revealRolesOnDeath: true, allowSpectators: true };
 
-function view(id) {
+function view(fullId) {
+  // "firstnight-Godfather" shows the first night as that role; the role defaults to Detective.
+  const [id, asRole] = fullId.split("-");
   const phase = ({ lobby: "Lobby", firstnight: "NightZero", night: "Night", day: "Day", voting: "Voting", defence: "Defence", results: "Results", ended: "Ended" })[id] ?? "Day";
   const base = {
-    gameId: id, phase, nightNumber: phase === "Lobby" ? 0 : 2, minPlayers: 3, maxPlayers: 8, players,
-    yourPlayerId: players[0].playerId, yourRole: phase === "Lobby" ? null : "Detective", youAreAlive: true,
+    gameId: fullId, phase, nightNumber: phase === "Lobby" ? 0 : 2, minPlayers: 3, maxPlayers: 8, players,
+    yourPlayerId: players[0].playerId, yourRole: phase === "Lobby" ? null : (asRole ?? "Detective"), youAreAlive: true,
     yourLastInvestigationResult: null, lastNightElimination: phase === "Day" ? { eliminatedPlayerId: players[4].playerId, wasSaved: false, wasTie: false, tiedPlayers: null, godfatherPromoted: false, ballots: null, round: 1, previousBallots: null, shotPlayerId: null } : null,
     lastVotingElimination: phase === "Results" ? { eliminatedPlayerId: players[2].playerId, wasSaved: false, wasTie: false, tiedPlayers: null, godfatherPromoted: false, ballots: [{ voterPlayerId: players[0].playerId, targetPlayerId: players[2].playerId }, { voterPlayerId: players[1].playerId, targetPlayerId: players[2].playerId }, { voterPlayerId: players[3].playerId, targetPlayerId: players[2].playerId }, { voterPlayerId: players[2].playerId, targetPlayerId: players[1].playerId }], round: 1, previousBallots: null, shotPlayerId: null } : null,
     winCondition: phase === "Ended" ? "VillagersWin" : "None", youAreController: true, requiredNightActionsComplete: false,
     votes: phase === "Voting" ? [{ voterPlayerId: players[1].playerId, targetPlayerId: players[2].playerId }, { voterPlayerId: players[3].playerId, targetPlayerId: players[2].playerId }, { voterPlayerId: players[2].playerId, targetPlayerId: null }] : [],
     discussion: phase === "Day" ? { segmentType: "Speaker", activePlayerId: players[1].playerId, originalSpeakerId: players[1].playerId, deadline: deadline(), pendingChallengerIds: [], yourChallengeIsPending: false, youCanRequestChallenge: true, youCanFinish: false, speakerOrder: players.filter(p => p.isAlive).map(p => p.playerId), completedSpeakerIds: [] } : null,
-    mafiaTeam: null, mafiaSuggestions: null, yourNightActionTargetId: null, yourInvestigations: [], youCannotHealSelf: false,
+    mafiaTeam: ["Godfather", "Mafia", "Silencer", "Negotiator"].includes(asRole) ? [{ playerId: players[0].playerId, role: asRole, rank: 1 }, { playerId: players[2].playerId, role: asRole === "Godfather" ? "Mafia" : "Godfather", rank: 2 }] : null, mafiaSuggestions: null, yourNightActionTargetId: null, yourInvestigations: [], youCannotHealSelf: false,
     nightProgress: phase === "Night" ? { submitted: 1, required: 3 } : null, rematchGameId: null, phaseDeadline: ["Night", "Voting"].includes(phase) ? deadline() : null,
     votingRound: 1, runoffCandidateIds: phase === "Defence" ? [players[1].playerId, players[2].playerId] : null, lastWords: null, rules,
     readyPlayerIds: phase === "Lobby" ? [players[1].playerId, players[2].playerId] : [], autoStartAt: null, controllerPlayerId: players[0].playerId,

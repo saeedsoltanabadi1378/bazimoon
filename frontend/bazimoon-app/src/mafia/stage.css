@@ -209,6 +209,8 @@ html[lang="fa"] .mafia-stage {
 /* ---------- role reveal: the card lies sideways, portrait beside the text ---------- */
 
 .mafia-stage .role-reveal-card {
+  /* Keep the card's full height when the Mafia team list joins it; the body scrolls instead. */
+  flex: none;
   min-height: 0 !important;
   padding: 16px 20px !important;
   border-radius: 18px !important;
