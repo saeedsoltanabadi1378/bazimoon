@@ -16,7 +16,7 @@ const deadline = () => new Date(Date.now() + 45_000).toISOString();
 const rules = { speakerSeconds: 60, challengeSeconds: 30, defenceSeconds: 30, lastWordsSeconds: 20, nightSeconds: 60, votingSeconds: 45, lastWordsForNightKills: false, preset: "Classic", godfatherAppearsInnocent: false, jokerWinEndsGame: true, revealRolesOnDeath: true, allowSpectators: true };
 
 function view(id) {
-  const phase = ({ lobby: "Lobby", night: "Night", day: "Day", voting: "Voting", defence: "Defence", results: "Results", ended: "Ended" })[id] ?? "Day";
+  const phase = ({ lobby: "Lobby", firstnight: "NightZero", night: "Night", day: "Day", voting: "Voting", defence: "Defence", results: "Results", ended: "Ended" })[id] ?? "Day";
   const base = {
     gameId: id, phase, nightNumber: phase === "Lobby" ? 0 : 2, minPlayers: 3, maxPlayers: 8, players,
     yourPlayerId: players[0].playerId, yourRole: phase === "Lobby" ? null : "Detective", youAreAlive: true,

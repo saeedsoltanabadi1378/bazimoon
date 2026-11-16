@@ -11,6 +11,9 @@ import { NoteSheet, VoiceHalo } from "./table";
 import { ReactionArt, reactionColors, useCanReact } from "./Reactions";
 import type { ReactionKind } from "./reactionTypes";
 import { useClock, useSecondsLeft } from "./timers";
+import { seatPoints } from "./seatRing";
+import { useTableWorld } from "./three/context";
+import type { SeatLook, SeatSpot } from "./three/world";
 
 const PORTRAIT_COUNT = 16;
 
@@ -81,33 +84,6 @@ interface SeatBubble {
 const TABLE_RATIO = 2.34;
 
 /**
- * Points at equal distances along a rounded curve around the table, the first at the top centre and
- * the rest clockwise. Equal spacing puts more seats on the long sides and never stacks the ends.
- */
-function seatPoints(count: number, rx: number, ry: number): [number, number][] {
-  const steps = 720;
-  const power = 2 / 2.6;
-  const points: [number, number][] = [];
-  const lengths = [0];
-  for (let k = 0; k <= steps; k++) {
-    const angle = -Math.PI / 2 + (k / steps) * 2 * Math.PI;
-    const c = Math.cos(angle);
-    const s = Math.sin(angle);
-    points.push([rx * Math.sign(c) * Math.abs(c) ** power, ry * Math.sign(s) * Math.abs(s) ** power]);
-    if (k > 0) lengths.push(lengths[k - 1] + Math.hypot(points[k][0] - points[k - 1][0], points[k][1] - points[k - 1][1]));
-  }
-  const total = lengths[steps];
-  const seats: [number, number][] = [];
-  let k = 0;
-  for (let i = 0; i < count; i++) {
-    const target = (total / count) * i;
-    while (lengths[k] < target) k++;
-    seats.push(points[k]);
-  }
-  return seats;
-}
-
-/**
  * The table with everyone seated around it, the same on every phase: who is alive, out, speaking,
  * silenced or a revealed Mayor. Seats are tapped to pick a player, or to open your private note.
  */
@@ -133,6 +109,9 @@ export function TableScene({ pick, tags, counts, nowId, doneIds, dimIds, clock, 
   const { t, n } = useLanguage();
   const { notes } = usePlayerNotes(view?.gameId ?? "");
   const ref = useRef<HTMLDivElement>(null);
+  const overlay = useRef<HTMLDivElement>(null);
+  const world = useTableWorld();
+  const [spots, setSpots] = useState<SeatSpot[] | null>(null);
   const [size, setSize] = useState({ w: 0, h: 0 });
   const [noting, setNoting] = useState<{ player: PlayerView; host: Element } | null>(null);
 
@@ -147,18 +126,60 @@ export function TableScene({ pick, tags, counts, nowId, doneIds, dimIds, clock, 
     return () => observer.disconnect();
   }, []);
 
+  const compact = size.h < 340;
+  const plate = compact ? 26 : 44;
+  const hasView = Boolean(view);
+
+  // The 3D table draws inside this section, behind the HTML seats, which it keeps on their coins.
+  useLayoutEffect(() => {
+    const el = ref.current;
+    const layer = overlay.current;
+    if (!world || !el || !layer) return;
+    world.attachTable(el, {
+      plate,
+      onLayout: setSpots,
+      onDrift: (transform) => {
+        layer.style.transform = transform;
+      },
+    });
+    return () => {
+      world.detach(el);
+      layer.style.transform = "";
+      setSpots(null);
+    };
+  }, [world, plate, hasView]);
+
+  const looks: SeatLook[] = (view?.players ?? []).map((p, index) => ({
+    portrait: seatPortrait(index),
+    alive: p.isAlive,
+    now: p.playerId === nowId,
+    // The same seats the flat table dims: done speaking, or not part of the pick or re-vote.
+    dim: p.isAlive && p.playerId !== nowId && (Boolean(doneIds?.has(p.playerId)) || (!pick?.canPick(p.playerId) && (Boolean(dimIds?.has(p.playerId)) || Boolean(pick && p.playerId !== view?.yourPlayerId)))),
+    spot: p.playerId === spotId,
+  }));
+  const night = view?.phase === "Night" || view?.phase === "NightZero";
+  const looksKey = JSON.stringify(looks);
+  useLayoutEffect(() => {
+    world?.setSeats(JSON.parse(looksKey) as SeatLook[]);
+    world?.setNight(night);
+  }, [world, looksKey, night]);
+
   if (!view) return null;
 
   const { w, h } = size;
-  const compact = h < 340;
-  const face = Math.round(Math.max(38, Math.min(92, h / (compact ? 6.2 : 6.6))));
+  const three = Boolean(world && spots && spots.length === view.players.length);
+  const face = three
+    ? Math.round((spots!.reduce((sum, spot) => sum + spot.r, 0) / spots!.length) * 2)
+    : Math.round(Math.max(38, Math.min(92, h / (compact ? 6.2 : 6.6))));
   const seatHeight = face + (compact ? 20 : 38);
   // Seats ring the table from outside: the table is sized so each portrait only overlaps its rim.
   const ry = h / 2 - seatHeight / 2 - 3;
   const tableHeight = Math.max(80, 2 * ry - face * 0.75);
   const tableWidth = Math.max(160, Math.min(tableHeight * TABLE_RATIO, w - 2 * face - 56));
   const rx = tableWidth / 2 + face * 0.32;
-  const points = w > 0 && h > 0 ? seatPoints(view.players.length, rx, ry) : [];
+  const points: [number, number][] = three
+    ? spots!.map((spot) => [spot.x - w / 2, spot.y - h / 2])
+    : w > 0 && h > 0 ? seatPoints(view.players.length, rx, ry) : [];
 
   const canNote = !view.youAreSpectator && view.phase !== "Ended";
   const speaking = Boolean(nowId);
@@ -200,8 +221,9 @@ export function TableScene({ pick, tags, counts, nowId, doneIds, dimIds, clock, 
   };
 
   return (
-    <section ref={ref} className="table-scene" dir="ltr" aria-label={t("players")}>
-      <img className="table-scene__table" src={tableArt.table} alt="" draggable={false} style={{ width: tableWidth, height: tableHeight }} />
+    <section ref={ref} className={`table-scene${three ? " table-scene--3d" : ""}`} dir="ltr" aria-label={t("players")}>
+      {!three && <img className="table-scene__table" src={tableArt.table} alt="" draggable={false} style={{ width: tableWidth, height: tableHeight }} />}
+      <div ref={overlay} className="table-scene__overlay">
       {voteLines.length > 0 && (
         <svg className="table-links" width={w} height={h} aria-hidden="true">
           {voteLines.map((line) => (
@@ -223,7 +245,7 @@ export function TableScene({ pick, tags, counts, nowId, doneIds, dimIds, clock, 
         </svg>
       )}
       {/* Drawn after the aim lines, so the clock stays readable when one crosses it. */}
-      {clock && w > 0 && <CentreClock clock={clock} width={Math.round(tableWidth * 0.6)} compact={compact} />}
+      {clock && w > 0 && <CentreClock clock={clock} width={Math.round(three ? (Math.max(...points.map(([x]) => x)) - Math.min(...points.map(([x]) => x))) * 0.5 : tableWidth * 0.6)} compact={compact} />}
       <div className="table-scene__spoken" role="log" aria-live="polite">
         {[...bubbles].map(([senderId, bubble]) => (
           <p key={bubble.key}>
@@ -269,7 +291,7 @@ export function TableScene({ pick, tags, counts, nowId, doneIds, dimIds, clock, 
             key={id}
             type="button"
             className={classes.join(" ")}
-            style={{ left: w / 2 + x, top: h / 2 + y, "--face": `${face}px`, "--aim": aimColor } as CSSProperties}
+            style={{ left: w / 2 + x, top: h / 2 + y, "--face": `${three ? Math.round(spots![index].r * 2) : face}px`, "--aim": aimColor } as CSSProperties}
             aria-label={`${n(index + 1)} ${you ? t("youName", { name: p.displayName }) : p.displayName}, ${state}`}
             aria-pressed={pick ? selected : undefined}
             aria-disabled={!pickable && !notable}
@@ -282,7 +304,7 @@ export function TableScene({ pick, tags, counts, nowId, doneIds, dimIds, clock, 
               }
             }}
           >
-            <span className="table-seat__face" style={{ backgroundImage: `url(${seatPortrait(index)})` }}>
+            <span className="table-seat__face" style={three ? undefined : { backgroundImage: `url(${seatPortrait(index)})` }}>
               {now && <VoiceHalo inset={-7} color="#f1d79a" />}
               {view.controllerPlayerId === id && <span className="table-seat__crown"><Icon name="crown" size={Math.round(face * 0.34)} strokeWidth={2.2} /></span>}
               {mark && <span className={`table-seat__mark table-seat__mark--${mark}`} />}
@@ -317,6 +339,7 @@ export function TableScene({ pick, tags, counts, nowId, doneIds, dimIds, clock, 
           </button>
         );
       })}
+      </div>
       {noting && createPortal(<NoteSheet
           gameId={view.gameId}
           player={noting.player}

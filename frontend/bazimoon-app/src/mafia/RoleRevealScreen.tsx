@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useGame } from "./GameProvider";
 import { useLanguage } from "../i18n/LanguageContext";
 import { Bar, Body, IconDisc, Screen } from "../ui/components";
@@ -6,16 +6,49 @@ import { findPlayer, roleMeta } from "./roles";
 import { useRoleName } from "./parts";
 import { haptic } from "../lib/haptics";
 import { RolePortrait } from "./RolePortrait";
+import { useTableWorld } from "./three/context";
+import type { CardLook } from "./three/world";
 
 /** Shown once per game right after roles are dealt; the card stays face-down until tapped. */
 export function RoleRevealScreen({ onReady }: { onReady: () => void }) {
   const { view } = useGame();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const roleName = useRoleName();
   const [shown, setShown] = useState(false);
-  if (!view?.yourRole) return null;
+  const world = useTableWorld();
+  const cardHost = useRef<HTMLSpanElement>(null);
+  const role = view?.yourRole;
 
-  const role = view.yourRole;
+  // The 3D card: one stable host, so the card turns in place instead of being redrawn.
+  const look = (host: HTMLElement): CardLook | null => role ? {
+    image: roleMeta[role].image,
+    name: roleName(role),
+    kicker: t("youAreThe"),
+    font: getComputedStyle(host).getPropertyValue("--font-noir").trim() || "Georgia, serif",
+    dir: language === "fa" ? "rtl" : "ltr",
+    accent: roleMeta[role].fg,
+    glow: roleMeta[role].bg,
+  } : null;
+  const lookRef = useRef(look);
+  lookRef.current = look;
+  const shownRef = useRef(shown);
+  shownRef.current = shown;
+  useLayoutEffect(() => {
+    const host = cardHost.current;
+    const first = host && lookRef.current(host);
+    if (!world || !host || !first) return;
+    world.attachCard(host, first, shownRef.current);
+    return () => world.detach(host);
+  }, [world, role]);
+  useEffect(() => {
+    const host = cardHost.current;
+    const next = host && look(host);
+    if (!world || !next) return;
+    world.setCardLook(next);
+    world.setCardShown(shown);
+  });
+
+  if (!view || !role) return null;
   const meta = roleMeta[role];
   const tip = role === "Sniper" ? t("tipSniper")
     : role === "DieHard" ? (view.rules.revealRolesOnDeath ? null : t("tipDieHard"))
@@ -48,7 +81,29 @@ export function RoleRevealScreen({ onReady }: { onReady: () => void }) {
             display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16, padding: 28,
           }}
         >
-          {!shown ? (
+          {world ? (
+            <span className="stack center role-reveal-card__face" style={{ gap: 14 }}>
+              <span ref={cardHost} className="role-card-3d" aria-hidden="true" />
+              {!shown ? (
+                <>
+                  <span className="display" style={{ fontSize: 22, fontWeight: 700 }}>{t("tapToReveal")}</span>
+                  <span style={{ fontSize: 14, color: "var(--muted)" }}>{t("tapAgainToHide")}</span>
+                </>
+              ) : (
+                <>
+                  <span style={{ fontSize: 14, color: "var(--text-2)" }}>{t("youAreThe")}</span>
+                  <span className="display" style={{ fontSize: 40, lineHeight: 1, color: meta.fg }}>{roleName(role)}</span>
+                  <span style={{ fontSize: 15, lineHeight: 1.5, color: "var(--text-soft)", maxWidth: 280 }}>
+                    {t(`reveal${role}`)}
+                  </span>
+                  <span style={{ padding: "6px 12px", borderRadius: 999, background: "#2A1E14", fontSize: 13, color: "var(--text-2)" }}>
+                    {t("teamLabel", { team: meta.team === "mafia" ? t("teamMafia") : meta.team === "independent" ? t("teamIndependent") : t("teamTown") })}
+                  </span>
+                  {tip && <span style={{ fontSize: 13, lineHeight: 1.5, color: "var(--text-2)", maxWidth: 290 }}>{tip}</span>}
+                </>
+              )}
+            </span>
+          ) : !shown ? (
             <>
               <IconDisc icon="moon" size={96} iconSize={44} bg="#2A1E14" fg="#C9A25A" />
               <span className="display" style={{ fontSize: 22, fontWeight: 700 }}>{t("tapToReveal")}</span>
