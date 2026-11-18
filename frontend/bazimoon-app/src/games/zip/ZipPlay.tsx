@@ -6,7 +6,7 @@ import { TabBar } from "../../ui/TabBar";
 import { formatClock } from "../../lib/format";
 import { randomSeed } from "../../lib/rng";
 import { haptic } from "../../lib/haptics";
-import { generateZip, hint as hintFor, visit, zipLevelSize, type ZipMessage } from "./logic";
+import { generateZip, hint as hintFor, isValidPath, visit, ZIP_PRACTICE, zipLevelDifficulty, zipLevelSize, type ZipDifficulty, type ZipMessage } from "./logic";
 import { PlayHeader, useFinish, useSavedState, useStopwatch, useTrackStarted, type SavedState } from "../shared/play";
 import { LevelLoading, rememberLevel, useLevelCopy, useLevelState } from "../shared/levels";
 
@@ -30,25 +30,34 @@ export function ZipPlay({ mode, level, seed: seedParam, size: sizeParam }: { mod
 function ZipLevel({ level }: { level: number }) {
   const [saved, setSaved, clear, ready] = useLevelState<Saved>("zip", "level", level, freshSave, (s) => ({ path: s.path, ms: s.ms, hints: s.hints }));
   if (!ready) return <LevelLoading />;
-  return <ZipBoard level={level} size={zipLevelSize(level)} seedKey={`zip-L${level}`} state={[saved, setSaved, clear]} />;
+  return <ZipBoard level={level} size={zipLevelSize(level)} difficulty={zipLevelDifficulty(level)} seedKey={`zip-L${level}`} state={[saved, setSaved, clear]} />;
 }
 
 function ZipPractice({ seed, size }: { seed: number; size: number }) {
   const seedKey = `zip-practice-${seed}`;
   const state = useSavedState<Saved>(`bazimoon-zip-${seedKey}`, freshSave);
-  return <ZipBoard level={null} size={size} seedKey={seedKey} state={state} />;
+  return <ZipBoard level={null} size={size} difficulty={ZIP_PRACTICE} seedKey={seedKey} state={state} />;
 }
 
-function ZipBoard({ level, size, seedKey, state }: { level: number | null; size: number; seedKey: string; state: SavedState<Saved> }) {
+function ZipBoard({ level, size, difficulty, seedKey, state }: { level: number | null; size: number; difficulty: ZipDifficulty; seedKey: string; state: SavedState<Saved> }) {
   const { t, language } = useLanguage();
   const { back } = useNavigation();
   const copy = useLevelCopy();
   const finish = useFinish("zip");
   useTrackStarted("zip");
   const mode = level !== null ? "level" : "practice";
-  const puzzle = useMemo(() => generateZip(size, seedKey), [size, seedKey]);
+  const puzzle = useMemo(() => generateZip(size, seedKey, difficulty), [size, seedKey, difficulty]);
 
-  const [saved, setSaved, clearSaved] = state;
+  const [stored, setSaved, clearSaved] = state;
+  // A level that has been rebuilt (new walls or numbers) makes an old saved path meaningless: start it over.
+  const stale = useMemo(
+    () => !isValidPath(puzzle, stored.path) || (!!stored.cleared && !isValidPath(puzzle, stored.cleared)),
+    [puzzle, stored.path, stored.cleared],
+  );
+  const saved = stale ? { ...stored, path: [], cleared: null } : stored;
+  useEffect(() => {
+    if (stale) setSaved((s) => ({ ...s, path: [], cleared: null }));
+  }, [stale, setSaved]);
   const [message, setMessage] = useState<{ key: ZipMessage | "hintOffTrack" | "hintAdded" | "boardCleared" | "pathRestored"; values?: Record<string, number>; error: boolean } | null>(null);
   const solved = saved.path.length === size * size && puzzle.checkpoints[saved.path[saved.path.length - 1]] === puzzle.count;
   const [ms] = useStopwatch(!solved, saved.ms);
@@ -158,6 +167,21 @@ function ZipBoard({ level, size, seedKey, state }: { level: number | null; size:
               {saved.path.length > 1 && (
                 <polyline points={points} fill="none" stroke="#3FB8A6" strokeWidth={cell * 0.36} strokeLinecap="round" strokeLinejoin="round" />
               )}
+              {puzzle.walls.map(([a, b]) => {
+                const r = Math.floor(a / size);
+                const c = a % size;
+                // b is either the cell to the right (a wall standing up) or the cell below (a wall lying down).
+                const side = b === a + 1;
+                const x1 = side ? (c + 1) * cell : c * cell;
+                const y1 = side ? r * cell : (r + 1) * cell;
+                return (
+                  <line
+                    key={`${a}-${b}`}
+                    x1={x1} y1={y1} x2={side ? x1 : x1 + cell} y2={side ? y1 + cell : y1}
+                    stroke="#F2EEE6" strokeWidth={Math.max(4, cell * 0.12)} strokeLinecap="round"
+                  />
+                );
+              })}
             </svg>
             {Object.entries(puzzle.checkpoints).map(([index, n]) => {
               const i = Number(index);

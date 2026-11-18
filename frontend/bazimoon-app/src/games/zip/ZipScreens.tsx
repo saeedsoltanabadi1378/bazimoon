@@ -58,6 +58,7 @@ export function ZipIntro() {
         { title: t("zipStep1"), text: t("zipStep1Text") },
         { title: t("zipStep2"), text: t("zipStep2Text") },
         { title: t("zipStep3"), text: t("zipStep3Text") },
+        { title: t("zipStep4"), text: t("zipStep4Text") },
       ]}
       rewards={[t("rewardLevel20"), t("rewardLevelStreak"), t("rewardLeagueXp")]}
       secondary={levels.all}
