@@ -77,6 +77,27 @@ function hubMessage(message) {
   if (message.invocationId) push({ type: 3, invocationId: message.invocationId, result: null });
 }
 
+// Shelem rooms for layout checks: the room code picks the phase, e.g. /sh/PLAY opens SH-PLAY.
+function shelemRoom(code) {
+  const key = code.replace(/^SH-/, "").toLowerCase();
+  const phase = ({ lobby: "lobby", bid: "bidding", disc: "discard", trump: "trump", play: "playing", wait: "playing", res: "roundresult", fin: "finished" })[key] ?? "playing";
+  const hand = ["AS", "KS", "TS", "7S", "AH", "QH", "5H", "9D", "8D", "KC", "JC", "5C"];
+  const full = phase === "discard" ? [...hand, "2D", "3C", "4H", "6S"] : hand;
+  const names = ["آرمان", "سارا", "کیان", "نگار"];
+  return {
+    winningScore: 1165, scoreHistory: phase === "lobby" ? [] : [{ round: 1, bid: 120, delta: [120, 45], totals: [120, 45] }],
+    code, gameId: code, version: 1, phase, round: phase === "lobby" ? 0 : 2, dealerSeat: 3, turnSeat: key === "wait" ? 1 : 0,
+    highestBid: ["lobby", "bidding"].includes(phase) ? (phase === "bidding" ? 115 : null) : 125, declarerSeat: ["lobby", "bidding"].includes(phase) ? null : 0,
+    shelemCalled: false, trump: ["playing", "roundresult", "finished"].includes(phase) ? "hearts" : null,
+    teamScores: phase === "finished" ? [1185, 640] : [120, 45], roundPoints: phase === "playing" ? [45, 20] : [130, 35], roundDelta: [130, 35], winnerTeam: phase === "finished" ? 0 : null,
+    yourSeat: 0, youAreHost: true, hand: ["roundresult", "finished", "lobby"].includes(phase) ? [] : full,
+    legalCards: phase === "playing" && key !== "wait" ? hand.filter((c) => c.endsWith("S")) : full,
+    players: names.map((name, seat) => ({ seat, name, isBot: seat === 1 || seat === 3, ready: seat !== 2 || phase !== "lobby", passed: phase === "bidding" && seat === 3, lastBid: phase === "bidding" && seat === 1 ? 115 : null, cards: phase === "playing" ? (seat === 2 ? 11 : 12) : 12, isYou: seat === 0, voiceUid: seat + 1, isHost: seat === 0 })),
+    trick: phase === "playing" ? [{ seat: 2, card: "QS" }, { seat: 3, card: "9S" }] : [], lastTrick: [], lastTrickWinner: null,
+    zaminCount: phase === "bidding" ? 4 : 0, discardCount: 4, botThinking: key === "wait", turnRemainingMs: key === "wait" ? null : 25_000, turnLimitMs: 30_000,
+  };
+}
+
 const server = http.createServer((req, res) => {
   // The hub client sends credentials, which rules out the "*" origin.
   res.setHeader("Access-Control-Allow-Origin", req.headers.origin ?? "*");
@@ -120,6 +141,8 @@ const server = http.createServer((req, res) => {
   if (req.url === "/api/hub/config") return send(200, { disabledGames: [] });
   if (req.url === "/api/invites") return send(200, []);
   if (req.url === "/api/events") { res.writeHead(204); return res.end(); }
+  const shelem = req.url?.match(/^\/api\/shelem\/rooms\/([^/?]+)/);
+  if (shelem) return send(200, shelemRoom(decodeURIComponent(shelem[1])));
   if (/^\/api\/tables\//.test(req.url ?? "")) return send(200, { gameId: "lobby", name: "میز شب جمعه", isOpen: true, isHost: true, inviteCode: "FA1234" });
   const safety = req.url?.match(/^\/api\/games\/([^/?]+)\/safety$/);
   if (safety) return send(200, { players: players.map((p, i) => ({ playerId: p.playerId, voiceUid: i + 1 })), blockedPlayerIds: [] });

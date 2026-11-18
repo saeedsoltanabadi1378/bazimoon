@@ -876,7 +876,7 @@ export const games: Record<keyof typeof en, string> = {
   shelemScoreDifference: "اختلاف: {n}",
   shelemMatchScore: "امتیاز مسابقه",
   shelemDealing: "در حال پخش کارت‌ها…",
-  shelemDealDescription: "۱۲ کارت برای هر نفر · ۴ کارت برای زمین",
+  shelemDealDescription: "۱۲ کارت برای هر نفر و ۴ کارت برای زمین",
   shelemCapturedScore: "امتیاز گرفته‌شده این دور · ما {us} / حریف {them}",
   shelemDropFour: "چهار کارت را اینجا رها کن · برای برگرداندن کارت روی آن بزن",
   shelemPass: "پاس",
