@@ -47,22 +47,26 @@
 .shelem-game .shelem-player--bottom { bottom: 8px; left: 50%; transform: translateX(-50%); z-index: 6; }
 .shelem-game .shelem-crown { position: absolute; inset-block-start: -13px; inset-inline-end: -5px; color: #ffe255; font-size: 18px; font-style: normal; line-height: 1; text-shadow: 0 1px 2px #000a; }
 
-/* What each seat is doing: beside the top badge, above the side badges and your own. */
+/* What each seat is doing: beside the top badge, under the side badges, above your own. */
 .shelem-game .shelem-player--top .shelem-player-status { top: 50%; bottom: auto; left: calc(100% + 6px); transform: translateY(-50%); }
-.shelem-game .shelem-player--left .shelem-player-status { top: auto; bottom: calc(100% + 6px); left: 0; }
-.shelem-game .shelem-player--right .shelem-player-status { top: auto; bottom: calc(100% + 6px); right: 0; left: auto; }
+.shelem-game .shelem-player--left .shelem-player-status { top: calc(100% + 6px); bottom: auto; left: 0; }
+.shelem-game .shelem-player--right .shelem-player-status { top: calc(100% + 6px); bottom: auto; right: 0; left: auto; }
 .shelem-game .shelem-player--bottom .shelem-player-status { top: auto; bottom: calc(100% + 6px); left: 50%; transform: translateX(-50%); }
 
-/* Other players' hands: a small fan of backs tucked under each badge. */
-.shelem-opponent-hand { position: absolute; z-index: 2; pointer-events: none; }
-.shelem-opponent-hand--top { top: 34px; left: 50%; transform: translateX(-50%); }
-.shelem-opponent-hand--left, .shelem-opponent-hand--right { top: calc(46% + 30px); width: 72px; }
-.shelem-opponent-hand--left { left: 6px; }
-.shelem-opponent-hand--right { right: 6px; }
-.shelem-game .shelem-opponent-hand .card-back-fan { min-width: 0; }
-.shelem-game .shelem-opponent-hand .playing-card { --card-w: 26px; margin-inline-start: -19px; rotate: calc((var(--back-i) - (var(--back-count) - 1) / 2) * 4deg); transform-origin: 50% 180%; box-shadow: 0 2px 4px #0006; }
-.shelem-game .shelem-opponent-hand--left .playing-card, .shelem-game .shelem-opponent-hand--right .playing-card { --card-w: 22px; margin-inline-start: -17px; }
-.shelem-game .shelem-opponent-hand .playing-card:first-child { margin-inline-start: 0; }
+/* Other players' hands: a fan of backs held by that player, turned to face the middle of the table from
+   their seat — your partner's upside down under their badge, each opponent's on its side above theirs —
+   so no one else's cards look like your own hand. */
+.shelem-opponent-hand { position: absolute; z-index: 2; width: 84px; height: 54px; pointer-events: none; }
+.shelem-opponent-hand--top { top: 50px; left: calc(50% - 42px); rotate: 180deg; }
+.shelem-opponent-hand--left { top: calc(46% - 112px); left: 2px; rotate: 90deg; }
+.shelem-opponent-hand--right { top: calc(46% - 112px); right: 2px; rotate: -90deg; }
+.shelem-game .shelem-opponent-hand .card-back-fan { position: relative; display: block; width: 100%; height: 100%; min-width: 0; }
+.shelem-game .shelem-opponent-hand .playing-card {
+  --card-w: 28px; --step: min(5deg, 52deg / var(--back-count));
+  position: absolute; bottom: 0; left: calc(50% - 14px); margin: 0;
+  rotate: calc((var(--back-i) - (var(--back-count) - 1) / 2) * var(--step)); transform-origin: 50% 165%;
+  box-shadow: -1px 1px 3px #0007;
+}
 .shelem-game .playing-card__back { inset: 2px; background: repeating-conic-gradient(#244566 0% 25%, #3d5a75 0% 50%) 0 0 / 5px 5px; border: 2px solid #c9d4de; }
 .shelem-game .playing-card__back::before, .shelem-game .playing-card__back::after { display: none; }
 .shelem-game .playing-card__moon { display: grid; place-items: center; width: 70%; height: 75%; border: 2px solid #aebfd0; border-radius: 3px; background: #19354d; color: #b9cbd9; }
