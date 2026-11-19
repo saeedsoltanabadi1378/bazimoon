@@ -10,6 +10,7 @@ export const GAME_STYLE: Record<string, [string, string, string]> = {
   mines: ["#2A1A1A", "#F08A7A", "M12 7a5 5 0 1 0 0 10 5 5 0 0 0 0-10zM12 2v3M12 19v3M2 12h3M19 12h3"],
   merge: ["#2A2650", "#9C8CFF", "M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z"],
   blocks: ["#25141E", "#F2B8D0", "M4 4h6v6H4zM10 10h6v6h-6zM4 14h6v6H4zM14 4h6v6h-6z"],
+  bricks: ["#2E1A12", "#FF9A62", "M3 4h8v5H3zM13 4h8v5h-8zM7 11h10v5H7zM12 19.5a1.5 1.5 0 1 0 0 .01"],
   stack: ["#13302C", "#5FD0BE", "M6 18h12v3H6zM7 13h10v3H7zM8 8h8v3H8zM9 3h6v3H9z"],
   memory: ["#1B2A44", "#8FA8FF", "M4 5h7v14H4zM13 5h7v14h-7z"],
   snake: ["#14241A", "#9ED98C", "M4 18h9a3 3 0 0 0 0-6H9a3 3 0 0 1 0-6h8M17 6h3"],

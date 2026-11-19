@@ -393,7 +393,7 @@ public sealed class AdminDashboardService
         var bots = await BotIdsAsync();
         var rows = (await _db.PuzzleResults.AsNoTracking().Where(r => r.Day == today).ToListAsync()).Where(r => !bots.Contains(r.UserId)).ToList();
         var dailies = new List<AdminDailyDto>();
-        foreach (var game in new[] { "mines", "stack", "blocks", "snake" })
+        foreach (var game in new[] { "mines", "stack", "blocks", "bricks", "snake" })
         {
             if (Progression.DailyNumber(game, today) is not { } number) continue;
             foreach (var mode in new[] { "daily" })

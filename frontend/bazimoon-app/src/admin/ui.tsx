@@ -184,6 +184,7 @@ const GAMES: Record<string, [string, string]> = {
   ladder: ["Word Ladder", "نردبان کلمه"],
   stack: ["Stack Tower", "برج‌سازی"],
   blocks: ["Blocks", "بلوک‌ها"],
+  bricks: ["Brick Breaker", "آجرشکن"],
   snake: ["Snake", "مار"],
   dooz: ["Dooz", "دوز"],
   spy: ["Spy", "جاسوس"],

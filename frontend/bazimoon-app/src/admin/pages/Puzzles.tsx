@@ -6,7 +6,7 @@ import { questionSet } from "../../couple/questions";
 import { formatCountdown, msUntilNextPuzzle } from "../../lib/format";
 
 const GAME_COLORS: Record<string, string> = {
-  zip: "#5FD0BE", queens: "#B79CF2", sudoku: "#7CC4FA", word: "#9ED98C", ladder: "#F0A83A", mines: "#8FA8FF", stack: "#7FC8E8", blocks: "#F2B8D0", snake: "#9ED98C",
+  zip: "#5FD0BE", queens: "#B79CF2", sudoku: "#7CC4FA", word: "#9ED98C", ladder: "#F0A83A", mines: "#8FA8FF", stack: "#7FC8E8", blocks: "#F2B8D0", bricks: "#FF9A62", snake: "#9ED98C",
 };
 
 const DIVISION_COLORS: Record<string, string> = {
@@ -40,6 +40,7 @@ export function PuzzlesPage() {
       case "ladder": return d.medianMoves != null ? t("steps", { count: d.medianMoves }) : t("none");
       case "stack": return d.medianScore != null ? t("floors", { count: d.medianScore }) : t("none");
       case "blocks":
+      case "bricks":
       case "snake": return d.medianScore != null ? t("pts", { count: d.medianScore }) : t("none");
       default: return d.medianTimeMs != null ? formatDuration(d.medianTimeMs, n) : t("none");
     }

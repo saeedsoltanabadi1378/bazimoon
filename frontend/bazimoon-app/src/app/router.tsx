@@ -1,8 +1,10 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useHub } from "../hub/HubData";
 
-export type GameKey = "zip" | "queens" | "merge" | "mines" | "memory" | "word" | "ladder" | "stack" | "blocks" | "sudoku" | "snake" | "dooz" | "spy" | "esmfamil" | "shelem";
-export type GameScreen = "intro" | "play" | "result" | "levels" | "setup" | "lobby" | "online" | "solo";
+export type GameKey = "zip" | "queens" | "merge" | "mines" | "memory" | "word" | "ladder" | "stack" | "blocks" | "bricks" | "sudoku" | "snake" | "dooz" | "spy" | "esmfamil" | "shelem";
+export type GameScreen = "intro" | "play" | "result" | "levels" | "setup" | "lobby" | "online" | "solo"
+  // Brick Breaker's menus
+  | "adventure" | "daily" | "challenges" | "shop" | "trophies" | "settings" | "tutorial";
 export type CoupleScreen = "home" | "invite" | "quiz" | "reveal";
 export type TabKey = "home" | "solo" | "mafia" | "league" | "profile";
 

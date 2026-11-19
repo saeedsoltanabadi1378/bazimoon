@@ -326,12 +326,21 @@ public sealed class HubService
         {
             number = Progression.DailyNumber(request.Game, today);
             var dailyMode = mode;
-            // Only the first daily attempt counts; replays are recorded as practice.
-            countsAsDaily = !await _db.PuzzleResults.AnyAsync(r => r.UserId == userId && r.Game == request.Game && r.Mode == dailyMode && r.PuzzleNumber == number);
+            // Only the first daily attempt counts (three for Brick Breaker); replays are recorded as practice.
+            int tries = await _db.PuzzleResults.CountAsync(r => r.UserId == userId && r.Game == request.Game && r.Mode == dailyMode && r.PuzzleNumber == number);
+            countsAsDaily = tries < Progression.DailyTries(request.Game);
             if (!countsAsDaily) mode = "practice";
+        }
+        // Brick Breaker's adventure levels and challenges keep their number, so each has its own board.
+        else if (request.Game == "bricks" && (mode == "adventure" || mode.StartsWith("challenge", StringComparison.Ordinal))
+            && request.PuzzleNumber is { } played && played is >= 1 and <= 200)
+        {
+            number = played;
         }
 
         var history = await _db.PuzzleResults.Where(r => r.UserId == userId && r.Game == request.Game).ToListAsync();
+        // Brick Breaker's modes score on different scales: a best only counts against the same mode.
+        if (request.Game == "bricks") history = history.Where(h => h.Mode == mode).ToList();
         bool higherIsBetter = request.Score.HasValue && !request.TimeMs.HasValue;
         bool newBest = request.Solved && (higherIsBetter
             ? history.All(h => (h.Score ?? 0) < request.Score)
@@ -435,8 +444,10 @@ public sealed class HubService
     public async Task<BoardDto> GetBoardAsync(Guid userId, string game, int? number, string? mode = null)
     {
         if (!Progression.Games.Contains(game)) throw new GameException("Unknown game.");
-        // A language variant of a daily (Daily Word and Esm-Famil have a Persian one).
-        var dailyMode = mode == "daily-fa" ? "daily-fa" : "daily";
+        // A language variant of a daily (Daily Word and Esm-Famil have a Persian one), or a Brick
+        // Breaker challenge, whose number is the challenge.
+        var dailyMode = mode == "daily-fa" ? "daily-fa" : game == "bricks" && mode == "challenge" ? "challenge" : "daily";
+        if (dailyMode == "challenge" && number is null) throw new GameException("Pick a challenge.");
         number ??= Progression.DailyNumber(game, Today);
         var group = await GroupMembersAsync(userId);
         group.ExceptWith(await BotIdsExceptAsync(userId));
@@ -444,8 +455,14 @@ public sealed class HubService
             .Where(r => r.Game == game && r.Mode == dailyMode && r.PuzzleNumber == number && group.Contains(r.UserId))
             .ToListAsync();
         var names = await _db.PlayerStats.Where(s => group.Contains(s.UserId)).ToDictionaryAsync(s => s.UserId, s => s.Username);
-        var ordered = game == "esmfamil"
-            ? results.OrderByDescending(r => r.Score ?? 0).ToList() // solo Esm-Famil is scored, not timed
+        if (game == "bricks")
+        {
+            // Brick Breaker: each player's best try, by medal (challenges) then score.
+            results = results.GroupBy(r => r.UserId)
+                .Select(g => g.OrderByDescending(r => r.Detail ?? 0).ThenByDescending(r => r.Score ?? 0).First()).ToList();
+        }
+        var ordered = game is "esmfamil" or "bricks"
+            ? results.OrderByDescending(r => game == "bricks" && dailyMode == "challenge" ? r.Detail ?? 0 : 0).ThenByDescending(r => r.Score ?? 0).ToList() // scored, not timed
             : results
             .OrderByDescending(r => r.Solved)
             .ThenBy(r => r.TimeMs ?? int.MaxValue)
@@ -518,7 +535,8 @@ public sealed class HubService
         var everyone = await _db.PlayerStats.AsNoTracking().ToListAsync();
         var sameDivision = everyone.Where(s => !bots.Contains(s.UserId) && Progression.Division(s.Rating).Division == division).ToDictionary(s => s.UserId, s => s.Username);
         var scores = await _db.PuzzleResults
-            .Where(r => r.Game == game && r.Day >= weekStart && r.Score != null)
+            // Brick Breaker's ladder is endless runs only (its levels and dailies score differently).
+            .Where(r => r.Game == game && r.Day >= weekStart && r.Score != null && (game != "bricks" || r.Mode == "endless"))
             .GroupBy(r => r.UserId)
             .Select(g => new { UserId = g.Key, Best = g.Max(r => r.Score!.Value) })
             .ToListAsync();

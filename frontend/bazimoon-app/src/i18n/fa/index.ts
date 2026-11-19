@@ -6,5 +6,6 @@ import { games } from "./games";
 import { party } from "./party";
 import { friends } from "./friends";
 import { clans } from "./clans";
+import { bricks } from "./bricks";
 
-export const fa: Record<keyof typeof en, string> = { ...core, ...mafia, ...hub, ...games, ...party, ...friends, ...clans };
+export const fa: Record<keyof typeof en, string> = { ...core, ...mafia, ...hub, ...games, ...party, ...friends, ...clans, ...bricks };

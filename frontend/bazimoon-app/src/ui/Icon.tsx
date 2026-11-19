@@ -63,6 +63,7 @@ const paths = {
   ladder: <path d="M7 3v18M17 3v18M7 7h10M7 12h10M7 17h10" />,
   stack: <path d="M6 18h12v3H6zM7 13h10v3H7zM8 8h8v3H8zM9 3h6v3H9z" />,
   blocks: <path d="M4 4h6v6H4zM10 10h6v6h-6zM4 14h6v6H4zM14 4h6v6h-6z" />,
+  bricks: <path d="M3 4h8v5H3zM13 4h8v5h-8zM7 11h10v5H7zM12 19.5a1.5 1.5 0 1 0 0 .01" />,
   snake: <path d="M4 18h9a3 3 0 0 0 0-6H9a3 3 0 0 1 0-6h8M17 6h3" />,
   phone: <path d="M7 2h10v20H7zM11 18h2" />,
   dooz: <path d="M9 3v18M15 3v18M3 9h18M3 15h18" />,

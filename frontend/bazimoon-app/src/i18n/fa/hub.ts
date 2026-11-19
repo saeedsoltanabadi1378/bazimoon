@@ -81,6 +81,8 @@ export const hub: Record<keyof typeof en, string> = {
   gameCouple: "کوییز زوج‌ها",
   subCouple: "با همراهت بازی کن",
   gameBlocks: "بلوک‌ها",
+  gameBricks: "آجرشکن",
+  subBricks: "نشانه بگیر، کمانه کن، بشکن",
   subBlocks: "قطعه بچین، خط پاک کن",
   gameSnake: "مار",
   subSnake: "بخور، بزرگ شو، خودت را گاز نگیر",

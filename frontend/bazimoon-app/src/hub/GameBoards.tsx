@@ -248,3 +248,26 @@ export function BlocksBoard({ size = 110 }: { size?: number }) {
     </svg>
   );
 }
+
+/** Brick Breaker: numbered bricks, a +1 ring and a fan of balls bouncing up from the launcher. */
+const bricksCells: [number, number, string, number][] = [
+  [0, 0, "#FFD166", 24], [1, 0, "#FF9A62", 31], [3, 0, "#6E8BFF", 12], [5, 0, "#FF5C7A", 48], [6, 0, "#4FC3F7", 7],
+  [0, 1, "#4FC3F7", 6], [2, 1, "#5BD69A", 3], [4, 1, "#FFD166", 21], [6, 1, "#6E8BFF", 14], [1, 2, "#5BD69A", 2], [5, 2, "#4FC3F7", 8],
+];
+
+export function BricksBoard({ size = 110 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 100 100" aria-hidden="true">
+      {bricksCells.map(([x, y, c, v]) => (
+        <g key={`${x},${y}`}>
+          <rect x={x * 14.2 + 1} y={y * 14.2 + 4} width="12.4" height="12.4" rx="2.6" fill={c} />
+          <text x={x * 14.2 + 7.2} y={y * 14.2 + 12.8} textAnchor="middle" fontSize="6.4" fontWeight="800" fill="#0B0D1A">{v}</text>
+        </g>
+      ))}
+      <circle cx={3 * 14.2 + 7.2} cy={2 * 14.2 + 10.2} r="4.4" fill="none" stroke="#B8F24A" strokeWidth="1.6" />
+      {[[50, 88], [55, 76], [60, 64], [66, 52]].map(([x, y]) => <circle key={`${x}`} cx={x} cy={y} r="2.4" fill="#FFFFFF" />)}
+      <circle cx="44" cy="92" r="2.8" fill="#FFFFFF" />
+      <line x1="0" y1="82" x2="100" y2="82" stroke="rgb(255 255 255 / 18%)" strokeWidth="0.8" strokeDasharray="3 2" />
+    </svg>
+  );
+}

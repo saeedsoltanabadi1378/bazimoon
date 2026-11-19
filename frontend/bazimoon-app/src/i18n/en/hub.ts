@@ -80,6 +80,8 @@ export const hub = {
   gameCouple: "Couple Quiz",
   subCouple: "Play with your partner",
   gameBlocks: "Blocks",
+  gameBricks: "Brick Breaker",
+  subBricks: "Aim, bounce, break",
   subBlocks: "Fit pieces, clear lines",
   gameSnake: "Snake",
   subSnake: "Eat, grow, don't bite yourself",

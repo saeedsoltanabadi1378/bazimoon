@@ -31,7 +31,7 @@ const ClanFormScreen = lazy(() => import("./clans/ClanFormScreen").then((m) => (
 const ClanEventScreen = lazy(() => import("./clans/ClanEventScreen").then((m) => ({ default: m.ClanEventScreen })));
 const CoupleRoute = lazy(() => import("./couple/CoupleRoute").then((m) => ({ default: m.CoupleRoute })));
 
-const gameKeys: GameKey[] = ["zip", "queens", "merge", "mines", "memory", "word", "ladder", "stack", "blocks", "sudoku", "snake", "dooz", "spy", "esmfamil", "shelem"];
+const gameKeys: GameKey[] = ["zip", "queens", "merge", "mines", "memory", "word", "ladder", "stack", "blocks", "bricks", "sudoku", "snake", "dooz", "spy", "esmfamil", "shelem"];
 const isGameKey = (key: string): key is GameKey => (gameKeys as string[]).includes(key);
 
 /** Where the app opens: an invite or game link (/t/CODE, /g/ID, /couple/TOKEN, /ef/CODE, /f/CODE, /friends, /c/CODE, /clan, /play/GAME), or home. */

@@ -20,6 +20,10 @@ import { EsmFamilIntro, EsmFamilPlay, EsmFamilResult, EsmFamilSetup } from "./es
 import { EsmFamilSolo } from "./esmfamil/EsmFamilSolo";
 import { EsmFamilLobby, EsmFamilOnline } from "./esmfamil/EsmFamilOnline";
 import { ShelemIntro, ShelemRoomScreen } from "./shelem/ShelemScreens";
+import { BricksPlay } from "./bricks/BricksPlay";
+import { BricksAdventure, BricksChallenges, BricksDaily, BricksHome } from "./bricks/BricksMenus";
+import { BricksSettings, BricksShop, BricksTrophies } from "./bricks/BricksShop";
+import { BricksResult, BricksTutorial } from "./bricks/BricksResult";
 
 type GameRouteProps = { route: Extract<Route, { name: "game" }> };
 
@@ -85,6 +89,22 @@ export function GameRoute({ route }: GameRouteProps) {
       if (route.screen === "play") return <BlocksPlay key={JSON.stringify(p)} mode={(["daily", "adventure"].includes(str(p?.mode, "")) ? str(p?.mode, "") : "classic") as "classic" | "daily" | "adventure"} level={num(p?.level)} />;
       if (route.screen === "result") return <BlocksResult params={p} />;
       return <BlocksIntro />;
+    case "bricks": {
+      const bricksMode = str(p?.mode, "endless");
+      const playMode = (["adventure", "daily", "challenge"].includes(bricksMode) ? bricksMode : "endless") as "endless" | "adventure" | "daily" | "challenge";
+      switch (route.screen) {
+        case "play": return <BricksPlay key={JSON.stringify(p)} mode={playMode} refNumber={num(p?.ref) ?? 0} fresh={p?.fresh === true || p?.fresh === "true"} />;
+        case "result": return <BricksResult params={p} />;
+        case "adventure": return <BricksAdventure />;
+        case "daily": return <BricksDaily />;
+        case "challenges": return <BricksChallenges />;
+        case "shop": return <BricksShop />;
+        case "trophies": return <BricksTrophies initialTab={str(p?.tab, "achievements") === "stats" ? "stats" : "achievements"} />;
+        case "settings": return <BricksSettings />;
+        case "tutorial": return <BricksTutorial />;
+        default: return <BricksHome />;
+      }
+    }
     case "snake":
       if (route.screen === "play") return <SnakePlay key={JSON.stringify(p)} mode={(["daily", "wrap"].includes(str(p?.mode, "")) ? str(p?.mode, "") : "classic") as "classic" | "daily" | "wrap"} />;
       if (route.screen === "result") return <SnakeResult params={p} />;

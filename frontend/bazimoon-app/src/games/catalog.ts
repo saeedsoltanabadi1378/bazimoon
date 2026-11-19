@@ -36,6 +36,7 @@ export const catalog: CatalogEntry[] = [
   { key: "spy", name: "gameSpy", sub: "subSpy", category: "Party", tag: "New", icon: "spy", bg: "#2A1418", fg: "#F08A7A", accent: "#F08A7A", tint: "linear-gradient(160deg, #4A1C22, #2A1013)" },
   { key: "dooz", name: "gameDooz", sub: "subDooz", category: "Classics", tag: "vsBot", icon: "dooz", bg: "#1E2138", fg: "#C3B9FF", accent: "#C3B9FF", tint: "linear-gradient(160deg, #2C3160, #1A1D38)" },
   { key: "snake", name: "gameSnake", sub: "subSnake", category: "Arcade", tag: "Endless", icon: "snake", bg: "#14241A", fg: "#9ED98C", accent: "#9ED98C", tint: "linear-gradient(160deg, #2D4A1E, #17280F)" },
+  { key: "bricks", name: "gameBricks", sub: "subBricks", category: "Arcade", tag: "New", icon: "bricks", bg: "#2E1A12", fg: "#FF9A62", accent: "#FF9A62", tint: "linear-gradient(160deg, #4A2A1A, #2A1410)" },
   { key: "blocks", name: "gameBlocks", sub: "subBlocks", category: "Arcade", tag: "Endless", icon: "blocks", bg: "#25141E", fg: "#F2B8D0", accent: "#F2B8D0", tint: "linear-gradient(160deg, #4A2240, #2A1324)" },
 ];
 

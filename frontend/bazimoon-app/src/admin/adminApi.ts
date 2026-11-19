@@ -324,7 +324,7 @@ export interface AppSettings {
 }
 
 /** Every game an admin can switch off, in the order the Games section lists them. */
-export const ALL_GAMES = ["mafia", "couple", "zip", "queens", "sudoku", "word", "ladder", "mines", "merge", "blocks", "stack", "memory", "snake", "dooz", "spy", "esmfamil", "shelem"] as const;
+export const ALL_GAMES = ["mafia", "couple", "zip", "queens", "sudoku", "word", "ladder", "mines", "merge", "blocks", "bricks", "stack", "memory", "snake", "dooz", "spy", "esmfamil", "shelem"] as const;
 
 
 export interface CountItem {

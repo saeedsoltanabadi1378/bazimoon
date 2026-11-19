@@ -6,7 +6,7 @@ import { TabBar } from "../ui/TabBar";
 import { useHub, useLoad } from "./HubData";
 import { GameCard } from "./GameCard";
 import { LadderBoard, MergeBoard, QueensBoard, ZipBoard } from "./HomeBoards";
-import { BlocksBoard, CoupleBoard, DoozBoard, EsmFamilBoard, MemoryBoard, MinesBoard, ShelemBoard, SnakeBoard, SpyBoard, StackBoard, SudokuBoard, WordBoard } from "./GameBoards";
+import { BlocksBoard, BricksBoard, CoupleBoard, DoozBoard, EsmFamilBoard, MemoryBoard, MinesBoard, ShelemBoard, SnakeBoard, SpyBoard, StackBoard, SudokuBoard, WordBoard } from "./GameBoards";
 import { catalog, tagColors, type GameCategory } from "../games/catalog";
 import { dailyLadder } from "../games/ladder/logic";
 import { readLocal } from "../lib/storage";
@@ -51,6 +51,7 @@ export function SoloScreen() {
       case "dooz": return <DoozBoard />;
       case "snake": return <SnakeBoard />;
       case "blocks": return <BlocksBoard />;
+      case "bricks": return <BricksBoard />;
       default: return null;
     }
   }

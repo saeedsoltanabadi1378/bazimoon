@@ -25,17 +25,21 @@ public static class Progression
         ["mines"] = new DateOnly(2026, 9, 1),
         ["stack"] = new DateOnly(2026, 9, 1),
         ["blocks"] = new DateOnly(2026, 9, 1),
+        ["bricks"] = new DateOnly(2026, 11, 18),
         ["snake"] = new DateOnly(2026, 10, 15),
         ["esmfamil"] = new DateOnly(2026, 10, 15),
     };
 
-    public static readonly IReadOnlySet<string> Games = new HashSet<string> { "zip", "queens", "merge", "mines", "memory", "word", "ladder", "stack", "blocks", "sudoku", "snake", "dooz", "esmfamil" };
+    public static readonly IReadOnlySet<string> Games = new HashSet<string> { "zip", "queens", "merge", "mines", "memory", "word", "ladder", "stack", "blocks", "bricks", "sudoku", "snake", "dooz", "esmfamil" };
     /// <summary>Puzzles played level by level, from level 1 up, as many a day as the player likes.</summary>
     public static readonly IReadOnlySet<string> LevelGames = new HashSet<string> { "zip", "queens", "sudoku", "word", "ladder" };
     /// <summary>Level puzzles that count toward the shared puzzle streak.</summary>
     public static readonly IReadOnlySet<string> StreakGames = LevelGames;
 
     public static bool IsDaily(string mode) => mode == "daily" || mode.StartsWith("daily-", StringComparison.Ordinal);
+
+    /// <summary>Daily tries that count (and rank) per player and day: Brick Breaker allows three, the rest one.</summary>
+    public static int DailyTries(string game) => game == "bricks" ? 3 : 1;
 
     /// <summary>"level", or a language track such as "level-fa" (Word and Ladder have Persian levels).</summary>
     public static bool IsLevel(string mode) => mode == "level" || mode.StartsWith("level-", StringComparison.Ordinal);
@@ -181,6 +185,12 @@ public static class Progression
                 return daily ? 2 * Math.Max(0, o.Moves ?? 0) : 0;
             case "blocks":
                 return Math.Min(150, (o.Score ?? 0) / 50 + (newBest ? 10 : 0));
+            case "bricks":
+                // Adventure levels and challenges: 10 for a finish plus 5 per star or medal (Detail);
+                // endless and daily: 1 XP per 100 points, plus 10 for a new best.
+                if (o.Mode == "adventure" || o.Mode.StartsWith("challenge", StringComparison.Ordinal))
+                    return o.Solved ? 10 + 5 * Math.Clamp(o.Detail ?? 0, 0, 3) : 5;
+                return Math.Min(150, (o.Score ?? 0) / 100 + (newBest ? 10 : 0));
             default:
                 return 0;
         }
